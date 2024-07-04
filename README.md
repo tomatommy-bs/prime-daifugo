@@ -1,2 +1,3 @@
 # board-game-house
-this is the online ver. game played in 霜降りチューブ
+
+here is a house for board games
