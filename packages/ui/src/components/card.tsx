@@ -1,7 +1,7 @@
 interface Props {}
 
 const Card: React.FC = () => {
-  return <></>;
+  return <>card</>;
 };
 
 export { Card };
