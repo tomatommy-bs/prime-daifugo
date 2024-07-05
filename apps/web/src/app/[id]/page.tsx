@@ -1,5 +1,6 @@
 import { NextPageProps } from "@repo/ui/utils";
 import { Card } from "@repo/ui/components";
+import { Input } from "@mantine/core";
 
 export default function Page(props: NextPageProps<"id">) {
   const {
@@ -10,6 +11,7 @@ export default function Page(props: NextPageProps<"id">) {
     <div>
       {id}
       <Card />
+      <Input />
     </div>
   );
 }
