@@ -2,7 +2,7 @@ import type { Config } from "tailwindcss";
 import { tailwindConfig } from "@repo/tailwind-config/config";
 
 const config: Pick<Config, "content" | "presets"> = {
-  // presets: [tailwindConfig],
+  presets: [tailwindConfig],
   content: ["./src/app/**/*.tsx"],
 };
 
