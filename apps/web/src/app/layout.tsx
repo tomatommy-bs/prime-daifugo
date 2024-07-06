@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { MantineProvider, ColorSchemeScript } from "@mantine/core";
+import "@mantine/core/styles.css";
 
 const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
+  src: "../fonts/GeistVF.woff",
   variable: "--font-geist-sans",
 });
 const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
+  src: "../fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
 });
 
@@ -23,8 +25,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <ColorSchemeScript />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
+        <MantineProvider>{children}</MantineProvider>
       </body>
     </html>
   );
