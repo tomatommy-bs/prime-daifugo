@@ -19,5 +19,9 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "@mantine/carousel": "^7.11.2",
+    "embla-carousel-react": "^7.1.0"
+  }
 }
