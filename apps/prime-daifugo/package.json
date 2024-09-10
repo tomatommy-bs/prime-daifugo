@@ -10,12 +10,15 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@mantine/hooks": "^7.11.1",
+    "@mantine/core": "^7.12.2",
+    "@mantine/hooks": "^7.12.2",
+    "@mantine/notifications": "^7.12.2",
     "framer-motion": "^11.3.0",
-    "next": "^14.2.4",
+    "next": "^14.2.9",
     "partysocket": "^1.0.2",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",
@@ -29,8 +32,8 @@
     "eslint": "^8",
     "eslint-config-next": "15.0.0-rc.0",
     "partykit": "^0.0.110",
-    "postcss": "^8.4.39",
-    "postcss-preset-mantine": "^1.15.0",
+    "postcss": "^8.4.45",
+    "postcss-preset-mantine": "^1.17.0",
     "postcss-simple-vars": "^7.0.1",
     "tailwindcss": "^3.4.4",
     "typescript": "^5"
