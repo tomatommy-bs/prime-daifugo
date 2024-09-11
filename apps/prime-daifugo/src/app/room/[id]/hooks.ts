@@ -3,6 +3,7 @@ import * as serverToClient from "../../../interface/server-to-client";
 
 interface UseMessageHandlerProps {
   onChat?: (message: string, from: string, socket: PartySocket) => void;
+  onPresence?: (presence: serverToClient.PresenceEvent["presence"]) => void;
 }
 
 export const useMessageHandler = (props: UseMessageHandlerProps) => {
@@ -13,6 +14,8 @@ export const useMessageHandler = (props: UseMessageHandlerProps) => {
       case "chat":
         props.onChat?.(data.message, data.from, socket);
         break;
+      case "presence":
+        props.onPresence?.(data.presence);
     }
   };
 

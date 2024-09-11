@@ -13,6 +13,13 @@ export default class Server implements Party.Server {
       message: `connection ${conn.id} joined the room`,
       from: "__system__",
     });
+    ServerMessenger.broadcastPresence({
+      room: this.room,
+      connections: Array.from(this.room.getConnections()).map((conn) => ({
+        id: conn.id,
+        name: conn.id,
+      })),
+    });
   }
 
   onMessage(payload: string, sender: Party.Connection) {
@@ -25,9 +32,16 @@ export default class Server implements Party.Server {
       message: `connection ${connection.id} left the room`,
       from: "__system__",
     });
+    const connections = Array.from(this.room.getConnections());
+    ServerMessenger.broadcastPresence({
+      room: this.room,
+      connections: connections.map((conn) => ({
+        id: conn.id,
+        name: conn.id,
+      })),
+    });
 
-    const connections = this.room.getConnections();
-    if (Array.from(connections).length === 0) this.initialize();
+    if (connections.length === 0) this.initialize();
   }
 
   onStart(): void | Promise<void> {

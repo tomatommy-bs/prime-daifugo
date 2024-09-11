@@ -15,4 +15,16 @@ export class ServerMessenger {
     };
     room.broadcast(JSON.stringify(payload));
   }
+
+  static broadcastPresence(args: {
+    room: Party.Room;
+    connections: { id: string; name: string }[];
+  }) {
+    const { room, connections } = args;
+    const payload: serverToClient.PresenceEvent = {
+      event: "presence",
+      presence: connections,
+    };
+    room.broadcast(JSON.stringify(payload));
+  }
 }
