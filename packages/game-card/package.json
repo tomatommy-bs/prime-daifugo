@@ -1,0 +1,19 @@
+{
+  "name": "@repo/game-card",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "react": "^18.2.0"
+  },
+  "scripts": {
+    "build:svg": "svgr --out-dir src/components/icons -- src/svgs"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "*",
+    "@repo/typescript-config": "*",
+    "@svgr/cli": "^8.1.0",
+    "typescript": "^5.3.3"
+  }
+}

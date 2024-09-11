@@ -8,6 +8,7 @@ import { useListState } from "@mantine/hooks";
 import { useMessageHandler } from "./hooks";
 import { ClientMessenger } from "./client-messenger";
 import * as serverToClient from "../../../interface/server-to-client";
+import { GameCard } from "@repo/game-card";
 
 interface Props {
   params: Record<"id", string>;
@@ -81,6 +82,7 @@ const Page = ({ params: { id } }: Props) => {
           </Fragment>
         ))}
       </Stack>
+      <GameCard card="2C" width={100} height={100} />
 
       <TextInput ref={chatInputRef} name="message" />
       <button onClick={handleSubmitChat}>Send message</button>
