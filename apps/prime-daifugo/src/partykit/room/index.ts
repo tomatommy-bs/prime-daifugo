@@ -1,49 +1,30 @@
 import type * as Party from "partykit/server";
 import * as serverToClient from "../../interface/server-to-client";
 import { MessageManager } from "./logic/message-manager";
+import { messageHandler } from "./logic/message-handler";
+import { ServerMessenger } from "./logic";
 
 export default class Server implements Party.Server {
-  messageManager: MessageManager;
-  constructor(readonly room: Party.Room) {
-    this.messageManager = new MessageManager(room, {
-      onChat: (message, sender) => {
-        const payload: serverToClient.ChatEvent = {
-          event: "chat",
-          message: message,
-        };
-        room.broadcast(JSON.stringify(payload), [sender.id]);
-      },
+  constructor(readonly room: Party.Room) {}
+
+  onConnect(conn: Party.Connection, ctx: Party.ConnectionContext) {
+    ServerMessenger.broadcastMessage({
+      room: this.room,
+      message: `connection ${conn.id} joined the room`,
+      from: "__system__",
     });
   }
 
-  onConnect(conn: Party.Connection, ctx: Party.ConnectionContext) {
-    console.log(
-      `Connected:
-        id: ${conn.id}
-        room: ${this.room.id}
-        url: ${new URL(ctx.request.url).pathname}`
-    );
-
-    const payload: serverToClient.ChatEvent = {
-      event: "chat",
-      message: `connection ${conn.id} joined the room`,
-    };
-    this.room.broadcast(JSON.stringify(payload), [conn.id]);
-  }
-
   onMessage(payload: string, sender: Party.Connection) {
-    this.messageManager.onMessage(payload, sender);
+    messageHandler.onMessage(this.room, payload, sender);
   }
 
   onClose(connection: Party.Connection): void | Promise<void> {
-    console.log(`connection ${connection.id} disconnected`);
-
-    const payload: serverToClient.ChatEvent = {
-      event: "chat",
+    ServerMessenger.broadcastMessage({
+      room: this.room,
       message: `connection ${connection.id} left the room`,
-    };
-
-    this.room.broadcast(JSON.stringify(payload), [connection.id]);
+      from: "__system__",
+    });
 
     const connections = this.room.getConnections();
     if (Array.from(connections).length === 0) this.initialize();

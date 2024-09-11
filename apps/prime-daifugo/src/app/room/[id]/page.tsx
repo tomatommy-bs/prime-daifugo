@@ -2,12 +2,11 @@
 
 import usePartySocket from "partysocket/react";
 import { PARTYKIT_HOST } from "../../../constants/env";
-import { notifications } from "@mantine/notifications";
-import { Paper, TextInput } from "@mantine/core";
-import { useRef } from "react";
-import * as clientToServer from "../../../interface/client-to-server";
-import * as serverToClient from "../../../interface/server-to-client";
+import { Paper, Stack, TextInput } from "@mantine/core";
+import { Fragment, useRef } from "react";
 import { useListState } from "@mantine/hooks";
+import { useMessageHandler } from "./hooks";
+import { ClientMessenger } from "./client-messenger";
 
 interface Props {
   params: Record<"id", string>;
@@ -15,17 +14,23 @@ interface Props {
 }
 
 const Page = ({ params: { id } }: Props) => {
-  const [chats, handler] = useListState<string>();
+  const [chats, handler] = useListState<{
+    pos: "left" | "right";
+    msg: string;
+  }>();
+  const { onMessage } = useMessageHandler({
+    onChat: (message, from, socket) => {
+      if (from === socket.id) handler.append({ pos: "right", msg: message });
+      else handler.append({ pos: "left", msg: message });
+    },
+  });
 
   const ws = usePartySocket({
     host: PARTYKIT_HOST,
     party: "room",
     room: id,
     onMessage: (e) => {
-      const payload = serverToClient.serverToClientSchema.parse(
-        JSON.parse(e.data)
-      );
-      if (payload.event === "chat") handler.append(payload.message);
+      onMessage(e.data, ws);
     },
     onOpen: () => {},
   });
@@ -35,25 +40,32 @@ const Page = ({ params: { id } }: Props) => {
   const handleSubmitChat = () => {
     const message = chatInputRef?.current?.value;
     if (!message) return;
-    const payload: clientToServer.ChatEvent = {
-      event: "chat",
-      message: chatInputRef?.current?.value,
-    };
-    ws.send(JSON.stringify(payload));
+    ClientMessenger.sendMessage({ ws, message });
     chatInputRef.current.value = "";
   };
 
   return (
     <div>
       <h1>Room {id}</h1>
+
+      <Stack>
+        {chats.map(({ pos, msg }) => (
+          <Fragment>
+            {pos === "left" ? (
+              <div className="chat chat-start">
+                <div className="chat-bubble">{msg}</div>
+              </div>
+            ) : (
+              <div className="chat chat-end">
+                <p className="chat-bubble chat-bubble-primary">{msg}</p>
+              </div>
+            )}
+          </Fragment>
+        ))}
+      </Stack>
+
       <TextInput ref={chatInputRef} name="message" />
       <button onClick={handleSubmitChat}>Send message</button>
-
-      <Paper>
-        {chats.map((chat) => (
-          <div key={chat}>{chat}</div>
-        ))}
-      </Paper>
     </div>
   );
 };
