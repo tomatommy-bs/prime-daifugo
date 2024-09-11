@@ -13,6 +13,7 @@ const presenceEventSchema = z.object({
     z.object({
       id: z.string(),
       name: z.string(),
+      status: z.enum(["ready", "not-ready"]),
     })
   ),
 });

@@ -3,11 +3,16 @@ import * as serverToClient from "../../interface/server-to-client";
 import { MessageManager } from "./logic/message-manager";
 import { messageHandler } from "./logic/message-handler";
 import { ServerMessenger } from "./logic";
+import { ConnectionState } from "@/interface/connection";
 
 export default class Server implements Party.Server {
   constructor(readonly room: Party.Room) {}
 
-  onConnect(conn: Party.Connection, ctx: Party.ConnectionContext) {
+  onConnect(
+    conn: Party.Connection<ConnectionState>,
+    ctx: Party.ConnectionContext
+  ) {
+    conn.setState({ status: "not-ready" });
     ServerMessenger.broadcastMessage({
       room: this.room,
       message: `connection ${conn.id} joined the room`,
@@ -15,14 +20,10 @@ export default class Server implements Party.Server {
     });
     ServerMessenger.broadcastPresence({
       room: this.room,
-      connections: Array.from(this.room.getConnections()).map((conn) => ({
-        id: conn.id,
-        name: conn.id,
-      })),
     });
   }
 
-  onMessage(payload: string, sender: Party.Connection) {
+  onMessage(payload: string, sender: Party.Connection<ConnectionState>) {
     messageHandler.onMessage(this.room, payload, sender);
   }
 
@@ -32,13 +33,9 @@ export default class Server implements Party.Server {
       message: `connection ${connection.id} left the room`,
       from: "__system__",
     });
-    const connections = Array.from(this.room.getConnections());
+    const connections = Array.from(this.room.getConnections<ConnectionState>());
     ServerMessenger.broadcastPresence({
       room: this.room,
-      connections: connections.map((conn) => ({
-        id: conn.id,
-        name: conn.id,
-      })),
     });
 
     if (connections.length === 0) this.initialize();

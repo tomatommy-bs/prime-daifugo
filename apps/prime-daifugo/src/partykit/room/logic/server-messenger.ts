@@ -1,5 +1,6 @@
 import type * as Party from "partykit/server";
 import * as serverToClient from "@/interface/server-to-client";
+import { ConnectionState } from "@/interface/connection";
 
 export class ServerMessenger {
   static broadcastMessage(args: {
@@ -16,11 +17,15 @@ export class ServerMessenger {
     room.broadcast(JSON.stringify(payload));
   }
 
-  static broadcastPresence(args: {
-    room: Party.Room;
-    connections: { id: string; name: string }[];
-  }) {
-    const { room, connections } = args;
+  static broadcastPresence(args: { room: Party.Room }) {
+    const { room } = args;
+    const connections = Array.from(room.getConnections<ConnectionState>()).map(
+      (conn) => ({
+        id: conn.id,
+        name: conn.id,
+        status: conn.state?.status || "not-ready",
+      })
+    );
     const payload: serverToClient.PresenceEvent = {
       event: "presence",
       presence: connections,

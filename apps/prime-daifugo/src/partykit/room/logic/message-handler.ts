@@ -9,4 +9,18 @@ export const messageHandler = new MessageManager({
       from: sender.id,
     });
   },
+
+  onSetReady: (room, sender) => {
+    sender.setState({ ...sender.state, status: "ready" });
+    ServerMessenger.broadcastPresence({ room });
+  },
+
+  onUnsetReady: (room, sender) => {
+    sender.setState({ ...sender.state, status: "not-ready" });
+    ServerMessenger.broadcastPresence({ room });
+  },
+
+  onStartGame: (room, sender) => {
+    console.log("start game");
+  },
 });

@@ -10,4 +10,31 @@ export class ClientMessenger {
     };
     ws.send(JSON.stringify(payload));
   }
+
+  static setReady(args: { ws: PartySocket }) {
+    const { ws } = args;
+    const payload: clientToServer.RoomEvent = {
+      event: "room",
+      action: "set-ready",
+    };
+    ws.send(JSON.stringify(payload));
+  }
+
+  static unsetReady(args: { ws: PartySocket }) {
+    const { ws } = args;
+    const payload: clientToServer.RoomEvent = {
+      event: "room",
+      action: "unset-ready",
+    };
+    ws.send(JSON.stringify(payload));
+  }
+
+  static startGame(args: { ws: PartySocket }) {
+    const { ws } = args;
+    const payload: clientToServer.RoomEvent = {
+      event: "room",
+      action: "start-game",
+    };
+    ws.send(JSON.stringify(payload));
+  }
 }

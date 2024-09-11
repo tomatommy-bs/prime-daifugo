@@ -2,13 +2,22 @@
 
 import usePartySocket from "partysocket/react";
 import { PARTYKIT_HOST } from "../../../constants/env";
-import { Avatar, Group, Paper, Stack, TextInput } from "@mantine/core";
+import {
+  Affix,
+  Avatar,
+  Button,
+  Group,
+  Paper,
+  SimpleGrid,
+  Stack,
+  TextInput,
+} from "@mantine/core";
 import { Fragment, useRef, useState } from "react";
 import { useListState } from "@mantine/hooks";
 import { useMessageHandler } from "./hooks";
 import { ClientMessenger } from "./client-messenger";
 import * as serverToClient from "../../../interface/server-to-client";
-import { GameCard } from "@repo/game-card";
+import { GameCard, cardIds } from "@repo/game-card";
 
 interface Props {
   params: Record<"id", string>;
@@ -44,48 +53,32 @@ const Page = ({ params: { id } }: Props) => {
     onOpen: () => {},
   });
 
-  const chatInputRef = useRef<HTMLInputElement>(null);
+  const myPresence = presence.find((p) => p.id === ws?.id);
 
-  const handleSubmitChat = () => {
-    const message = chatInputRef?.current?.value;
-    if (!message) return;
-    ClientMessenger.sendMessage({ ws, message });
-    chatInputRef.current.value = "";
+  const handleGameStart = () => {
+    ClientMessenger.startGame({ ws });
   };
 
   return (
     <div>
       <h1>Room {id}</h1>
       <Group>
-        {presence.map(({ id, name }) => (
+        {presence.map(({ id, name, status }) => (
           <Paper key={id} p="xs" style={{ width: 200 }}>
-            {name}
+            {name} | {status}
           </Paper>
         ))}
+        {myPresence?.status === "ready" ? (
+          <Button onClick={() => ClientMessenger.unsetReady({ ws })}>
+            un ready
+          </Button>
+        ) : (
+          <Button onClick={() => ClientMessenger.setReady({ ws })}>
+            ready
+          </Button>
+        )}
+        <Button onClick={handleGameStart}>start game</Button>
       </Group>
-
-      <Stack>
-        {chats.map(({ pos, msg }) => (
-          <Fragment>
-            {pos === "left" ? (
-              <div className="chat chat-start">
-                <div className="chat-image">
-                  <Avatar />
-                </div>
-                <div className="chat-bubble">{msg}</div>
-              </div>
-            ) : (
-              <div className="chat chat-end">
-                <p className="chat-bubble chat-bubble-primary">{msg}</p>
-              </div>
-            )}
-          </Fragment>
-        ))}
-      </Stack>
-      <GameCard card="2C" width={100} height={100} />
-
-      <TextInput ref={chatInputRef} name="message" />
-      <button onClick={handleSubmitChat}>Send message</button>
     </div>
   );
 };
