@@ -20,7 +20,7 @@ export default function RootLayout({
       <head>
         <ColorSchemeScript />
       </head>
-      <body>
+      <body className="min-h-screen">
         <MantineProvider>
           <Notifications position="top-center" />
           {children}
