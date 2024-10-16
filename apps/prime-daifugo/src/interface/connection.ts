@@ -6,4 +6,5 @@ export interface Connection {
 
 export interface ConnectionState {
   status: "ready" | "not-ready";
+  name: string;
 }

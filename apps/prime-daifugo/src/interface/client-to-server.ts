@@ -6,6 +6,12 @@ const chatEventSchema = z.object({
 });
 export type ChatEvent = z.infer<typeof chatEventSchema>;
 
+const setNameEventSchema = z.object({
+  event: z.literal("set-name"),
+  name: z.string(),
+});
+export type SetNameEvent = z.infer<typeof setNameEventSchema>;
+
 const roomEventSchema = z.object({
   event: z.literal("room"),
   action: z.union([
@@ -16,5 +22,9 @@ const roomEventSchema = z.object({
 });
 export type RoomEvent = z.infer<typeof roomEventSchema>;
 
-export const clientToServerSchema = z.union([chatEventSchema, roomEventSchema]);
+export const clientToServerSchema = z.union([
+  chatEventSchema,
+  setNameEventSchema,
+  roomEventSchema,
+]);
 export type ClientToServer = z.infer<typeof clientToServerSchema>;

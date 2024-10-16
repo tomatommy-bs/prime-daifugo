@@ -8,6 +8,11 @@ interface Event {
     message: string,
     sender: Party.Connection<ConnectionState>
   ) => void;
+  onSetName?: (
+    room: Party.Room,
+    name: string,
+    sender: Party.Connection<ConnectionState>
+  ) => void;
   onSetReady?: (
     room: Party.Room,
     sender: Party.Connection<ConnectionState>
@@ -24,12 +29,14 @@ interface Event {
 
 export class MessageManager {
   onChat?: Event["onChat"];
+  onSetName?: Event["onSetName"];
   onSetReady?: Event["onSetReady"];
   onUnsetReady?: Event["onUnsetReady"];
   onStartGame?: Event["onStartGame"];
 
   constructor(args: Event) {
     this.onChat = args.onChat;
+    this.onSetName = args.onSetName;
     this.onSetReady = args.onSetReady;
     this.onUnsetReady = args.onUnsetReady;
     this.onStartGame = args.onStartGame;
@@ -58,6 +65,10 @@ export class MessageManager {
             this.onStartGame?.(room, sender);
             break;
         }
+        break;
+      case "set-name": {
+        this.onSetName?.(room, msg.name, sender);
+      }
     }
   }
 }

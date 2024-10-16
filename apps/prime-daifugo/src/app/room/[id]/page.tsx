@@ -17,7 +17,7 @@ import { useListState } from "@mantine/hooks";
 import { useMessageHandler } from "./hooks";
 import { ClientMessenger } from "./client-messenger";
 import * as serverToClient from "../../../interface/server-to-client";
-import { GameCard, cardIds } from "@repo/game-card";
+import Cookies from "js-cookie";
 
 interface Props {
   params: Record<"id", string>;
@@ -50,7 +50,9 @@ const Page = ({ params: { id } }: Props) => {
     onMessage: (e) => {
       onMessage(e.data, ws);
     },
-    onOpen: () => {},
+    onOpen: () => {
+      ClientMessenger.sendName({ ws, name: Cookies.get("name") ?? "unknown" });
+    },
   });
 
   const myPresence = presence.find((p) => p.id === ws?.id);

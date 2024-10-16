@@ -22,10 +22,11 @@ export class ServerMessenger {
     const connections = Array.from(room.getConnections<ConnectionState>()).map(
       (conn) => ({
         id: conn.id,
-        name: conn.id,
+        name: conn.state?.name || conn.id.substring(0, 8),
         status: conn.state?.status || "not-ready",
       })
     );
+    console.log("connections", connections);
     const payload: serverToClient.PresenceEvent = {
       event: "presence",
       presence: connections,

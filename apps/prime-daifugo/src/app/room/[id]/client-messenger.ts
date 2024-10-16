@@ -37,4 +37,13 @@ export class ClientMessenger {
     };
     ws.send(JSON.stringify(payload));
   }
+
+  static sendName(args: { ws: PartySocket; name: string }) {
+    const { ws, name } = args;
+    const payload: clientToServer.SetNameEvent = {
+      event: "set-name",
+      name: name,
+    };
+    ws.send(JSON.stringify(payload));
+  }
 }

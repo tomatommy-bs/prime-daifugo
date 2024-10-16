@@ -31,7 +31,7 @@ export default function Page() {
     <Paper withBorder p={"md"}>
       <Center>
         <Group align="end">
-          <ActionIcon>
+          <ActionIcon variant="white" pb={8}>
             <Text>🗑️</Text>
           </ActionIcon>
           <TextInput

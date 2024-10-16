@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbo",
-    "dev:pk": "partykit dev --live",
+    "next": "next dev --turbo",
+    "partykit": "partykit dev --live",
+    "dev": "npm run next & npm run partykit",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

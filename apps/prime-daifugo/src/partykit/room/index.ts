@@ -12,7 +12,7 @@ export default class Server implements Party.Server {
     conn: Party.Connection<ConnectionState>,
     ctx: Party.ConnectionContext
   ) {
-    conn.setState({ status: "not-ready" });
+    conn.setState({ status: "not-ready", name: conn.id });
     ServerMessenger.broadcastMessage({
       room: this.room,
       message: `connection ${conn.id} joined the room`,
