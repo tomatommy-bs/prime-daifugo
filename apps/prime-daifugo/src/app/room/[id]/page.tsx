@@ -18,8 +18,9 @@ import { useMessageHandler } from "./hooks";
 import { ClientMessenger } from "./client-messenger";
 import * as serverToClient from "../../../interface/server-to-client";
 import Cookies from "js-cookie";
-import ClientRoomManager from "./room-manager";
-import { useRouter } from "next/navigation";
+import { notifications } from "@mantine/notifications";
+import { WaitingRoom } from "./_ui/waiting-room";
+import { ROOM_STATUS } from "@/constants/status";
 
 interface Props {
   params: Record<"id", string>;
@@ -27,23 +28,29 @@ interface Props {
 }
 
 const Page = ({ params: { id } }: Props) => {
-  const [chats, handler] = useListState<{
-    pos: "left" | "right";
-    msg: string;
-  }>();
   const [presence, setPresence] = useState<
     serverToClient.PresenceEvent["presence"]
   >([]);
+  const [roomStatus, setRoomStatus] = useState<
+    (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS] | null
+  >(null);
 
   const { onMessage } = useMessageHandler({
-    onChat: (message, from, socket) => {
-      if (from === socket.id) handler.append({ pos: "right", msg: message });
-      else handler.append({ pos: "left", msg: message });
+    onChat: (message, from, _socket) => {
+      const senderName = presence.find((p) => p.id === from)?.name;
+      notifications.show({
+        title: senderName ? `${senderName} より` : null,
+        message: message,
+        position: "bottom-right",
+      });
     },
     onPresence: (presence) => {
       setPresence(presence);
     },
     onStartGame: () => {},
+    onRoomStatus: (status) => {
+      setRoomStatus(status);
+    },
   });
 
   const ws = usePartySocket({
@@ -64,30 +71,17 @@ const Page = ({ params: { id } }: Props) => {
     ClientMessenger.startGame({ ws });
   };
 
-  const canStartGame = ClientRoomManager.canStartGame(presence);
-
   return (
     <div>
       <h1>Room {id}</h1>
-      <Group>
-        {presence.map(({ id, name, status }) => (
-          <Paper key={id} p="xs" style={{ width: 200 }}>
-            {name} | {status}
-          </Paper>
-        ))}
-        {myPresence?.status === "ready" ? (
-          <Button onClick={() => ClientMessenger.unsetReady({ ws })}>
-            un ready
-          </Button>
-        ) : (
-          <Button onClick={() => ClientMessenger.setReady({ ws })}>
-            ready
-          </Button>
-        )}
-        <Button onClick={handleGameStart} disabled={!canStartGame}>
-          start game
-        </Button>
-      </Group>
+      <WaitingRoom
+        presence={presence}
+        myPresence={myPresence}
+        onGameStart={handleGameStart}
+        onSetReady={() => ClientMessenger.setReady({ ws })}
+        onUnsetReady={() => ClientMessenger.unsetReady({ ws })}
+      />
+      {roomStatus}
     </div>
   );
 };

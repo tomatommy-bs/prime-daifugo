@@ -1,8 +1,12 @@
 import type * as Party from "partykit/server";
 import * as serverToClient from "@/interface/server-to-client";
 import { ConnectionState } from "@/interface/connection";
+import { ROOM_STATUS } from "@/constants/status";
 
 export class ServerMessenger {
+  /**
+   * 主に chat イベントを送信する
+   */
   static broadcastMessage(args: {
     room: Party.Room;
     message: string;
@@ -17,6 +21,10 @@ export class ServerMessenger {
     room.broadcast(JSON.stringify(payload));
   }
 
+  /**
+   * 主に presence イベントを送信する
+   * ルーム内の全員のプレゼンス情報を送信する
+   */
   static broadcastPresence(args: { room: Party.Room }) {
     const { room } = args;
     const connections = Array.from(room.getConnections<ConnectionState>()).map(
@@ -33,6 +41,23 @@ export class ServerMessenger {
     room.broadcast(JSON.stringify(payload));
   }
 
+  static broadcastRoomStatus(args: {
+    room: Party.Room;
+    status?: (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS];
+  }) {
+    const { room, status } = args;
+    if (status == undefined) return;
+    const payload: serverToClient.RoomStatusEvent = {
+      event: "room-status",
+      status,
+    };
+    room.broadcast(JSON.stringify(payload));
+  }
+
+  /**
+   * 主に system イベントを送信する
+   * - action: "game-start" でゲーム開始を通知する
+   */
   static broadcastSystemEvent(args: {
     room: Party.Room;
     content: Omit<serverToClient.SystemEvent, "event">;

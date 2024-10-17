@@ -5,6 +5,7 @@ import { messageHandler } from "./logic/message-handler";
 import { ServerMessenger } from "./logic";
 import { ConnectionState } from "@/interface/connection";
 import { ROOM_STATUS } from "@/constants/status";
+import assert from "assert";
 
 export default class Server implements Party.Server {
   constructor(readonly room: Party.Room) {}
@@ -22,18 +23,27 @@ export default class Server implements Party.Server {
     }
   }
 
-  onConnect(
+  async onConnect(
     conn: Party.Connection<ConnectionState>,
     ctx: Party.ConnectionContext
   ) {
     conn.setState({ status: "not-ready", name: conn.id });
+    const roomStatus =
+      await this.room.storage.get<
+        (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS]
+      >("roomStatus");
+
     ServerMessenger.broadcastMessage({
       room: this.room,
-      message: `connection ${conn.id} joined the room`,
+      message: `New Member joined the room`,
       from: "__system__",
     });
     ServerMessenger.broadcastPresence({
       room: this.room,
+    });
+    ServerMessenger.broadcastRoomStatus({
+      room: this.room,
+      status: roomStatus,
     });
   }
 
@@ -41,10 +51,10 @@ export default class Server implements Party.Server {
     messageHandler.onMessage(this.room, payload, sender);
   }
 
-  onClose(connection: Party.Connection): void | Promise<void> {
+  onClose(connection: Party.Connection<ConnectionState>): void | Promise<void> {
     ServerMessenger.broadcastMessage({
       room: this.room,
-      message: `connection ${connection.id} left the room`,
+      message: `${connection.state?.name} left the room`,
       from: "__system__",
     });
     const connections = Array.from(this.room.getConnections<ConnectionState>());

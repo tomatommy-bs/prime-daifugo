@@ -19,6 +19,12 @@ const presenceEventSchema = z.object({
 });
 export type PresenceEvent = z.infer<typeof presenceEventSchema>;
 
+const roomStatusEventSchema = z.object({
+  event: z.literal("room-status"),
+  status: z.enum(["waiting", "playing"]),
+});
+export type RoomStatusEvent = z.infer<typeof roomStatusEventSchema>;
+
 const systemEventSchema = z.object({
   event: z.literal("system"),
   action: z.literal("game-start"),
@@ -28,5 +34,6 @@ export type SystemEvent = z.infer<typeof systemEventSchema>;
 export const serverToClientSchema = z.union([
   chatEventSchema,
   presenceEventSchema,
+  roomStatusEventSchema,
   systemEventSchema,
 ]);

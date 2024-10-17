@@ -37,6 +37,7 @@ export const messageHandler = new MessageManager({
       room,
       content: { action: "game-start" },
     });
+    ServerMessenger.broadcastRoomStatus({ room, status: ROOM_STATUS.playing });
     console.log("start game");
   },
 });
