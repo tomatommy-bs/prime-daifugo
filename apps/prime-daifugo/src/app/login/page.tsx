@@ -21,10 +21,12 @@ export default function Page() {
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    console.log("first");
     Cookies.set("name", name, { expires: 365 });
     const callback = searchParams.get("callback");
-    typeof callback == "string" ? router.push(callback) : router.push("/");
+    typeof callback == "string"
+      ? // CHECK: router.push() では, middleware の cache 処理によりすでに `/room/[id]` からリダイレクトされているため, ページ遷移が行われない
+        (location.pathname = callback)
+      : router.push("/");
   };
 
   return (

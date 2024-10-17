@@ -4,7 +4,6 @@ import type { MiddlewareConfig, NextRequest } from "next/server";
 // This function can be marked `async` if using `await` inside
 export function middleware(request: NextRequest) {
   const name = request.cookies.get("name")?.value;
-  console.log("name", name);
 
   if (name == undefined || name.length < 3 || name.length > 10) {
     const url = new URL(request.url);

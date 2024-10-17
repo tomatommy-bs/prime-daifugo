@@ -1,6 +1,7 @@
 import assert from "assert";
 import { MessageManager } from "./message-manager";
 import { ServerMessenger } from "./server-messenger";
+import { ROOM_STATUS } from "@/constants/status";
 
 export const messageHandler = new MessageManager({
   onChat: (room, message, sender) => {
@@ -29,8 +30,13 @@ export const messageHandler = new MessageManager({
     ServerMessenger.broadcastPresence({ room });
   },
 
-  onStartGame: (room, sender) => {
+  onStartGame: async (room, sender) => {
     assert(sender.state);
+    await room.storage.put("roomStatus", ROOM_STATUS.playing);
+    ServerMessenger.broadcastSystemEvent({
+      room,
+      content: { action: "game-start" },
+    });
     console.log("start game");
   },
 });

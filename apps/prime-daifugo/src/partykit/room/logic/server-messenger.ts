@@ -26,10 +26,21 @@ export class ServerMessenger {
         status: conn.state?.status || "not-ready",
       })
     );
-    console.log("connections", connections);
     const payload: serverToClient.PresenceEvent = {
       event: "presence",
       presence: connections,
+    };
+    room.broadcast(JSON.stringify(payload));
+  }
+
+  static broadcastSystemEvent(args: {
+    room: Party.Room;
+    content: Omit<serverToClient.SystemEvent, "event">;
+  }) {
+    const { room, content } = args;
+    const payload: serverToClient.SystemEvent = {
+      event: "system",
+      ...content,
     };
     room.broadcast(JSON.stringify(payload));
   }

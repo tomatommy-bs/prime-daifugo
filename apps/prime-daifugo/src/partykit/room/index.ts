@@ -1,12 +1,26 @@
-import type * as Party from "partykit/server";
+import * as Party from "partykit/server";
 import * as serverToClient from "../../interface/server-to-client";
 import { MessageManager } from "./logic/message-manager";
 import { messageHandler } from "./logic/message-handler";
 import { ServerMessenger } from "./logic";
 import { ConnectionState } from "@/interface/connection";
+import { ROOM_STATUS } from "@/constants/status";
 
 export default class Server implements Party.Server {
   constructor(readonly room: Party.Room) {}
+
+  async onRequest(req: Party.Request): Promise<Response> {
+    switch (req.method) {
+      case "GET": {
+        const roomStatus = await this.room.storage.get("roomStatus");
+        const body = { roomStatus };
+        const payload = JSON.stringify(body);
+        return new Response(payload, { status: 200 });
+      }
+      default:
+        return new Response("method not allowed", { status: 405 });
+    }
+  }
 
   onConnect(
     conn: Party.Connection<ConnectionState>,
@@ -52,7 +66,7 @@ export default class Server implements Party.Server {
   private initialize() {
     this.room.storage.deleteAlarm();
     this.room.storage.deleteAll();
-
+    this.room.storage.put("roomStatus", ROOM_STATUS.waiting);
     console.log(`room ${this.room.id} initialized`);
   }
 }

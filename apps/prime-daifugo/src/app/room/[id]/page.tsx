@@ -18,6 +18,8 @@ import { useMessageHandler } from "./hooks";
 import { ClientMessenger } from "./client-messenger";
 import * as serverToClient from "../../../interface/server-to-client";
 import Cookies from "js-cookie";
+import ClientRoomManager from "./room-manager";
+import { useRouter } from "next/navigation";
 
 interface Props {
   params: Record<"id", string>;
@@ -41,6 +43,7 @@ const Page = ({ params: { id } }: Props) => {
     onPresence: (presence) => {
       setPresence(presence);
     },
+    onStartGame: () => {},
   });
 
   const ws = usePartySocket({
@@ -61,6 +64,8 @@ const Page = ({ params: { id } }: Props) => {
     ClientMessenger.startGame({ ws });
   };
 
+  const canStartGame = ClientRoomManager.canStartGame(presence);
+
   return (
     <div>
       <h1>Room {id}</h1>
@@ -79,7 +84,9 @@ const Page = ({ params: { id } }: Props) => {
             ready
           </Button>
         )}
-        <Button onClick={handleGameStart}>start game</Button>
+        <Button onClick={handleGameStart} disabled={!canStartGame}>
+          start game
+        </Button>
       </Group>
     </div>
   );
