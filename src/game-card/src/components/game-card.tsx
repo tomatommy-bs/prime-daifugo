@@ -1,6 +1,6 @@
-import { SVGProps } from 'react'
+import type { SVGProps } from 'react'
 import * as svgCards from './icons'
-import { CardId } from '../tools/suit-num'
+import type { CardId } from '../tools/suit-num'
 
 const cardIdToModuleName: Record<CardId, keyof typeof svgCards> = {
   '2C': 'Svg2C',

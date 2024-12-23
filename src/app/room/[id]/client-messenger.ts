@@ -1,5 +1,5 @@
-import * as clientToServer from '@/interface/client-to-server'
-import PartySocket from 'partysocket'
+import type * as clientToServer from '@/interface/client-to-server'
+import type PartySocket from 'partysocket'
 
 export class ClientMessenger {
   static sendMessage(args: { ws: PartySocket; message: string }) {

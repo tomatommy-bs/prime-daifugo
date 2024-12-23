@@ -1,5 +1,5 @@
-import { Button, CheckIcon, CloseIcon, Group, Paper } from '@mantine/core'
-import * as serverToClient from '@/interface/server-to-client'
+import { Button, CheckIcon, Group, Paper } from '@mantine/core'
+import type * as serverToClient from '@/interface/server-to-client'
 import ClientRoomManager from '../room-manager'
 
 interface Props {

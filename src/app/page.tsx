@@ -1,4 +1,4 @@
-import { Button, Group, Text } from '@mantine/core'
+import { Button, Group } from '@mantine/core'
 import Link from 'next/link'
 
 function* primeNumberGenerator(): Generator<number, number> {
@@ -35,7 +35,9 @@ export default function Home() {
               <h2 className="card-title">{room}</h2>
               <div className="card-actions justify-end">
                 <Link className="w-full" href={`room/${room}`}>
-                  <button className="btn w-full btn-primary">Join</button>
+                  <button type="button" className="btn w-full btn-primary">
+                    Join
+                  </button>
                 </Link>
               </div>
             </div>

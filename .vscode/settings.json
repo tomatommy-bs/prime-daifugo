@@ -14,8 +14,8 @@
     "editor.defaultFormatter": "biomejs.biome"
   },
   "editor.codeActionsOnSave": {
-    "quickfix.biome": true,
-    "source.organizeImports.biome": true
+    "quickfix.biome": "explicit",
+    "source.organizeImports.biome": "explicit"
   },
   // gitmoji
   "gitmoji.outputType": "emoji", // 文字列形式で絵文字を出力する

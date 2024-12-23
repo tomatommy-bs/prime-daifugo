@@ -1,11 +1,8 @@
-import * as Party from 'partykit/server'
-import * as serverToClient from '../../interface/server-to-client'
-import { MessageManager } from './logic/message-manager'
+import type * as Party from 'partykit/server'
 import { messageHandler } from './logic/message-handler'
 import { ServerMessenger } from './logic'
-import { ConnectionState } from '@/interface/connection'
+import type { ConnectionState } from '@/interface/connection'
 import { ROOM_STATUS } from '@/constants/status'
-import assert from 'assert'
 
 export default class Server implements Party.Server {
   constructor(readonly room: Party.Room) {}

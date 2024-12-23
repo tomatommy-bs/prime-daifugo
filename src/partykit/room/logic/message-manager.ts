@@ -1,6 +1,6 @@
 import type * as Party from 'partykit/server'
 import { clientToServerSchema } from '@/interface/client-to-server'
-import { ConnectionState } from '@/interface/connection'
+import type { ConnectionState } from '@/interface/connection'
 
 interface Event {
   onChat?: (room: Party.Room, message: string, sender: Party.Connection<ConnectionState>) => void

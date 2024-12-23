@@ -1,7 +1,7 @@
-import assert from 'assert'
+import assert from 'node:assert/strict'
+import { ROOM_STATUS } from '@/constants/status'
 import { MessageManager } from './message-manager'
 import { ServerMessenger } from './server-messenger'
-import { ROOM_STATUS } from '@/constants/status'
 
 export const messageHandler = new MessageManager({
   onChat: (room, message, sender) => {
@@ -40,7 +40,7 @@ export const messageHandler = new MessageManager({
     ServerMessenger.broadcastRoomStatus({ room, status: ROOM_STATUS.playing })
   },
 
-  onDraw: async (room, sender) => {
+  onDraw: (_room, sender) => {
     assert(sender.state)
   },
 })

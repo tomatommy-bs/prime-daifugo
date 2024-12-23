@@ -5,12 +5,13 @@ import type { MiddlewareConfig, NextRequest } from 'next/server'
 export function middleware(request: NextRequest) {
   const name = request.cookies.get('name')?.value
 
-  if (name == undefined || name.length < 3 || name.length > 10) {
+  if (name === undefined || name.length < 3 || name.length > 10) {
     const url = new URL(request.url)
     url.pathname = '/login'
     url.searchParams.set('callback', request.nextUrl.pathname)
     return NextResponse.redirect(url)
-  } else return NextResponse.next()
+  }
+  return NextResponse.next()
 }
 
 // See "Matching Paths" below to learn more

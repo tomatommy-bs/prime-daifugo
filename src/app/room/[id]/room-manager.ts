@@ -1,4 +1,4 @@
-import { PresenceEvent } from '@/interface/server-to-client'
+import type { PresenceEvent } from '@/interface/server-to-client'
 
 export default class ClientRoomManager {
   static canStartGame(presence: PresenceEvent['presence']) {

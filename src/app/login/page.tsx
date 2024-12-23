@@ -22,7 +22,7 @@ export default function Page() {
   }
 
   return (
-    <Paper withBorder p={'md'}>
+    <Paper withBorder={true} p={'md'}>
       <Center>
         <Group align="end">
           <ActionIcon variant="white" pb={8}>

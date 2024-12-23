@@ -1,6 +1,6 @@
-import PartySocket from 'partysocket'
+import type { ROOM_STATUS } from '@/constants/status'
+import type PartySocket from 'partysocket'
 import * as serverToClient from '../../../interface/server-to-client'
-import { ROOM_STATUS } from '@/constants/status'
 
 interface UseMessageHandlerProps {
   onChat?: (message: string, from: string, socket: PartySocket) => void

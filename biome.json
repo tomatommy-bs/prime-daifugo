@@ -22,7 +22,12 @@
       },
       "complexity": {
         "useSimplifiedLogicExpression": "off",
-        "noExcessiveCognitiveComplexity": "off"
+        "noExcessiveCognitiveComplexity": "off",
+        "noStaticOnlyClass": "off"
+      },
+      "correctness": {
+        "noNodejsModules": "off",
+        "useImportExtensions": "off"
       }
     }
   },

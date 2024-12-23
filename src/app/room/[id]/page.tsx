@@ -2,16 +2,15 @@
 
 import usePartySocket from 'partysocket/react'
 import { PARTYKIT_HOST } from '../../../constants/env'
-import { Affix, Avatar, Button, Group, Paper, SimpleGrid, Stack, TextInput } from '@mantine/core'
-import { Fragment, useRef, useState } from 'react'
-import { useListState } from '@mantine/hooks'
+import { Button, } from '@mantine/core'
+import { useState } from 'react'
 import { useMessageHandler } from './hooks'
 import { ClientMessenger } from './client-messenger'
-import * as serverToClient from '../../../interface/server-to-client'
+import type * as serverToClient from '../../../interface/server-to-client'
 import Cookies from 'js-cookie'
 import { notifications } from '@mantine/notifications'
 import { WaitingRoom } from './_ui/waiting-room'
-import { ROOM_STATUS } from '@/constants/status'
+import type { ROOM_STATUS } from '@/constants/status'
 
 interface Props {
   params: Record<'id', string>

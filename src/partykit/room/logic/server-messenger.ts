@@ -1,7 +1,7 @@
+import type { ROOM_STATUS } from '@/constants/status'
+import type { ConnectionState } from '@/interface/connection'
+import type * as serverToClient from '@/interface/server-to-client'
 import type * as Party from 'partykit/server'
-import * as serverToClient from '@/interface/server-to-client'
-import { ConnectionState } from '@/interface/connection'
-import { ROOM_STATUS } from '@/constants/status'
 
 export class ServerMessenger {
   /**
@@ -44,7 +44,9 @@ export class ServerMessenger {
     status?: (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS]
   }) {
     const { room, status } = args
-    if (status == undefined) return
+    if (status === undefined) {
+      return
+    }
     const payload: serverToClient.RoomStatusEvent = {
       event: 'room-status',
       status,

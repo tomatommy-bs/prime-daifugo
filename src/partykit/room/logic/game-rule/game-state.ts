@@ -1,4 +1,4 @@
-import { CardId } from "@/game-card/src"
+import type { CardId } from "@/game-card/src"
 
 
 export interface GameState {
