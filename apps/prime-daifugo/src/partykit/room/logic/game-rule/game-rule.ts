@@ -41,16 +41,22 @@ export const PrimeDaifugoGame: Game<GameState> = {
   name: "prime-daifugo",
   minPlayers: 2,
   maxPlayers: 4,
-  setup: (ctx) => {
+  setup: function (ctx) {
     const deck = _.shuffle([...cardIds]);
 
+    if (
+      ctx.numPlayers > (this.maxPlayers ?? Infinity) ||
+      ctx.numPlayers < (this.minPlayers ?? 0)
+    ) {
+      throw new Error("Invalid number of players");
+    }
     if (deck.length < config.initialNumCards * ctx.numPlayers)
       throw new Error("Not enough cards for all players");
 
     const players: GameState["players"] = {};
     for (const playerID of Object.keys(ctx.activePlayers)) {
       players[playerID] = {
-        hand: _.dropRight(deck, config.initialNumCards),
+        hand: deck.splice(0, config.initialNumCards),
       };
     }
 
