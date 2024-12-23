@@ -25,6 +25,10 @@ interface Event {
     room: Party.Room,
     sender: Party.Connection<ConnectionState>
   ) => void;
+  onDraw?: (
+    room: Party.Room,
+    sender: Party.Connection<ConnectionState>
+  ) => void;
 }
 
 export class MessageManager {
@@ -33,6 +37,7 @@ export class MessageManager {
   onSetReady?: Event["onSetReady"];
   onUnsetReady?: Event["onUnsetReady"];
   onStartGame?: Event["onStartGame"];
+  onDraw?: Event["onDraw"];
 
   constructor(args: Event) {
     this.onChat = args.onChat;
@@ -40,6 +45,7 @@ export class MessageManager {
     this.onSetReady = args.onSetReady;
     this.onUnsetReady = args.onUnsetReady;
     this.onStartGame = args.onStartGame;
+    this.onDraw = args.onDraw;
   }
 
   onMessage(
@@ -64,11 +70,28 @@ export class MessageManager {
           case "start-game":
             this.onStartGame?.(room, sender);
             break;
+          default:
+            throw new Error(msg satisfies never);
         }
         break;
       case "set-name": {
         this.onSetName?.(room, msg.name, sender);
+        break;
       }
+      case "game": {
+        switch (msg.action) {
+          case "draw":
+            this.onDraw?.(room, sender);
+            break;
+          case "pass":
+            break;
+          default:
+            throw new Error(msg satisfies never);
+        }
+        break;
+      }
+      default:
+        throw new Error(msg satisfies never);
     }
   }
 }

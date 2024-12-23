@@ -46,4 +46,13 @@ export class ClientMessenger {
     };
     ws.send(JSON.stringify(payload));
   }
+
+  static draw(args: { ws: PartySocket }) {
+    const { ws } = args;
+    const payload: clientToServer.GameEvent = {
+      event: "game",
+      action: "draw",
+    };
+    ws.send(JSON.stringify(payload));
+  }
 }

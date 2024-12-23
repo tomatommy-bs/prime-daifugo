@@ -82,6 +82,7 @@ const Page = ({ params: { id } }: Props) => {
         onUnsetReady={() => ClientMessenger.unsetReady({ ws })}
       />
       {roomStatus}
+      <Button onClick={() => ClientMessenger.draw({ ws })}>draw</Button>
     </div>
   );
 };

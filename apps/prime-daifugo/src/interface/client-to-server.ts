@@ -22,9 +22,16 @@ const roomEventSchema = z.object({
 });
 export type RoomEvent = z.infer<typeof roomEventSchema>;
 
+const gameEventSchema = z.object({
+  event: z.literal("game"),
+  action: z.union([z.literal("draw"), z.literal("pass")]),
+});
+export type GameEvent = z.infer<typeof gameEventSchema>;
+
 export const clientToServerSchema = z.union([
   chatEventSchema,
   setNameEventSchema,
   roomEventSchema,
+  gameEventSchema,
 ]);
 export type ClientToServer = z.infer<typeof clientToServerSchema>;

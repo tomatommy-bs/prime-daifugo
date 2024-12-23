@@ -38,6 +38,9 @@ export const messageHandler = new MessageManager({
       content: { action: "game-start" },
     });
     ServerMessenger.broadcastRoomStatus({ room, status: ROOM_STATUS.playing });
-    console.log("start game");
+  },
+
+  onDraw: async (room, sender) => {
+    assert(sender.state);
   },
 });
