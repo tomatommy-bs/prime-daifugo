@@ -1,39 +1,39 @@
-import { z } from "zod";
+import { z } from 'zod'
 
 const chatEventSchema = z.object({
-  event: z.literal("chat"),
+  event: z.literal('chat'),
   message: z.string(),
   from: z.string(),
-});
-export type ChatEvent = z.infer<typeof chatEventSchema>;
+})
+export type ChatEvent = z.infer<typeof chatEventSchema>
 
 const presenceEventSchema = z.object({
-  event: z.literal("presence"),
+  event: z.literal('presence'),
   presence: z.array(
     z.object({
       id: z.string(),
       name: z.string(),
-      status: z.enum(["ready", "not-ready"]),
-    })
+      status: z.enum(['ready', 'not-ready']),
+    }),
   ),
-});
-export type PresenceEvent = z.infer<typeof presenceEventSchema>;
+})
+export type PresenceEvent = z.infer<typeof presenceEventSchema>
 
 const roomStatusEventSchema = z.object({
-  event: z.literal("room-status"),
-  status: z.enum(["waiting", "playing"]),
-});
-export type RoomStatusEvent = z.infer<typeof roomStatusEventSchema>;
+  event: z.literal('room-status'),
+  status: z.enum(['waiting', 'playing']),
+})
+export type RoomStatusEvent = z.infer<typeof roomStatusEventSchema>
 
 const systemEventSchema = z.object({
-  event: z.literal("system"),
-  action: z.literal("game-start"),
-});
-export type SystemEvent = z.infer<typeof systemEventSchema>;
+  event: z.literal('system'),
+  action: z.literal('game-start'),
+})
+export type SystemEvent = z.infer<typeof systemEventSchema>
 
 export const serverToClientSchema = z.union([
   chatEventSchema,
   presenceEventSchema,
   roomStatusEventSchema,
   systemEventSchema,
-]);
+])

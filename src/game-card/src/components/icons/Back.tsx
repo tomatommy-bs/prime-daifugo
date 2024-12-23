@@ -1,5 +1,5 @@
-import * as React from "react";
-import type { SVGProps } from "react";
+import * as React from 'react'
+import type { SVGProps } from 'react'
 const SvgBack = (props: SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -11,12 +11,12 @@ const SvgBack = (props: SVGProps<SVGSVGElement>) => (
     {...props}
   >
     <defs>
-      <style>{".back_svg__cls-2{fill:#fff}"}</style>
+      <style>{'.back_svg__cls-2{fill:#fff}'}</style>
     </defs>
     <path
       d="M201.58 10.08A10.08 10.08 0 0 0 191.5 0H10.08A10.08 10.08 0 0 0 0 10.08v262.06a10.08 10.08 0 0 0 10.08 10.08H191.5a10.08 10.08 0 0 0 10.08-10.08z"
       style={{
-        fill: "#020101",
+        fill: '#020101',
       }}
     />
     <path
@@ -52,5 +52,5 @@ const SvgBack = (props: SVGProps<SVGSVGElement>) => (
       className="back_svg__cls-2"
     />
   </svg>
-);
-export default SvgBack;
+)
+export default SvgBack

@@ -1,62 +1,62 @@
-import { Game } from "boardgame.io";
-import { CardId, cardIds } from "@repo/game-card";
+import { Game } from 'boardgame.io'
+import { CardId, cardIds } from '@repo/game-card'
 
 const config = {
   initialNumCards: 8,
-} as const;
+} as const
 
 export interface G {
   players: {
     [playerID: string]: {
-      hand: CardId[];
-    };
-  };
+      hand: CardId[]
+    }
+  }
   /**
    * 現在場に出ているカード
    */
-  field: CardId[];
+  field: CardId[]
   /**
    * 山札
    */
-  deck: CardId[];
+  deck: CardId[]
 }
 
 const arrayPops = <T>(array: T[], num: number): T[] => {
-  const result: T[] = [];
+  const result: T[] = []
   for (let i = 0; i < num; i++) {
-    result.push(array.pop()!);
+    result.push(array.pop()!)
   }
-  return result;
-};
+  return result
+}
 
 export const PrimeDaifugoGame: Game<G, { draw: () => void }> = {
-  name: "prime-daifugo",
+  name: 'prime-daifugo',
   minPlayers: 2,
   maxPlayers: 4,
 
   setup: ({ random, ctx }) => {
-    const playerIds = Object.keys(ctx.activePlayers ?? {});
-    const initialDeck = random.Shuffle([...cardIds]);
+    const playerIds = Object.keys(ctx.activePlayers ?? {})
+    const initialDeck = random.Shuffle([...cardIds])
 
-    const players: G["players"] = {};
+    const players: G['players'] = {}
     for (const playerID of playerIds) {
       players[playerID] = {
         hand: arrayPops(initialDeck, config.initialNumCards),
-      };
+      }
     }
     const G: G = {
       players: players,
       deck: initialDeck,
       field: [],
-    };
-    return G;
+    }
+    return G
   },
 
   /**
    * いづれかのプレイヤーの手札が0になったら終了
    */
   endIf: ({ G }) => {
-    return Object.values(G.players).some((player) => player.hand.length === 0);
+    return Object.values(G.players).some((player) => player.hand.length === 0)
   },
 
   moves: {
@@ -74,10 +74,10 @@ export const PrimeDaifugoGame: Game<G, { draw: () => void }> = {
      * カードを引く
      */
     draw: ({ G, ctx, events }) => {
-      const player = G.players[ctx.currentPlayer];
-      player?.hand.push(G.deck.pop()!);
-      console.log("player", player);
-      events.endTurn();
+      const player = G.players[ctx.currentPlayer]
+      player?.hand.push(G.deck.pop()!)
+      console.log('player', player)
+      events.endTurn()
     },
   },
-};
+}

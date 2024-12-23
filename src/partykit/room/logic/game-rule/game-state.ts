@@ -1,17 +1,18 @@
-import { CardId } from "@repo/game-card";
+import { CardId } from "@/game-card/src"
+
 
 export interface GameState {
   players: {
     [playerID: string]: {
-      hand: CardId[];
-    };
-  };
+      hand: CardId[]
+    }
+  }
   /**
    * 現在場に出ているカード
    */
-  field: CardId[];
+  field: CardId[]
   /**
    * 山札
    */
-  deck: CardId[];
+  deck: CardId[]
 }

@@ -1,5 +1,5 @@
-import * as React from "react";
-import type { SVGProps } from "react";
+import * as React from 'react'
+import type { SVGProps } from 'react'
 const SvgAd = (props: SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -37,14 +37,14 @@ const SvgAd = (props: SVGProps<SVGSVGElement>) => (
         <stop
           offset={0}
           style={{
-            stopColor: "#df0000",
+            stopColor: '#df0000',
             stopOpacity: 1,
           }}
         />
         <stop
           offset={1}
           style={{
-            stopColor: "#df0000",
+            stopColor: '#df0000',
             stopOpacity: 0.64122134,
           }}
         />
@@ -53,14 +53,14 @@ const SvgAd = (props: SVGProps<SVGSVGElement>) => (
         <stop
           offset={0}
           style={{
-            stopColor: "#fff",
+            stopColor: '#fff',
             stopOpacity: 0.4351145,
           }}
         />
         <stop
           offset={1}
           style={{
-            stopColor: "#000",
+            stopColor: '#000',
             stopOpacity: 0,
           }}
         />
@@ -78,16 +78,16 @@ const SvgAd = (props: SVGProps<SVGSVGElement>) => (
     </defs>
     <g
       style={{
-        fillRule: "nonzero",
-        clipRule: "nonzero",
-        stroke: "#000",
+        fillRule: 'nonzero',
+        clipRule: 'nonzero',
+        stroke: '#000',
         strokeMiterlimit: 4,
       }}
     >
       <path
         d="M166.837 235.548c0 3.777-3.087 6.869-6.871 6.869H7.11c-3.775 0-6.861-3.092-6.861-6.87V7.12C.25 3.343 3.336.25 7.11.25h152.856c3.784 0 6.87 3.093 6.87 6.87z"
         style={{
-          fill: "#fff",
+          fill: '#fff',
           strokeWidth: 0.5,
         }}
       />
@@ -98,32 +98,32 @@ const SvgAd = (props: SVGProps<SVGSVGElement>) => (
       y={28.013}
       style={{
         fontSize: 32,
-        fontStyle: "normal",
+        fontStyle: 'normal',
         fontWeight: 400,
-        lineHeight: "125%",
+        lineHeight: '125%',
         letterSpacing: 0,
         wordSpacing: 0,
-        fill: "#df0000",
+        fill: '#df0000',
         fillOpacity: 1,
-        stroke: "none",
-        fontFamily: "Bitstream Vera Sans",
+        stroke: 'none',
+        fontFamily: 'Bitstream Vera Sans',
       }}
     >
       <tspan
         x={6.246}
         y={28.013}
         style={{
-          fontStyle: "normal",
-          fontVariant: "normal",
+          fontStyle: 'normal',
+          fontVariant: 'normal',
           fontWeight: 400,
-          fontStretch: "normal",
-          fontFamily: "Arial",
-          InkscapeFontSpecification: "Arial",
-          fill: "#df0000",
+          fontStretch: 'normal',
+          fontFamily: 'Arial',
+          InkscapeFontSpecification: 'Arial',
+          fill: '#df0000',
           fillOpacity: 1,
         }}
       >
-        {"A"}
+        {'A'}
       </tspan>
     </text>
     <text
@@ -132,15 +132,15 @@ const SvgAd = (props: SVGProps<SVGSVGElement>) => (
       y={-213.515}
       style={{
         fontSize: 32,
-        fontStyle: "normal",
+        fontStyle: 'normal',
         fontWeight: 400,
-        lineHeight: "125%",
+        lineHeight: '125%',
         letterSpacing: 0,
         wordSpacing: 0,
-        fill: "#df0000",
+        fill: '#df0000',
         fillOpacity: 1,
-        stroke: "none",
-        fontFamily: "Bitstream Vera Sans",
+        stroke: 'none',
+        fontFamily: 'Bitstream Vera Sans',
       }}
       transform="scale(-1)"
     >
@@ -148,23 +148,23 @@ const SvgAd = (props: SVGProps<SVGSVGElement>) => (
         x={-161.088}
         y={-213.515}
         style={{
-          fontStyle: "normal",
-          fontVariant: "normal",
+          fontStyle: 'normal',
+          fontVariant: 'normal',
           fontWeight: 400,
-          fontStretch: "normal",
-          fill: "#df0000",
+          fontStretch: 'normal',
+          fill: '#df0000',
           fillOpacity: 1,
-          fontFamily: "Arial",
-          InkscapeFontSpecification: "Arial",
+          fontFamily: 'Arial',
+          InkscapeFontSpecification: 'Arial',
         }}
       >
-        {"A"}
+        {'A'}
       </tspan>
     </text>
     <path
       d="M3.243-4.725C1.126-7.59 0-10.5 0-10.5s-1.126 2.91-3.243 5.775C-5.361-1.862-8 0-8 0s2.639 1.861 4.757 4.726C-1.126 7.59 0 10.5 0 10.5s1.126-2.91 3.243-5.774C5.361 1.861 8 0 8 0S5.361-1.862 3.243-4.725"
       style={{
-        fill: "url(#AD_svg__h)",
+        fill: 'url(#AD_svg__h)',
         fillOpacity: 1,
       }}
       transform="translate(82.284 116.888)scale(5.95137)"
@@ -172,27 +172,27 @@ const SvgAd = (props: SVGProps<SVGSVGElement>) => (
     <path
       d="M117.301 604.266s-8.067-94.95 22.857-122.857c34.761-31.369 140-11.429 140-11.429s-71.54 24.838-100 48.572c-27.21 22.692-62.857 85.714-62.857 85.714"
       style={{
-        fill: "url(#AD_svg__i)",
+        fill: 'url(#AD_svg__i)',
         fillOpacity: 1,
-        stroke: "none",
-        filter: "url(#AD_svg__j)",
+        stroke: 'none',
+        filter: 'url(#AD_svg__j)',
       }}
       transform="matrix(-.2491 .04028 -.04172 -.25798 131.779 225.09)"
     />
     <path
       d="M3.243-4.725C1.126-7.59 0-10.5 0-10.5s-1.126 2.91-3.243 5.775C-5.361-1.862-8 0-8 0s2.639 1.861 4.757 4.726C-1.126 7.59 0 10.5 0 10.5s1.126-2.91 3.243-5.774C5.361 1.861 8 0 8 0S5.361-1.862 3.243-4.725"
       style={{
-        fill: "#df0000",
+        fill: '#df0000',
       }}
       transform="matrix(1.4769 0 0 1.4769 16.968 44.236)"
     />
     <path
       d="M3.243-4.725C1.126-7.59 0-10.5 0-10.5s-1.126 2.91-3.243 5.775C-5.361-1.862-8 0-8 0s2.639 1.861 4.757 4.726C-1.126 7.59 0 10.5 0 10.5s1.126-2.91 3.243-5.774C5.361 1.861 8 0 8 0S5.361-1.862 3.243-4.725"
       style={{
-        fill: "#df0000",
+        fill: '#df0000',
       }}
       transform="matrix(1.4769 0 0 1.4769 150.62 198.503)"
     />
   </svg>
-);
-export default SvgAd;
+)
+export default SvgAd

@@ -1,7 +1,7 @@
-import assert from "assert";
-import { MessageManager } from "./message-manager";
-import { ServerMessenger } from "./server-messenger";
-import { ROOM_STATUS } from "@/constants/status";
+import assert from 'assert'
+import { MessageManager } from './message-manager'
+import { ServerMessenger } from './server-messenger'
+import { ROOM_STATUS } from '@/constants/status'
 
 export const messageHandler = new MessageManager({
   onChat: (room, message, sender) => {
@@ -9,38 +9,38 @@ export const messageHandler = new MessageManager({
       room,
       message: message,
       from: sender.id,
-    });
+    })
   },
 
   onSetName: (room, name, sender) => {
-    assert(sender.state);
-    sender.setState({ ...sender.state, name: name });
-    ServerMessenger.broadcastPresence({ room });
+    assert(sender.state)
+    sender.setState({ ...sender.state, name: name })
+    ServerMessenger.broadcastPresence({ room })
   },
 
   onSetReady: (room, sender) => {
-    assert(sender.state);
-    sender.setState({ ...sender.state, status: "ready" });
-    ServerMessenger.broadcastPresence({ room });
+    assert(sender.state)
+    sender.setState({ ...sender.state, status: 'ready' })
+    ServerMessenger.broadcastPresence({ room })
   },
 
   onUnsetReady: (room, sender) => {
-    assert(sender.state);
-    sender.setState({ ...sender.state, status: "not-ready" });
-    ServerMessenger.broadcastPresence({ room });
+    assert(sender.state)
+    sender.setState({ ...sender.state, status: 'not-ready' })
+    ServerMessenger.broadcastPresence({ room })
   },
 
   onStartGame: async (room, sender) => {
-    assert(sender.state);
-    await room.storage.put("roomStatus", ROOM_STATUS.playing);
+    assert(sender.state)
+    await room.storage.put('roomStatus', ROOM_STATUS.playing)
     ServerMessenger.broadcastSystemEvent({
       room,
-      content: { action: "game-start" },
-    });
-    ServerMessenger.broadcastRoomStatus({ room, status: ROOM_STATUS.playing });
+      content: { action: 'game-start' },
+    })
+    ServerMessenger.broadcastRoomStatus({ room, status: ROOM_STATUS.playing })
   },
 
   onDraw: async (room, sender) => {
-    assert(sender.state);
+    assert(sender.state)
   },
-});
+})

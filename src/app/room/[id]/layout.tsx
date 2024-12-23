@@ -1,5 +1,5 @@
-import { Affix, Button, Container } from "@mantine/core";
-import Link from "next/link";
+import { Affix, Button, Container } from '@mantine/core'
+import Link from 'next/link'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -15,5 +15,5 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </footer>
       </Container>
     </section>
-  );
+  )
 }

@@ -1,24 +1,24 @@
-import type * as Party from "partykit/server";
-import * as serverToClient from "@/interface/server-to-client";
-import { ConnectionState } from "@/interface/connection";
-import { ROOM_STATUS } from "@/constants/status";
+import type * as Party from 'partykit/server'
+import * as serverToClient from '@/interface/server-to-client'
+import { ConnectionState } from '@/interface/connection'
+import { ROOM_STATUS } from '@/constants/status'
 
 export class ServerMessenger {
   /**
    * 主に chat イベントを送信する
    */
   static broadcastMessage(args: {
-    room: Party.Room;
-    message: string;
-    from: string;
+    room: Party.Room
+    message: string
+    from: string
   }) {
-    const { room, message, from } = args;
+    const { room, message, from } = args
     const payload: serverToClient.ChatEvent = {
-      event: "chat",
+      event: 'chat',
       message: message,
       from,
-    };
-    room.broadcast(JSON.stringify(payload));
+    }
+    room.broadcast(JSON.stringify(payload))
   }
 
   /**
@@ -26,32 +26,30 @@ export class ServerMessenger {
    * ルーム内の全員のプレゼンス情報を送信する
    */
   static broadcastPresence(args: { room: Party.Room }) {
-    const { room } = args;
-    const connections = Array.from(room.getConnections<ConnectionState>()).map(
-      (conn) => ({
-        id: conn.id,
-        name: conn.state?.name || conn.id.substring(0, 8),
-        status: conn.state?.status || "not-ready",
-      })
-    );
+    const { room } = args
+    const connections = Array.from(room.getConnections<ConnectionState>()).map((conn) => ({
+      id: conn.id,
+      name: conn.state?.name || conn.id.substring(0, 8),
+      status: conn.state?.status || 'not-ready',
+    }))
     const payload: serverToClient.PresenceEvent = {
-      event: "presence",
+      event: 'presence',
       presence: connections,
-    };
-    room.broadcast(JSON.stringify(payload));
+    }
+    room.broadcast(JSON.stringify(payload))
   }
 
   static broadcastRoomStatus(args: {
-    room: Party.Room;
-    status?: (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS];
+    room: Party.Room
+    status?: (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS]
   }) {
-    const { room, status } = args;
-    if (status == undefined) return;
+    const { room, status } = args
+    if (status == undefined) return
     const payload: serverToClient.RoomStatusEvent = {
-      event: "room-status",
+      event: 'room-status',
       status,
-    };
-    room.broadcast(JSON.stringify(payload));
+    }
+    room.broadcast(JSON.stringify(payload))
   }
 
   /**
@@ -59,14 +57,14 @@ export class ServerMessenger {
    * - action: "game-start" でゲーム開始を通知する
    */
   static broadcastSystemEvent(args: {
-    room: Party.Room;
-    content: Omit<serverToClient.SystemEvent, "event">;
+    room: Party.Room
+    content: Omit<serverToClient.SystemEvent, 'event'>
   }) {
-    const { room, content } = args;
+    const { room, content } = args
     const payload: serverToClient.SystemEvent = {
-      event: "system",
+      event: 'system',
       ...content,
-    };
-    room.broadcast(JSON.stringify(payload));
+    }
+    room.broadcast(JSON.stringify(payload))
   }
 }
