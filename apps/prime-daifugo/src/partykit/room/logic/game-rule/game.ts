@@ -1,12 +1,11 @@
 import { Game } from "boardgame.io";
-import { Client } from "boardgame.io/react";
 import { CardId, cardIds } from "@repo/game-card";
 
 const config = {
   initialNumCards: 8,
 } as const;
 
-interface G {
+export interface G {
   players: {
     [playerID: string]: {
       hand: CardId[];
@@ -30,11 +29,10 @@ const arrayPops = <T>(array: T[], num: number): T[] => {
   return result;
 };
 
-const PrimeDaifugo: Game<G> = {
+export const PrimeDaifugoGame: Game<G, { draw: () => void }> = {
   name: "prime-daifugo",
   minPlayers: 2,
   maxPlayers: 4,
-  turn: { minMoves: 1, maxMoves: 1 },
 
   setup: ({ random, ctx }) => {
     const playerIds = Object.keys(ctx.activePlayers ?? {});
@@ -75,6 +73,11 @@ const PrimeDaifugo: Game<G> = {
     /**
      * カードを引く
      */
-    draw: ({ G, ctx, events }) => {},
+    draw: ({ G, ctx, events }) => {
+      const player = G.players[ctx.currentPlayer];
+      player?.hand.push(G.deck.pop()!);
+      console.log("player", player);
+      events.endTurn();
+    },
   },
 };
