@@ -1,4 +1,4 @@
-import { cardIds } from "@repo/game-card";
+import { cardIds } from "@/game-card/src";
 import { GameState } from "./game-state";
 import _ from "lodash";
 
