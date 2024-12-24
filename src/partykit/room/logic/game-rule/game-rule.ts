@@ -1,17 +1,20 @@
 import { cardIds } from '@/game-card/src'
 import _ from 'lodash'
-import type { GameState } from './game-state'
+import type { PrimeDaifugoGameState } from './game-state'
 
-export type StageName = 'observe' | 'wait' | 'play' | 'end'
+const INVALID_MOVE = 'INVALID_MOVE'
+export type PlayerStage = 'observe' | 'wait' | 'play' | 'end'
 
-export interface Ctx<stage = string> {
+export interface Ctx {
   numPlayers: number
   activePlayers: {
-    [playerID: string]: stage
+    [playerID: string]: PlayerStage
   }
+  currentPlayer: string
+  playOrder: string[]
 }
 
-interface Game<S = GameState> {
+export interface Game<S = unknown> {
   name?: string
   minPlayers?: number
   maxPlayers?: number
@@ -29,15 +32,20 @@ interface Game<S = GameState> {
   setup: (ctx: Ctx) => S
 }
 
-interface MoveMap<S = unknown> {
-  [moveName: string]: (ctx: Ctx) => GameState
+export type MoveFnArgs<S = unknown> = { ctx: Ctx; state: S }
+export type MoveFn<S = unknown> = (
+  args: MoveFnArgs<S>,
+  ...input: unknown[]
+) => S | typeof INVALID_MOVE
+export interface MoveMap<S = unknown> {
+  [moveName: string]: MoveFn<S>
 }
 
 const config = {
   initialNumCards: 8,
 } as const
 
-export const PrimeDaifugoGame: Game<GameState> = {
+export const PrimeDaifugoGame = {
   name: 'prime-daifugo',
   minPlayers: 2,
   maxPlayers: 4,
@@ -54,17 +62,34 @@ export const PrimeDaifugoGame: Game<GameState> = {
       throw new Error('Not enough cards for all players')
     }
 
-    const players: GameState['players'] = {}
+    const players: PrimeDaifugoGameState['players'] = {}
     for (const playerID of Object.keys(ctx.activePlayers)) {
       players[playerID] = {
         hand: deck.splice(0, config.initialNumCards),
+        drawFlag: true,
       }
     }
 
     return {
+      playersStage: {},
       players,
       field: [],
       deck: deck,
     }
   },
-}
+  moves: {
+    draw: ({ ctx, state }) => {
+      const player = state.players[ctx.currentPlayer]
+      if (state.deck.length === 0) {
+        return INVALID_MOVE
+      }
+      if (player.drawFlag === false) {
+        return INVALID_MOVE
+      }
+      const drawnCard = state.deck.pop()
+      player.hand.push(drawnCard)
+      player.drawFlag = false
+      return state
+    },
+  },
+} as const satisfies Game<PrimeDaifugoGameState>

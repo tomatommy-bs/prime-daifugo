@@ -1,10 +1,11 @@
-import type { CardId } from "@/game-card/src"
+import type { CardId } from '@/game-card/src'
 
-
-export interface GameState {
+export interface PrimeDaifugoGameState {
   players: {
     [playerID: string]: {
       hand: CardId[]
+      /** 山札からひく権利 */
+      drawFlag: boolean
     }
   }
   /**

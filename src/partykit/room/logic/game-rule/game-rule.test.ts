@@ -1,14 +1,16 @@
-import { PrimeDaifugoGame } from './game-rule'
+import { type Ctx, PrimeDaifugoGame } from './game-rule'
 
 describe('PrimeDaifugoGame', () => {
   describe('setup', () => {
     it('各プレイヤーに正しい数のカードが配られること', () => {
-      const ctx = {
+      const ctx: Ctx = {
         numPlayers: 2,
         activePlayers: {
           '0': 'play',
           '1': 'play',
         },
+        currentPlayer: '0',
+        playOrder: ['0', '1'],
       }
 
       const initialState = PrimeDaifugoGame.setup(ctx)
@@ -25,7 +27,7 @@ describe('PrimeDaifugoGame', () => {
     })
 
     it('プレイヤー数が多すぎる場合はエラーを投げること', () => {
-      const ctx = {
+      const ctx: Ctx = {
         numPlayers: 5,
         activePlayers: {
           '0': 'play',
@@ -33,6 +35,17 @@ describe('PrimeDaifugoGame', () => {
           '2': 'play',
           '3': 'play',
           '4': 'play',
+        },
+      }
+
+      expect(() => PrimeDaifugoGame.setup(ctx)).toThrow()
+    })
+
+    it('プレイヤー数が少なすぎる場合はエラーを投げること', () => {
+      const ctx = {
+        numPlayers: 1,
+        activePlayers: {
+          '0': 'play',
         },
       }
 
