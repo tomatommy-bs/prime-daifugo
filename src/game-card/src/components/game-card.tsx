@@ -1,8 +1,8 @@
 import type { SVGProps } from 'react'
-import * as svgCards from './icons'
 import type { CardId } from '../tools/suit-num'
+import * as svgCards from './icons'
 
-const cardIdToModuleName: Record<CardId, keyof typeof svgCards> = {
+const cardIdToModuleName: Record<CardId | 'Back', keyof typeof svgCards> = {
   '2C': 'Svg2C',
   '2D': 'Svg2D',
   '2H': 'Svg2H',
@@ -55,10 +55,11 @@ const cardIdToModuleName: Record<CardId, keyof typeof svgCards> = {
   KD: 'Kd',
   KH: 'Kh',
   KS: 'Ks',
+  Back: 'Back',
 } as const
 
 interface Props extends SVGProps<SVGSVGElement> {
-  card: CardId
+  card: CardId | 'Back'
 }
 
 export const GameCard: React.FC<Props> = ({ card, ...props }) => {

@@ -27,7 +27,8 @@ export type RoomStatusEvent = z.infer<typeof roomStatusEventSchema>
 
 const systemEventSchema = z.object({
   event: z.literal('system'),
-  action: z.literal('game-start'),
+  action: z.enum(['game-start', 'draw', 'pass']),
+  gameState: z.any(),
 })
 export type SystemEvent = z.infer<typeof systemEventSchema>
 

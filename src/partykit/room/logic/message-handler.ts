@@ -1,3 +1,4 @@
+// biome-ignore lint/style/useNodejsImportProtocol: <explanation>
 import assert from 'assert'
 import { ROOM_STATUS } from '@/constants/status'
 import { type Ctx, PrimeDaifugoGame } from './game-rule'
@@ -44,7 +45,7 @@ export const messageHandler = new MessageManager({
     await room.storage.put('gameCtx', party.ctx)
     ServerMessenger.broadcastSystemEvent({
       room,
-      content: { action: 'game-start' },
+      content: { action: 'game-start', gameState: party.getState() },
     })
   },
 
@@ -66,6 +67,11 @@ export const messageHandler = new MessageManager({
     party.move.draw('1')
     party.move.pass('1')
     console.log(party.getState())
+
+    ServerMessenger.broadcastSystemEvent({
+      room,
+      content: { action: 'draw', gameState: party.getState() },
+    })
 
     await room.storage.put('gameState', party.getState())
     await room.storage.put('gameCtx', party.ctx)

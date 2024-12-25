@@ -1,11 +1,14 @@
 import type { ROOM_STATUS } from '@/constants/status'
+import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
 import type PartySocket from 'partysocket'
 import * as serverToClient from '../../../interface/server-to-client'
 
 interface UseMessageHandlerProps {
   onChat?: (message: string, from: string, socket: PartySocket) => void
   onPresence?: (presence: serverToClient.PresenceEvent['presence']) => void
-  onStartGame?: () => void
+  onStartGame?: (gameState: PrimeDaifugoGameState) => void
+  onDraw?: (gameState: PrimeDaifugoGameState) => void
+  onPass?: (gameState: PrimeDaifugoGameState) => void
   onRoomStatus?: (status: (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS]) => void
 }
 
@@ -23,7 +26,13 @@ export const useMessageHandler = (props: UseMessageHandlerProps) => {
       case 'system': {
         switch (data.action) {
           case 'game-start':
-            props.onStartGame?.()
+            props.onStartGame?.(data.gameState)
+            break
+          case 'draw':
+            props.onDraw?.(data.gameState)
+            break
+          case 'pass':
+            props.onPass?.(data.gameState)
             break
           default:
             throw new Error(data.action satisfies never)

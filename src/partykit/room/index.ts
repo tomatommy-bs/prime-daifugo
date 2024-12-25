@@ -62,7 +62,7 @@ export default class Server implements Party.Server {
   }
 
   onAlarm(): void | Promise<void> {
-    console.log(`room  alarmed`)
+    console.log('room  alarmed')
   }
 
   private initialize() {
