@@ -47,6 +47,7 @@ export const messageHandler = new MessageManager({
       room,
       content: { action: 'game-start', gameState: party.getState() },
     })
+    ServerMessenger.broadcastRoomStatus({ room, status: ROOM_STATUS.playing })
   },
 
   onDraw: async (room, sender) => {

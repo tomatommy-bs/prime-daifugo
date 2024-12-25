@@ -1,3 +1,4 @@
+import { PrimeDaifugoGameStateSchema } from '@/partykit/room/logic/game-rule/game-state'
 import { z } from 'zod'
 
 const chatEventSchema = z.object({
@@ -28,7 +29,7 @@ export type RoomStatusEvent = z.infer<typeof roomStatusEventSchema>
 const systemEventSchema = z.object({
   event: z.literal('system'),
   action: z.enum(['game-start', 'draw', 'pass']),
-  gameState: z.any(),
+  gameState: PrimeDaifugoGameStateSchema,
 })
 export type SystemEvent = z.infer<typeof systemEventSchema>
 
