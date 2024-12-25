@@ -15,10 +15,12 @@ export default function Page() {
     e.preventDefault()
     Cookies.set('name', name, { expires: 365 })
     const callback = searchParams.get('callback')
-    typeof callback == 'string'
-      ? // CHECK: router.push() では, middleware の cache 処理によりすでに `/room/[id]` からリダイレクトされているため, ページ遷移が行われない
-        (location.pathname = callback)
-      : router.push('/')
+    if (typeof callback === 'string') {
+      // CHECK: router.push() では, middleware の cache 処理によりすでに `/room/[id]` からリダイレクトされているため, ページ遷移が行われない
+      location.pathname = callback
+    } else {
+      router.push('/')
+    }
   }
 
   return (
