@@ -31,6 +31,27 @@ describe('GameParty', () => {
       expect(state.field).toHaveLength(0)
       expect(state.deck.length).toBe(52 - 8 * 2)
     })
+
+    it('state を import してインスタンスが生成されること', () => {
+      // state を生成
+      const party = new GameParty({
+        game: PrimeDaifugoGame,
+        numPlayers: 2,
+      })
+      const exportedState = party.getState()
+      const exportedCtx = party.ctx
+
+      // state を import してインスタンスを生成
+      const party2 = new GameParty({
+        game: PrimeDaifugoGame,
+        activePlayers: exportedCtx.activePlayers,
+        currentPlayer: exportedCtx.currentPlayer,
+        playOrder: exportedCtx.playOrder,
+        state: exportedState,
+      })
+      const importedState = party2.getState()
+      expect(importedState).toEqual(exportedState)
+    })
   })
 
   describe('move.draw', () => {

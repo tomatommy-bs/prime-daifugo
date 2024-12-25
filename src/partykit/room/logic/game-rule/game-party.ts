@@ -20,7 +20,7 @@ type ExtractStateFromGame<G extends Game> = G extends Game<infer S> ? S : never
 export class GameParty<G extends Game = Game> {
   game: G
   private state: ExtractStateFromGame<G>
-  ctx: Ctx
+  readonly ctx: Ctx
   move: {
     [K in keyof G['moves']]: (playerId: string, ...args: Tail<Parameters<G['moves'][K]>>) => void
   }
