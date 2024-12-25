@@ -131,6 +131,8 @@ export const cardIds = [
   'KD',
 ] as const
 
+export const cardIdSet = new Set(cardIds)
+
 export type CardSuit = (typeof cardSuit)[keyof typeof cardSuit]
 export type CardNum = (typeof cardNum)[keyof typeof cardNum]
 export type CardId = (typeof cardIds)[number]

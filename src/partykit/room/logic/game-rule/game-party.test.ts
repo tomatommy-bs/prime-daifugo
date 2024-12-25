@@ -104,4 +104,37 @@ describe('GameParty', () => {
       expect(party.ctx.currentPlayer).toBe('0')
     })
   })
+
+  describe('move.submit', () => {
+    it('現在のプレイヤーのみがmoveを実行できること', () => {
+      const party = new GameParty({
+        game: PrimeDaifugoGame,
+        numPlayers: 2,
+      })
+
+      const state = party.getState()
+      const initialDeckLength = state.deck.length
+      const initialHandLength = state.players['0'].hand.length
+      const topCard = state.players['0'].hand[0]
+      expect(party.ctx.currentPlayer).toBe('0')
+      expect(state.field).toHaveLength(0)
+
+      // 他のプレイヤー(1)は出せない
+      party.move.submit('1', [state.players['1'].hand[0]])
+      expect(state.deck.length).toBe(initialDeckLength)
+      expect(state.players['1'].hand.length).toBe(initialHandLength)
+
+      // 現在のプレイヤー(0)が出せる
+      party.move.submit('0', [state.players['0'].hand[0]])
+      expect(state.deck.length).toBe(initialDeckLength)
+      expect(state.players['0'].hand.length).toBe(initialHandLength - 1)
+
+      // field に出したカードが追加されている
+      expect(state.field).toHaveLength(1)
+      expect(state.field[0]).toEqual([topCard])
+
+      // active player が変わる
+      expect(party.ctx.currentPlayer).toBe('1')
+    })
+  })
 })

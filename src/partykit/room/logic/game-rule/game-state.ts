@@ -11,7 +11,7 @@ export interface PrimeDaifugoGameState {
   /**
    * 現在場に出ているカード
    */
-  field: CardId[]
+  field: CardId[][]
   /**
    * 山札
    */

@@ -1,4 +1,4 @@
-import { cardIds } from '@/game-card/src'
+import { type CardId, cardIds } from '@/game-card/src'
 import _ from 'lodash'
 import type { PrimeDaifugoGameState } from './game-state'
 
@@ -99,6 +99,26 @@ export const PrimeDaifugoGame = {
     pass: ({ ctx, state, events }) => {
       const player = state.players[ctx.currentPlayer]
       player.drawRight = true
+      events.endTurn()
+      return state
+    },
+
+    submit: ({ ctx, state, events }, submitCardIds: CardId[]) => {
+      const player = state.players[ctx.currentPlayer]
+
+      // 出すカードがない
+      if (submitCardIds.length === 0) {
+        return INVALID_MOVE
+      }
+      // 手札にないカードを出そうとしている
+      if (submitCardIds.some((submitCardId) => !player.hand.includes(submitCardId))) {
+        return INVALID_MOVE
+      }
+
+      // カードを出す
+      state.field.push(submitCardIds) // 場に出す
+      _.pullAll(player.hand, submitCardIds) // 手札から削除
+
       events.endTurn()
       return state
     },
