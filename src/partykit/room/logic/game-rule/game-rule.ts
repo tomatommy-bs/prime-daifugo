@@ -2,7 +2,7 @@ import { cardIds } from '@/game-card/src'
 import _ from 'lodash'
 import type { PrimeDaifugoGameState } from './game-state'
 
-const INVALID_MOVE = 'INVALID_MOVE'
+export const INVALID_MOVE = 'INVALID_MOVE'
 export type PlayerStage = 'observe' | 'wait' | 'play' | 'end'
 
 export interface Ctx {
@@ -78,7 +78,7 @@ export const PrimeDaifugoGame = {
     }
   },
   moves: {
-    draw: ({ ctx, state }) => {
+    draw: ({ ctx, state }, numCards: number) => {
       const player = state.players[ctx.currentPlayer]
       if (state.deck.length === 0) {
         return INVALID_MOVE
