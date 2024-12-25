@@ -1,4 +1,3 @@
-
 import type { SVGProps } from 'react'
 const SvgQc = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -9,6 +8,7 @@ const SvgQc = (props: SVGProps<SVGSVGElement>) => (
     viewBox="0 0 167.087 242.667"
     {...props}
   >
+    <title>Queen of Clubs</title>
     <g
       style={{
         fillRule: 'nonzero',
@@ -48,7 +48,6 @@ const SvgQc = (props: SVGProps<SVGSVGElement>) => (
           fontWeight: 400,
           fontStretch: 'normal',
           fontFamily: 'Arial',
-          InkscapeFontSpecification: 'Arial',
         }}
       >
         {'Q'}
@@ -162,7 +161,6 @@ const SvgQc = (props: SVGProps<SVGSVGElement>) => (
           fontWeight: 400,
           fontStretch: 'normal',
           fontFamily: 'Arial',
-          InkscapeFontSpecification: 'Arial',
         }}
       >
         {'Q'}

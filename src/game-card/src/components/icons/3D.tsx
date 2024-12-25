@@ -1,4 +1,3 @@
-
 import type { SVGProps } from 'react'
 const Svg3D = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -9,6 +8,7 @@ const Svg3D = (props: SVGProps<SVGSVGElement>) => (
     viewBox="0 0 167.087 242.667"
     {...props}
   >
+    <title>3 of Diamonds</title>
     <g
       style={{
         fillRule: 'nonzero',
@@ -53,7 +53,6 @@ const Svg3D = (props: SVGProps<SVGSVGElement>) => (
           fill: '#df0000',
           fillOpacity: 1,
           fontFamily: 'Arial',
-          InkscapeFontSpecification: 'Arial',
         }}
       >
         {'3'}
@@ -88,7 +87,6 @@ const Svg3D = (props: SVGProps<SVGSVGElement>) => (
           fill: '#df0000',
           fillOpacity: 1,
           fontFamily: 'Arial',
-          InkscapeFontSpecification: 'Arial',
         }}
       >
         {'3'}

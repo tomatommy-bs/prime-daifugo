@@ -1,4 +1,3 @@
-
 import type { SVGProps } from 'react'
 const Svg10S = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -9,6 +8,7 @@ const Svg10S = (props: SVGProps<SVGSVGElement>) => (
     viewBox="0 0 167.087 242.667"
     {...props}
   >
+    <title>10 of Spades</title>
     <g
       style={{
         fillRule: 'nonzero',
@@ -51,7 +51,6 @@ const Svg10S = (props: SVGProps<SVGSVGElement>) => (
           fontWeight: 400,
           fontStretch: 'normal',
           fontFamily: 'Arial',
-          InkscapeFontSpecification: 'Arial',
         }}
       >
         {'1'}
@@ -189,7 +188,6 @@ const Svg10S = (props: SVGProps<SVGSVGElement>) => (
           fontWeight: 400,
           fontStretch: 'normal',
           fontFamily: 'Arial',
-          InkscapeFontSpecification: 'Arial',
         }}
       >
         {'1'}

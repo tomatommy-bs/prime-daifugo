@@ -1,4 +1,3 @@
-
 import type { SVGProps } from 'react'
 const SvgAh = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -10,6 +9,7 @@ const SvgAh = (props: SVGProps<SVGSVGElement>) => (
     viewBox="0 0 167.087 242.667"
     {...props}
   >
+    <title>Ace of Hearts</title>
     <defs>
       <radialGradient
         xlinkHref="#AH_svg__e"
@@ -155,7 +155,7 @@ const SvgAh = (props: SVGProps<SVGSVGElement>) => (
           fontWeight: 400,
           fontStretch: 'normal',
           fontFamily: 'Arial',
-          InkscapeFontSpecification: 'Arial',
+
           fill: '#df0000',
           fillOpacity: 1,
         }}
@@ -235,7 +235,6 @@ const SvgAh = (props: SVGProps<SVGSVGElement>) => (
           fill: '#df0000',
           fillOpacity: 1,
           fontFamily: 'Arial',
-          InkscapeFontSpecification: 'Arial',
         }}
       >
         {'A'}

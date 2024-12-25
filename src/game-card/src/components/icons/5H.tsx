@@ -1,4 +1,3 @@
-
 import type { SVGProps } from 'react'
 const Svg5H = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -9,6 +8,7 @@ const Svg5H = (props: SVGProps<SVGSVGElement>) => (
     viewBox="0 0 167.087 242.667"
     {...props}
   >
+    <title>5 of Hearts</title>
     <g
       style={{
         fillRule: 'nonzero',
@@ -53,7 +53,6 @@ const Svg5H = (props: SVGProps<SVGSVGElement>) => (
           fill: '#df0000',
           fillOpacity: 1,
           fontFamily: 'Arial',
-          InkscapeFontSpecification: 'Arial',
         }}
       >
         {'5'}
@@ -96,7 +95,6 @@ const Svg5H = (props: SVGProps<SVGSVGElement>) => (
           fill: '#df0000',
           fillOpacity: 1,
           fontFamily: 'Arial',
-          InkscapeFontSpecification: 'Arial',
         }}
       >
         {'5'}

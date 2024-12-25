@@ -1,4 +1,3 @@
-
 import type { SVGProps } from 'react'
 const SvgBack = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -10,6 +9,7 @@ const SvgBack = (props: SVGProps<SVGSVGElement>) => (
     height="1em"
     {...props}
   >
+    <title>back</title>
     <defs>
       <style>{'.back_svg__cls-2{fill:#fff}'}</style>
     </defs>

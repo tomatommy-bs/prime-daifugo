@@ -1,4 +1,3 @@
-
 import type { SVGProps } from 'react'
 const SvgKc = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -9,6 +8,7 @@ const SvgKc = (props: SVGProps<SVGSVGElement>) => (
     viewBox="0 0 167.087 242.667"
     {...props}
   >
+    <title>King of Clubs</title>
     <g
       style={{
         fillRule: 'nonzero',
@@ -48,7 +48,6 @@ const SvgKc = (props: SVGProps<SVGSVGElement>) => (
           fontWeight: 400,
           fontStretch: 'normal',
           fontFamily: 'Arial',
-          InkscapeFontSpecification: 'Arial',
         }}
       >
         {'K'}
@@ -177,7 +176,6 @@ const SvgKc = (props: SVGProps<SVGSVGElement>) => (
           fontWeight: 400,
           fontStretch: 'normal',
           fontFamily: 'Arial',
-          InkscapeFontSpecification: 'Arial',
         }}
       >
         {'K'}
