@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "next start",
     "biome": "biome lint --apply src && biome format --write src",
-    "test": "jest"
+    "test": "jest",
+    "deploy": "partykit deploy && vercel"
   },
   "dependencies": {
     "@mantine/core": "^7.12.2",

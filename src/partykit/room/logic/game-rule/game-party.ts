@@ -3,7 +3,7 @@ import { type Ctx, type Game, INVALID_MOVE, type MoveEvents, type MoveFnArgs } f
 interface ImportConstructor<G extends Game, S = unknown> {
   game: G
   state: S
-  activePlayers: Ctx['activePlayers']
+  activePlayers?: Ctx['activePlayers']
   currentPlayer: string
   playOrder: string[]
 }
@@ -11,6 +11,7 @@ interface ImportConstructor<G extends Game, S = unknown> {
 interface Constructor<G extends Game> {
   game: G
   numPlayers: number
+  activePlayers?: Ctx['activePlayers']
 }
 
 // Tail ユーティリティ型: タプル型の最初の要素を除外
@@ -27,7 +28,7 @@ export class GameParty<G extends Game = Game> {
 
   constructor(args: Constructor<G> | ImportConstructor<G>) {
     this.game = args.game
-    if ('activePlayers' in args) {
+    if ('state' in args) {
       this.state = args.state as ExtractStateFromGame<G>
       this.ctx = {
         numPlayers: Object.keys(args.activePlayers).length,

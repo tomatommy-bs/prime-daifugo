@@ -36,17 +36,21 @@ describe('PrimeDaifugoGame', () => {
           '3': 'play',
           '4': 'play',
         },
+        currentPlayer: '0',
+        playOrder: ['0', '1', '2', '3', '4'],
       }
 
       expect(() => PrimeDaifugoGame.setup(ctx)).toThrow()
     })
 
     it('プレイヤー数が少なすぎる場合はエラーを投げること', () => {
-      const ctx = {
+      const ctx: Ctx = {
         numPlayers: 1,
         activePlayers: {
           '0': 'play',
         },
+        currentPlayer: '0',
+        playOrder: ['0'],
       }
 
       expect(() => PrimeDaifugoGame.setup(ctx)).toThrow()
