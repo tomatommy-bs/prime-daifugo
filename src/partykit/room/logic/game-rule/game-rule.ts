@@ -89,6 +89,7 @@ export const PrimeDaifugoGame = {
       const drawnCard = state.deck.pop()
       player.hand.push(drawnCard)
       player.drawFlag = false
+
       return state
     },
   },

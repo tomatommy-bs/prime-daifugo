@@ -17,12 +17,12 @@ interface Constructor<G extends Game> {
 type Tail<T extends any[]> = T extends [any, ...infer Rest] ? Rest : never
 type ExtractStateFromGame<G extends Game> = G extends Game<infer S> ? S : never
 
-class GameParty<G extends Game = Game> {
+export class GameParty<G extends Game = Game> {
   game: G
-  state: ExtractStateFromGame<G>
+  private state: ExtractStateFromGame<G>
   ctx: Ctx
   move: {
-    [K in keyof G['moves']]: (...args: Tail<Parameters<G['moves'][K]>>) => ReturnType<G['moves'][K]>
+    [K in keyof G['moves']]: (playerId: string, ...args: Tail<Parameters<G['moves'][K]>>) => void
   }
 
   constructor(args: Constructor<G> | ImportConstructor<G>) {
@@ -51,11 +51,22 @@ class GameParty<G extends Game = Game> {
         currentPlayer: activePlayerIds[0],
         playOrder: activePlayerIds,
       }) as ExtractStateFromGame<G>
+
+      this.ctx = {
+        numPlayers: args.numPlayers,
+        activePlayers: activePlayers,
+        currentPlayer: activePlayerIds[0],
+        playOrder: activePlayerIds,
+      }
     }
 
     this.move = {} as this['move']
     for (const moveName in this.game.moves) {
-      ;(this.move as any)[moveName] = (...args: unknown[]) => {
+      ;(this.move as any)[moveName] = (playerId: string, ...args: unknown[]) => {
+        if (playerId !== this.ctx.currentPlayer) {
+          return
+        }
+
         // biome-ignore lint/style/noNonNullAssertion: <explanation>
         const moveFn = this.game.moves![moveName]
         const moveArgs: MoveFnArgs<ExtractStateFromGame<G>> = { ctx: this.ctx, state: this.state }
@@ -68,7 +79,7 @@ class GameParty<G extends Game = Game> {
     }
   }
 
-  getState() {
+  getState(): Readonly<ExtractStateFromGame<G>> {
     return this.state
   }
 }
@@ -78,4 +89,4 @@ const party = new GameParty({
   numPlayers: 2,
 })
 
-party.move.draw(1)
+party.move.draw('0', 1)
