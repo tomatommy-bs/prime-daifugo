@@ -32,7 +32,10 @@ export interface Game<S = unknown> {
   setup: (ctx: Ctx) => S
 }
 
-export type MoveFnArgs<S = unknown> = { ctx: Ctx; state: S }
+export type MoveEvents = {
+  endTurn: (args?: { next?: string }) => void
+}
+export type MoveFnArgs<S = unknown> = { ctx: Ctx; state: S; events: MoveEvents }
 export type MoveFn<S = unknown> = (
   args: MoveFnArgs<S>,
   ...input: unknown[]
@@ -66,7 +69,7 @@ export const PrimeDaifugoGame = {
     for (const playerID of Object.keys(ctx.activePlayers)) {
       players[playerID] = {
         hand: deck.splice(0, config.initialNumCards),
-        drawFlag: true,
+        drawRight: true,
       }
     }
 
@@ -78,18 +81,25 @@ export const PrimeDaifugoGame = {
     }
   },
   moves: {
-    draw: ({ ctx, state }, numCards: number) => {
+    draw: ({ ctx, state }) => {
       const player = state.players[ctx.currentPlayer]
       if (state.deck.length === 0) {
         return INVALID_MOVE
       }
-      if (player.drawFlag === false) {
+      if (player.drawRight === false) {
         return INVALID_MOVE
       }
       const drawnCard = state.deck.pop()
       player.hand.push(drawnCard)
-      player.drawFlag = false
+      player.drawRight = false
 
+      return state
+    },
+
+    pass: ({ ctx, state, events }) => {
+      const player = state.players[ctx.currentPlayer]
+      player.drawRight = true
+      events.endTurn()
       return state
     },
   },

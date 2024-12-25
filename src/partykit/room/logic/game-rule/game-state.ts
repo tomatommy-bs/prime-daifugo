@@ -5,7 +5,7 @@ export interface PrimeDaifugoGameState {
     [playerID: string]: {
       hand: CardId[]
       /** 山札からひく権利 */
-      drawFlag: boolean
+      drawRight: boolean
     }
   }
   /**

@@ -1,4 +1,4 @@
-import { type Ctx, type Game, INVALID_MOVE, type MoveFnArgs, PrimeDaifugoGame } from './game-rule'
+import { type Ctx, type Game, INVALID_MOVE, type MoveEvents, type MoveFnArgs } from './game-rule'
 
 interface ImportConstructor<G extends Game, S = unknown> {
   game: G
@@ -69,7 +69,27 @@ export class GameParty<G extends Game = Game> {
 
         // biome-ignore lint/style/noNonNullAssertion: <explanation>
         const moveFn = this.game.moves![moveName]
-        const moveArgs: MoveFnArgs<ExtractStateFromGame<G>> = { ctx: this.ctx, state: this.state }
+
+        const events: MoveEvents = {
+          endTurn: (args) => {
+            if (args?.next) {
+              if (!this.ctx.activePlayers[args.next]) {
+                throw new Error(`Invalid player: ${args.next}`)
+              }
+              this.ctx.currentPlayer = args.next
+            } else {
+              const currentPlayerIndex = this.ctx.playOrder.indexOf(this.ctx.currentPlayer)
+              const nextPlayerIndex = (currentPlayerIndex + 1) % this.ctx.numPlayers
+              this.ctx.currentPlayer = this.ctx.playOrder[nextPlayerIndex]
+            }
+          },
+        }
+
+        const moveArgs: MoveFnArgs<ExtractStateFromGame<G>> = {
+          ctx: this.ctx,
+          state: this.state,
+          events,
+        }
         const result = moveFn(moveArgs, ...args)
         if (result !== INVALID_MOVE) {
           this.state = result as ExtractStateFromGame<G>
@@ -83,10 +103,3 @@ export class GameParty<G extends Game = Game> {
     return this.state
   }
 }
-
-const party = new GameParty({
-  game: PrimeDaifugoGame,
-  numPlayers: 2,
-})
-
-party.move.draw('0', 1)
