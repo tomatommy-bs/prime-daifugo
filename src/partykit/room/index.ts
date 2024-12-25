@@ -1,8 +1,8 @@
-import type * as Party from 'partykit/server'
-import { messageHandler } from './logic/message-handler'
-import { ServerMessenger } from './logic'
-import type { ConnectionState } from '@/interface/connection'
 import { ROOM_STATUS } from '@/constants/status'
+import type { ConnectionState } from '@/interface/connection'
+import type * as Party from 'partykit/server'
+import { ServerMessenger } from './logic'
+import { messageHandler } from './logic/message-handler'
 
 export default class Server implements Party.Server {
   constructor(readonly room: Party.Room) {}
@@ -27,7 +27,7 @@ export default class Server implements Party.Server {
 
     ServerMessenger.broadcastMessage({
       room: this.room,
-      message: `New Member joined the room`,
+      message: 'New Member joined the room',
       from: '__system__',
     })
     ServerMessenger.broadcastPresence({
