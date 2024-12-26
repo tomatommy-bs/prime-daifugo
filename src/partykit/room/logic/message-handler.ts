@@ -39,8 +39,12 @@ export const messageHandler = new MessageManager({
     await room.storage.put('roomStatus', ROOM_STATUS.playing)
     const party = new GameParty({
       game: PrimeDaifugoGame,
-      numPlayers: Array.from(room.getConnections()).length,
     })
+    for (const conn of room.getConnections()) {
+      party.addClient({ clientId: conn.id })
+    }
+    party.setup()
+
     await room.storage.put('gameState', party.getState())
     await room.storage.put('gameCtx', party.ctx)
     ServerMessenger.broadcastSystemEvent({
@@ -63,15 +67,37 @@ export const messageHandler = new MessageManager({
       playOrder: gameCtx.playOrder,
       state: gameState,
     })
-    party.move.draw('0')
-    party.move.pass('0')
-    party.move.draw('1')
-    party.move.pass('1')
-    console.log(party.getState())
+
+    party.move.draw(sender.id)
 
     ServerMessenger.broadcastSystemEvent({
       room,
       content: { action: 'draw', gameState: party.getState() },
+    })
+
+    await room.storage.put('gameState', party.getState())
+    await room.storage.put('gameCtx', party.ctx)
+  },
+
+  onPass: async (room, sender) => {
+    const gameState = await room.storage.get<PrimeDaifugoGameState>('gameState')
+    const gameCtx = await room.storage.get<Ctx>('gameCtx')
+
+    assert(gameState)
+    assert(gameCtx)
+    const party = new GameParty({
+      game: PrimeDaifugoGame,
+      activePlayers: gameCtx.activePlayers,
+      currentPlayer: gameCtx.currentPlayer,
+      playOrder: gameCtx.playOrder,
+      state: gameState,
+    })
+
+    party.move.pass(sender.id)
+
+    ServerMessenger.broadcastSystemEvent({
+      room,
+      content: { action: 'pass', gameState: party.getState() },
     })
 
     await room.storage.put('gameState', party.getState())

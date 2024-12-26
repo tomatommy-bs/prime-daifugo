@@ -1,6 +1,6 @@
-import type * as Party from 'partykit/server'
 import { clientToServerSchema } from '@/interface/client-to-server'
 import type { ConnectionState } from '@/interface/connection'
+import type * as Party from 'partykit/server'
 
 interface Event {
   onChat?: (room: Party.Room, message: string, sender: Party.Connection<ConnectionState>) => void
@@ -9,6 +9,7 @@ interface Event {
   onUnsetReady?: (room: Party.Room, sender: Party.Connection<ConnectionState>) => void
   onStartGame?: (room: Party.Room, sender: Party.Connection<ConnectionState>) => void
   onDraw?: (room: Party.Room, sender: Party.Connection<ConnectionState>) => void
+  onPass?: (room: Party.Room, sender: Party.Connection<ConnectionState>) => void
 }
 
 export class MessageManager {
@@ -18,6 +19,7 @@ export class MessageManager {
   onUnsetReady?: Event['onUnsetReady']
   onStartGame?: Event['onStartGame']
   onDraw?: Event['onDraw']
+  onPass?: Event['onPass']
 
   constructor(args: Event) {
     this.onChat = args.onChat
@@ -26,6 +28,7 @@ export class MessageManager {
     this.onUnsetReady = args.onUnsetReady
     this.onStartGame = args.onStartGame
     this.onDraw = args.onDraw
+    this.onPass = args.onPass
   }
 
   onMessage(room: Party.Room, payload: string, sender: Party.Connection<ConnectionState>) {
@@ -60,6 +63,7 @@ export class MessageManager {
             this.onDraw?.(room, sender)
             break
           case 'pass':
+            this.onPass?.(room, sender)
             break
           default:
             throw new Error(msg satisfies never)

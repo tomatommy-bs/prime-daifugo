@@ -55,4 +55,13 @@ export class ClientMessenger {
     }
     ws.send(JSON.stringify(payload))
   }
+
+  static pass(args: { ws: PartySocket }) {
+    const { ws } = args
+    const payload: clientToServer.GameEvent = {
+      event: 'game',
+      action: 'pass',
+    }
+    ws.send(JSON.stringify(payload))
+  }
 }

@@ -10,7 +10,7 @@ export interface Ctx {
   activePlayers: {
     [playerID: string]: PlayerStage
   }
-  currentPlayer: string
+  currentPlayer: string | null
   playOrder: string[]
 }
 

@@ -81,7 +81,13 @@ const Page = ({ params: { id } }: Props) => {
         onUnsetReady={() => ClientMessenger.unsetReady({ ws })}
       />
       {roomStatus}
-      <Button onClick={() => ClientMessenger.draw({ ws })}>draw</Button>
+      <Button
+        onClick={() => ClientMessenger.draw({ ws })}
+        disabled={gameState?.players[ws.id]?.drawRight === false}
+      >
+        draw
+      </Button>
+      <Button onClick={() => ClientMessenger.pass({ ws })}>pass</Button>
 
       <Group justify="center">
         <Paper p={'md'}>
@@ -92,7 +98,7 @@ const Page = ({ params: { id } }: Props) => {
       </Group>
       <Paper mt={'md'} p={'md'}>
         <SimpleGrid cols={13} mt={'mt'}>
-          {gameState?.players['0'].hand?.map((card) => (
+          {gameState?.players[ws.id].hand?.map((card) => (
             <GameCard key={card} card={card} fontSize={'5rem'} />
           ))}
         </SimpleGrid>
