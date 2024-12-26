@@ -3,32 +3,36 @@ import {
   type Game,
   INVALID_MOVE,
   type MoveEvents,
+  type MoveFn,
   type MoveFnArgs,
-  type PlayerStage,
 } from './game-rule'
 
-interface ImportConstructor<G extends Game, S = unknown> {
+interface ImportConstructor<G extends Game = Game> {
   game: G
-  state: S
+  state: ExtractStateFromGame<G>
   activePlayers: Ctx['activePlayers']
   currentPlayer: string
   playOrder: string[]
 }
 
-interface Constructor<G extends Game> {
+interface Constructor<G extends Game = Game> {
   game: G
+  playerIds: string[]
 }
 
 // Tail ユーティリティ型: タプル型の最初の要素を除外
 type Tail<T extends any[]> = T extends [any, ...infer Rest] ? Rest : never
-type ExtractStateFromGame<G extends Game> = G extends Game<infer S> ? S : never
+type ExtractStateFromGame<G extends Game<unknown>> = G extends Game<infer S> ? S : never
 
 export class GameParty<G extends Game = Game> {
-  game: G
+  private readonly game: G
   private state: ExtractStateFromGame<G>
-  ctx: Ctx
-  move: {
-    [K in keyof G['moves']]: (playerId: string, ...args: Tail<Parameters<G['moves'][K]>>) => void
+  readonly ctx: Ctx
+  moves: {
+    [K in keyof G['moves']]: (
+      playerId: string,
+      ...args: Tail<Parameters<MoveFn<ExtractStateFromGame<G>>>>
+    ) => void
   }
 
   constructor(args: Constructor<G> | ImportConstructor<G>) {
@@ -41,41 +45,31 @@ export class GameParty<G extends Game = Game> {
         currentPlayer: args.currentPlayer,
         playOrder: args.playOrder,
       }
-      this.initializeMove()
     } else {
-      this.ctx = {
-        numPlayers: 0,
-        activePlayers: {},
-        currentPlayer: null,
-        playOrder: [],
+      const activePlayers: Ctx['activePlayers'] = {}
+      for (const playerId of args.playerIds) {
+        activePlayers[playerId] = 'play'
       }
+      this.ctx = {
+        numPlayers: args.playerIds.length,
+        activePlayers: activePlayers,
+        currentPlayer: args.playerIds[0],
+        playOrder: args.playerIds,
+      }
+      this.state = this.setup()
     }
+    this.moves = this.initializeMoves()
   }
 
-  addClient(args?: {
-    clientId?: string
-    stage?: PlayerStage
-  }): string {
-    const newNumPlayers = this.ctx.numPlayers + 1
-    const newActivePlayerId = args?.clientId ?? (newNumPlayers - 1).toString()
-
-    const ctx: Ctx = {
-      numPlayers: newNumPlayers,
-      activePlayers: {
-        ...this.ctx.activePlayers,
-        [newActivePlayerId]: args?.stage ?? 'play',
-      },
-      currentPlayer: null,
-      playOrder: [...this.ctx.playOrder, newActivePlayerId],
-    }
-    this.ctx = ctx
-    return newActivePlayerId
-  }
-
-  private initializeMove() {
-    this.move = {} as this['move']
+  private initializeMoves(): {
+    [K in keyof G['moves']]: (
+      playerId: string,
+      ...args: Tail<Parameters<MoveFn<ExtractStateFromGame<G>>>>
+    ) => void
+  } {
+    const move = {} as any
     for (const moveName in this.game.moves) {
-      ;(this.move as any)[moveName] = (playerId: string, ...args: unknown[]) => {
+      ;(move as any)[moveName] = (playerId: string, ...args: unknown[]) => {
         if (playerId !== this.ctx.currentPlayer) {
           return
         }
@@ -110,16 +104,16 @@ export class GameParty<G extends Game = Game> {
         return result
       }
     }
+    return move
   }
 
-  setup(): void {
+  private setup(): ExtractStateFromGame<G> {
     this.ctx.currentPlayer = this.ctx.playOrder[0]
 
-    this.state = this.game.setup(this.ctx) as ExtractStateFromGame<G>
-    this.initializeMove()
+    return this.game.setup(this.ctx) as ExtractStateFromGame<G>
   }
 
-  getState(): Readonly<ExtractStateFromGame<G>> {
+  getState(): ExtractStateFromGame<G> {
     return this.state
   }
 }

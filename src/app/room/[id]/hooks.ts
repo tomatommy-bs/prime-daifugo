@@ -13,6 +13,7 @@ interface UseMessageHandlerProps {
   onGameEvent?: (gameState: PrimeDaifugoGameState, ctx: Ctx) => void
   onDraw?: (gameState: PrimeDaifugoGameState, ctx: Ctx) => void
   onPass?: (gameState: PrimeDaifugoGameState, ctx: Ctx) => void
+  onSubmit?: (gameState: PrimeDaifugoGameState, ctx: Ctx) => void
   onRoomStatus?: (status: (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS]) => void
 }
 
@@ -37,6 +38,9 @@ export const useMessageHandler = (props: UseMessageHandlerProps) => {
             break
           case 'pass':
             props.onPass?.(data.gameState, data.ctx)
+            break
+          case "submit":
+            props.onSubmit?.(data.gameState, data.ctx)
             break
           default:
             throw new Error(data.action satisfies never)

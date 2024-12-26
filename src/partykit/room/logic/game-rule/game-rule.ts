@@ -1,3 +1,4 @@
+import assert from 'assert'
 import { type CardId, cardIds } from '@/game-card/src'
 import _ from 'lodash'
 import { z } from 'zod'
@@ -9,17 +10,17 @@ export type PlayerStage = 'observe' | 'wait' | 'play' | 'end'
 export const CtxSchema = z.object({
   numPlayers: z.number(),
   activePlayers: z.record(z.string(), z.enum(['observe', 'wait', 'play', 'end'])),
-  currentPlayer: z.string().nullable(),
+  currentPlayer: z.string(),
   playOrder: z.array(z.string()),
 })
 
 export type Ctx = z.infer<typeof CtxSchema>
 
-export interface Game<S = unknown> {
+export interface Game<State = any> {
   name?: string
   minPlayers?: number
   maxPlayers?: number
-  moves?: MoveMap<S>
+  moves: Record<string, MoveFn<State>>
   events?: {
     endGame?: boolean
     endPhase?: boolean
@@ -30,26 +31,20 @@ export interface Game<S = unknown> {
     pass?: boolean
     setActivePlayers?: boolean
   }
-  setup: (ctx: Ctx) => S
+  setup: (ctx: Ctx) => State
 }
 
 export type MoveEvents = {
   endTurn: (args?: { next?: string }) => void
 }
-export type MoveFnArgs<S = unknown> = { ctx: Ctx; state: S; events: MoveEvents }
-export type MoveFn<S = unknown> = (
-  args: MoveFnArgs<S>,
-  ...input: unknown[]
-) => S | typeof INVALID_MOVE
-export interface MoveMap<S = unknown> {
-  [moveName: string]: MoveFn<S>
-}
+export type MoveFnArgs<S> = { ctx: Ctx; state: S; events: MoveEvents }
+export type MoveFn<S> = (args: MoveFnArgs<S>, ...input: any[]) => S | typeof INVALID_MOVE
 
 const config = {
   initialNumCards: 8,
 } as const
 
-export const PrimeDaifugoGame = {
+export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
   name: 'prime-daifugo',
   minPlayers: 2,
   maxPlayers: 4,
@@ -91,6 +86,7 @@ export const PrimeDaifugoGame = {
         return INVALID_MOVE
       }
       const drawnCard = state.deck.pop()
+      assert(drawnCard)
       player.hand.push(drawnCard)
       player.drawRight = false
 
@@ -124,4 +120,4 @@ export const PrimeDaifugoGame = {
       return state
     },
   },
-} as const satisfies Game<PrimeDaifugoGameState>
+}

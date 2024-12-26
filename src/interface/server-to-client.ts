@@ -29,7 +29,7 @@ export type RoomStatusEvent = z.infer<typeof roomStatusEventSchema>
 
 const systemEventSchema = z.object({
   event: z.literal('system'),
-  action: z.enum(['game-start', 'draw', 'pass']),
+  action: z.enum(['game-start', 'draw', 'pass', 'submit']),
   gameState: PrimeDaifugoGameStateSchema,
   ctx: CtxSchema,
 })

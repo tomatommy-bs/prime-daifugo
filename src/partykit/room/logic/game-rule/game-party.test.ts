@@ -4,13 +4,12 @@ import { PrimeDaifugoGame } from './game-rule'
 describe('GameParty', () => {
   describe('constructor', () => {
     it('正しい初期状態でインスタンスが生成されること', () => {
+      const client1Id = '0'
+      const client2Id = '1'
       const party = new GameParty({
         game: PrimeDaifugoGame,
+        playerIds: ['0', '1'],
       })
-
-      const client1Id = party.addClient()
-      const client2Id = party.addClient()
-      party.setup()
 
       const state = party.getState()
 
@@ -36,9 +35,13 @@ describe('GameParty', () => {
     })
 
     it('state を import してインスタンスが生成されること', () => {
+      const client1Id = '0'
+      const client2Id = '1'
+
       // state を生成
       const party = new GameParty({
         game: PrimeDaifugoGame,
+        playerIds: [client1Id, client2Id],
       })
       const exportedState = party.getState()
       const exportedCtx = party.ctx
@@ -58,31 +61,31 @@ describe('GameParty', () => {
 
   describe('move.draw', () => {
     it('現在のプレイヤーのみがmoveを実行できること', () => {
-      const party = new GameParty({
-        game: PrimeDaifugoGame,
-      })
+      const client1Id = '0'
+      const client2Id = '1'
 
-      const client1Id = party.addClient()
-      const client2Id = party.addClient()
-      party.setup()
+      const party = new GameParty<typeof PrimeDaifugoGame>({
+        game: PrimeDaifugoGame,
+        playerIds: [client1Id, client2Id],
+      })
 
       const state = party.getState()
       const initialDeckLength = state.deck.length
       const initialHandLength = state.players[client1Id].hand.length
 
       // 他のプレイヤーはドローできない
-      party.move.draw(client2Id)
+      party.moves.draw(client2Id)
       expect(state.deck.length).toBe(initialDeckLength)
       expect(state.players[client2Id].hand.length).toBe(initialHandLength)
 
       // 現在のプレイヤーがドローできる
       expect(party.getState().players[client1Id].drawRight).toBe(true)
-      party.move.draw(client1Id)
+      party.moves.draw(client1Id)
       expect(state.deck.length).toBe(initialDeckLength - 1)
       expect(state.players[client1Id].hand.length).toBe(initialHandLength + 1)
 
       // １ターンで複数回ドローできない
-      party.move.draw(client1Id)
+      party.moves.draw(client1Id)
       expect(state.deck.length).toBe(initialDeckLength - 1)
       expect(state.players[client1Id].hand.length).toBe(initialHandLength + 1)
 
@@ -96,13 +99,13 @@ describe('GameParty', () => {
 
   describe('move.pass', () => {
     it('現在のプレイヤーのみがmoveを実行できること', () => {
-      const party = new GameParty({
-        game: PrimeDaifugoGame,
-      })
+      const client1Id = '0'
+      const client2Id = '1'
 
-      const client1Id = party.addClient()
-      const client2Id = party.addClient()
-      party.setup()
+      const party = new GameParty<typeof PrimeDaifugoGame>({
+        game: PrimeDaifugoGame,
+        playerIds: [client1Id, client2Id],
+      })
 
       const state = party.getState()
       const initialDeckLength = state.deck.length
@@ -110,13 +113,13 @@ describe('GameParty', () => {
       expect(party.ctx.currentPlayer).toBe(client1Id)
 
       // 他のプレイヤーはパスできない
-      party.move.pass(client2Id)
+      party.moves.pass(client2Id)
       expect(state.deck.length).toBe(initialDeckLength)
       expect(state.players[client2Id].hand.length).toBe(initialHandLength)
 
       // 現在のプレイヤーがパスできる
       expect(party.getState().players[client1Id].drawRight).toBe(true)
-      party.move.pass(client1Id)
+      party.moves.pass(client1Id)
       expect(state.deck.length).toBe(initialDeckLength)
       expect(state.players[client1Id].hand.length).toBe(initialHandLength)
 
@@ -127,7 +130,7 @@ describe('GameParty', () => {
       expect(party.ctx.currentPlayer).toBe(client2Id)
 
       // 他のプレイヤーがパスできる
-      party.move.pass(client2Id)
+      party.moves.pass(client2Id)
       expect(state.deck.length).toBe(initialDeckLength)
       expect(state.players[client2Id].hand.length).toBe(initialHandLength)
       expect(party.ctx.currentPlayer).toBe(client1Id)
@@ -136,13 +139,13 @@ describe('GameParty', () => {
 
   describe('move.submit', () => {
     it('現在のプレイヤーのみがmoveを実行できること', () => {
-      const party = new GameParty({
-        game: PrimeDaifugoGame,
-      })
+      const client1Id = '0'
+      const client2Id = '1'
 
-      const client1Id = party.addClient()
-      const client2Id = party.addClient()
-      party.setup()
+      const party = new GameParty<typeof PrimeDaifugoGame>({
+        game: PrimeDaifugoGame,
+        playerIds: [client1Id, client2Id],
+      })
 
       const state = party.getState()
       const initialDeckLength = state.deck.length
@@ -152,12 +155,12 @@ describe('GameParty', () => {
       expect(state.field).toHaveLength(0)
 
       // 他のプレイヤーは出せない
-      party.move.submit(client2Id, [state.players[client2Id].hand[0]])
+      party.moves.submit(client2Id, [state.players[client2Id].hand[0]])
       expect(state.deck.length).toBe(initialDeckLength)
       expect(state.players[client2Id].hand.length).toBe(initialHandLength)
 
       // 現在のプレイヤーが出せる
-      party.move.submit(client1Id, [state.players[client1Id].hand[0]])
+      party.moves.submit(client1Id, [state.players[client1Id].hand[0]])
       expect(state.deck.length).toBe(initialDeckLength)
       expect(state.players[client1Id].hand.length).toBe(initialHandLength - 1)
 

@@ -87,7 +87,7 @@ const Page = ({ params: { id } }: Props) => {
     )
     return enemyIds.map((id) => {
       const name = presence.find((p) => p.id === id)?.name
-      const hand = gameServerState.gameState.players[id].hand
+      const hand = gameServerState?.gameState.players[id].hand
       return { id, name, hand }
     })
   }, [gameServerState, presence, ws.id])
@@ -165,12 +165,12 @@ const Page = ({ params: { id } }: Props) => {
             </SimpleGrid>
           </Paper>
           <Button onClick={reset}>reset</Button>
-          {/* <Button
+          <Button
             disabled={submitCardIds.length === 0}
             onClick={() => ClientMessenger.submit({ ws, cardIds: submitCardIds })}
           >
             submit
-          </Button> */}
+          </Button>
         </>
       )}
     </div>

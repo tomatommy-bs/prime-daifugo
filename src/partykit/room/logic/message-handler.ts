@@ -2,7 +2,7 @@
 import assert from 'assert'
 import { ROOM_STATUS } from '@/constants/status'
 import type * as Party from 'partykit/server'
-import { type Ctx, PrimeDaifugoGame } from './game-rule'
+import { type Ctx, type Game, PrimeDaifugoGame } from './game-rule'
 import { GameParty } from './game-rule/game-party'
 import type { PrimeDaifugoGameState } from './game-rule/game-state'
 import { MessageManager } from './message-manager'
@@ -40,11 +40,8 @@ export const messageHandler = new MessageManager({
     await room.storage.put('roomStatus', ROOM_STATUS.playing)
     const party = new GameParty({
       game: PrimeDaifugoGame,
+      playerIds: Array.from(room.getConnections()).map((conn) => conn.id),
     })
-    for (const conn of room.getConnections()) {
-      party.addClient({ clientId: conn.id })
-    }
-    party.setup()
 
     await room.storage.put('gameState', party.getState())
     await room.storage.put('gameCtx', party.ctx)
@@ -57,7 +54,7 @@ export const messageHandler = new MessageManager({
 
   onDraw: async (room, sender) => {
     partyStorageMiddleware(room, (party) => {
-      party.move.draw(sender.id)
+      party.moves.draw(sender.id)
       party.ctx
       ServerMessenger.broadcastSystemEvent({
         room,
@@ -68,16 +65,29 @@ export const messageHandler = new MessageManager({
 
   onPass: async (room, sender) => {
     partyStorageMiddleware(room, (party) => {
-      party.move.pass(sender.id)
+      party.moves.pass(sender.id)
       ServerMessenger.broadcastSystemEvent({
         room,
         content: { action: 'pass', gameState: party.getState(), ctx: party.ctx },
       })
     })
   },
+
+  onSubmit: async (room, sender, submitCardSet) => {
+    partyStorageMiddleware(room, (party) => {
+      party.moves.submit(sender.id, submitCardSet.submit)
+      ServerMessenger.broadcastSystemEvent({
+        room,
+        content: { action: 'submit', gameState: party.getState(), ctx: party.ctx },
+      })
+    })
+  },
 })
 
-const partyStorageMiddleware = async (room: Party.Room, callback: (party: GameParty) => void) => {
+const partyStorageMiddleware = async (
+  room: Party.Room,
+  callback: (party: GameParty<Game<PrimeDaifugoGameState>>) => void,
+) => {
   const gameState = await room.storage.get<PrimeDaifugoGameState>('gameState')
   const gameCtx = await room.storage.get<Ctx>('gameCtx')
   assert(gameState)
