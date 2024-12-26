@@ -1,6 +1,7 @@
 // biome-ignore lint/style/useNodejsImportProtocol: <explanation>
 import assert from 'assert'
 import { ROOM_STATUS } from '@/constants/status'
+import type * as Party from 'partykit/server'
 import { type Ctx, PrimeDaifugoGame } from './game-rule'
 import { GameParty } from './game-rule/game-party'
 import type { PrimeDaifugoGameState } from './game-rule/game-state'
@@ -55,52 +56,43 @@ export const messageHandler = new MessageManager({
   },
 
   onDraw: async (room, sender) => {
-    const gameState = await room.storage.get<PrimeDaifugoGameState>('gameState')
-    const gameCtx = await room.storage.get<Ctx>('gameCtx')
-
-    assert(gameState)
-    assert(gameCtx)
-    const party = new GameParty({
-      game: PrimeDaifugoGame,
-      activePlayers: gameCtx.activePlayers,
-      currentPlayer: gameCtx.currentPlayer,
-      playOrder: gameCtx.playOrder,
-      state: gameState,
+    partyStorageMiddleware(room, (party) => {
+      party.move.draw(sender.id)
+      party.ctx
+      ServerMessenger.broadcastSystemEvent({
+        room,
+        content: { action: 'draw', gameState: party.getState() },
+      })
     })
-
-    party.move.draw(sender.id)
-
-    ServerMessenger.broadcastSystemEvent({
-      room,
-      content: { action: 'draw', gameState: party.getState() },
-    })
-
-    await room.storage.put('gameState', party.getState())
-    await room.storage.put('gameCtx', party.ctx)
   },
 
   onPass: async (room, sender) => {
-    const gameState = await room.storage.get<PrimeDaifugoGameState>('gameState')
-    const gameCtx = await room.storage.get<Ctx>('gameCtx')
-
-    assert(gameState)
-    assert(gameCtx)
-    const party = new GameParty({
-      game: PrimeDaifugoGame,
-      activePlayers: gameCtx.activePlayers,
-      currentPlayer: gameCtx.currentPlayer,
-      playOrder: gameCtx.playOrder,
-      state: gameState,
+    partyStorageMiddleware(room, (party) => {
+      party.move.pass(sender.id)
+      ServerMessenger.broadcastSystemEvent({
+        room,
+        content: { action: 'pass', gameState: party.getState() },
+      })
     })
-
-    party.move.pass(sender.id)
-
-    ServerMessenger.broadcastSystemEvent({
-      room,
-      content: { action: 'pass', gameState: party.getState() },
-    })
-
-    await room.storage.put('gameState', party.getState())
-    await room.storage.put('gameCtx', party.ctx)
   },
 })
+
+const partyStorageMiddleware = async (room: Party.Room, callback: (party: GameParty) => void) => {
+  const gameState = await room.storage.get<PrimeDaifugoGameState>('gameState')
+  const gameCtx = await room.storage.get<Ctx>('gameCtx')
+  assert(gameState)
+  assert(gameCtx)
+
+  const party = new GameParty({
+    game: PrimeDaifugoGame,
+    activePlayers: gameCtx.activePlayers,
+    currentPlayer: gameCtx.currentPlayer,
+    playOrder: gameCtx.playOrder,
+    state: gameState,
+  })
+
+  callback(party)
+
+  await room.storage.put('gameState', party.getState())
+  await room.storage.put('gameCtx', party.ctx)
+}
