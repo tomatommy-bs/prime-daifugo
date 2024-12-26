@@ -18,7 +18,8 @@
       "style": {
         "useNamingConvention": "off",
         "noDefaultExport": "off",
-        "useFilenamingConvention": "off"
+        "useFilenamingConvention": "off",
+        "useNodejsImportProtocol": "off"
       },
       "complexity": {
         "useSimplifiedLogicExpression": "off",

@@ -1,5 +1,6 @@
 import assert from 'assert'
 import { type CardId, cardIds } from '@/game-card/src'
+import { concatCardNumbers } from '@/utils/play-card'
 import _ from 'lodash'
 import { z } from 'zod'
 import type { PrimeDaifugoGameState } from './game-state'
@@ -112,12 +113,54 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
         return INVALID_MOVE
       }
 
-      // カードを出す
-      state.field.push(submitCardIds) // 場に出す
-      _.pullAll(player.hand, submitCardIds) // 手札から削除
+      // field の一番上のカード
+      const topFieldCard = _.last(state.field) ?? null
+
+      // rule: 場にカードがない場合
+      if (topFieldCard === null) {
+        // rule: 素数なら出せる
+        if (isPrime(concatCardNumbers(submitCardIds))) {
+          state.field.push(submitCardIds) // 場に出す
+          _.pullAll(player.hand, submitCardIds) // 手札から削除
+        } else {
+          // rule: 素数でない場合, 出したカードと同じ枚数のカードを山から引く
+          const drawnCards = state.deck.splice(0, submitCardIds.length)
+          player.hand.push(...drawnCards)
+        }
+      } else {
+        // rule: 場にあるカードと同じ枚数のカードしか出せない
+        if (submitCardIds.length !== topFieldCard.length) {
+          return INVALID_MOVE
+        }
+        // rule: 場のカードの合計値より大きい値を出すことができる
+        if (concatCardNumbers(submitCardIds) <= concatCardNumbers(topFieldCard)) {
+          return INVALID_MOVE
+        }
+        // rule: 素数なら出せる
+        if (isPrime(concatCardNumbers(submitCardIds))) {
+          state.field.push(submitCardIds) // 場に出す
+          _.pullAll(player.hand, submitCardIds) // 手札から削除
+        } else {
+          // rule: 素数でない場合, 出したカードと同じ枚数のカードを山から引く
+          const drawnCards = state.deck.splice(0, submitCardIds.length)
+          player.hand.push(...drawnCards)
+        }
+      }
 
       events.endTurn()
       return state
     },
   },
+}
+
+const isPrime = (n: number) => {
+  if (n === 1) {
+    return false
+  }
+  for (let i = 2; i <= Math.sqrt(n); i++) {
+    if (n % i === 0) {
+      return false
+    }
+  }
+  return true
 }

@@ -8,6 +8,7 @@ import { concatCardNumbers } from '@/utils/play-card'
 import { Button, Group, Paper, SimpleGrid, Stack } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import Cookies from 'js-cookie'
+import _ from 'lodash'
 import usePartySocket from 'partysocket/react'
 import { useMemo, useState } from 'react'
 import { PARTYKIT_HOST } from '../../../constants/env'
@@ -132,12 +133,19 @@ const Page = ({ params: { id } }: Props) => {
                     <span>
                       <GameCard card="Back" fontSize={'2rem'} />
                     </span>
-                    <span>x {enemy.hand.length}</span>
+                    <span>x {enemy.hand?.length}</span>
                   </Group>
                 </Paper>
               ))}
             </Stack>
           </Group>
+          <Paper mt={'md'} p={'md'}>
+            <SimpleGrid cols={13} mt={'mt'}>
+              {_.nth(gameServerState?.gameState?.field, -1)?.map((card) => (
+                <GameCard key={card} card={card} fontSize={'5rem'} />
+              ))}
+            </SimpleGrid>
+          </Paper>
           <Paper mt={'md'} p={'md'}>
             <SimpleGrid cols={13} mt={'mt'}>
               {submitCardIds.map((card) => (
@@ -166,7 +174,7 @@ const Page = ({ params: { id } }: Props) => {
           </Paper>
           <Button onClick={reset}>reset</Button>
           <Button
-            disabled={submitCardIds.length === 0}
+            disabled={submitCardIds.length === 0 || !isCommendable}
             onClick={() => ClientMessenger.submit({ ws, cardIds: submitCardIds })}
           >
             submit
