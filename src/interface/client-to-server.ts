@@ -1,3 +1,4 @@
+import type { CardId } from '@/game-card/src'
 import { z } from 'zod'
 
 const chatEventSchema = z.object({
@@ -6,22 +7,39 @@ const chatEventSchema = z.object({
 })
 export type ChatEvent = z.infer<typeof chatEventSchema>
 
-const setNameEventSchema = z.object({
-  event: z.literal('set-name'),
-  name: z.string(),
-})
+const setNameEventSchema = z
+  .object({
+    event: z.literal('set-name'),
+    name: z.string(),
+  })
+  .required()
 export type SetNameEvent = z.infer<typeof setNameEventSchema>
 
-const roomEventSchema = z.object({
-  event: z.literal('room'),
-  action: z.union([z.literal('set-ready'), z.literal('unset-ready'), z.literal('start-game')]),
-})
+const roomEventSchema = z
+  .object({
+    event: z.literal('room'),
+    action: z.union([z.literal('set-ready'), z.literal('unset-ready'), z.literal('start-game')]),
+  })
+  .required()
 export type RoomEvent = z.infer<typeof roomEventSchema>
 
-const gameEventSchema = z.object({
-  event: z.literal('game'),
-  action: z.union([z.literal('draw'), z.literal('pass')]),
-})
+const gameEventSchema = z.union([
+  z
+    .object({
+      event: z.literal('game'),
+      action: z.union([z.literal('draw'), z.literal('pass')]),
+    })
+    .required(),
+  z
+    .object({
+      event: z.literal('game'),
+      action: z.literal('submit'),
+      submitCardSet: z.object({
+        submit: z.array(z.string() as z.ZodType<CardId>),
+      }),
+    })
+    .required(),
+])
 export type GameEvent = z.infer<typeof gameEventSchema>
 
 export const clientToServerSchema = z.union([

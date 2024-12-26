@@ -50,7 +50,7 @@ export const messageHandler = new MessageManager({
     await room.storage.put('gameCtx', party.ctx)
     ServerMessenger.broadcastSystemEvent({
       room,
-      content: { action: 'game-start', gameState: party.getState() },
+      content: { action: 'game-start', gameState: party.getState(), ctx: party.ctx },
     })
     ServerMessenger.broadcastRoomStatus({ room, status: ROOM_STATUS.playing })
   },
@@ -61,7 +61,7 @@ export const messageHandler = new MessageManager({
       party.ctx
       ServerMessenger.broadcastSystemEvent({
         room,
-        content: { action: 'draw', gameState: party.getState() },
+        content: { action: 'draw', gameState: party.getState(), ctx: party.ctx },
       })
     })
   },
@@ -71,7 +71,7 @@ export const messageHandler = new MessageManager({
       party.move.pass(sender.id)
       ServerMessenger.broadcastSystemEvent({
         room,
-        content: { action: 'pass', gameState: party.getState() },
+        content: { action: 'pass', gameState: party.getState(), ctx: party.ctx },
       })
     })
   },

@@ -1,18 +1,19 @@
 import { type CardId, cardIds } from '@/game-card/src'
 import _ from 'lodash'
+import { z } from 'zod'
 import type { PrimeDaifugoGameState } from './game-state'
 
 export const INVALID_MOVE = 'INVALID_MOVE'
 export type PlayerStage = 'observe' | 'wait' | 'play' | 'end'
 
-export interface Ctx {
-  numPlayers: number
-  activePlayers: {
-    [playerID: string]: PlayerStage
-  }
-  currentPlayer: string | null
-  playOrder: string[]
-}
+export const CtxSchema = z.object({
+  numPlayers: z.number(),
+  activePlayers: z.record(z.string(), z.enum(['observe', 'wait', 'play', 'end'])),
+  currentPlayer: z.string().nullable(),
+  playOrder: z.array(z.string()),
+})
+
+export type Ctx = z.infer<typeof CtxSchema>
 
 export interface Game<S = unknown> {
   name?: string

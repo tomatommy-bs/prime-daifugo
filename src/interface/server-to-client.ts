@@ -1,3 +1,4 @@
+import { CtxSchema } from '@/partykit/room/logic/game-rule'
 import { PrimeDaifugoGameStateSchema } from '@/partykit/room/logic/game-rule/game-state'
 import { z } from 'zod'
 
@@ -30,6 +31,7 @@ const systemEventSchema = z.object({
   event: z.literal('system'),
   action: z.enum(['game-start', 'draw', 'pass']),
   gameState: PrimeDaifugoGameStateSchema,
+  ctx: CtxSchema,
 })
 export type SystemEvent = z.infer<typeof systemEventSchema>
 

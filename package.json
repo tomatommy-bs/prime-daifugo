@@ -5,7 +5,8 @@
   "scripts": {
     "next": "next dev",
     "partykit": "partykit dev --live",
-    "dev": "npm run next & npm run partykit",
+    "dev": "npm run next",
+    "dev:pk": "npm run partykit",
     "build": "next build",
     "start": "next start",
     "biome": "biome lint --apply src && biome format --write src",
