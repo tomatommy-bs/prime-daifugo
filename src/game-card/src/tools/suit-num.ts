@@ -141,5 +141,8 @@ export function getCardSuit(cardId: CardId): CardSuit {
   return cardId[1] as CardSuit
 }
 export function getCardNum(cardId: CardId): CardNum {
+  if (cardId.startsWith('10')) {
+    return '10'
+  }
   return cardId[0] as CardNum
 }
