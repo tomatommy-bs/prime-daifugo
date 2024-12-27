@@ -88,7 +88,7 @@ const Page = ({ params: { id } }: Props) => {
     )
     return enemyIds.map((id) => {
       const name = presence.find((p) => p.id === id)?.name
-      const hand = gameServerState?.gameState.players[id].hand
+      const hand = gameServerState?.gameState.players[id]?.hand
       return { id, name, hand }
     })
   }, [gameServerState, presence, ws.id])
