@@ -47,38 +47,74 @@ export const messageHandler = new MessageManager({
     await room.storage.put('gameCtx', party.ctx)
     ServerMessenger.broadcastSystemEvent({
       room,
-      content: { action: 'game-start', gameState: party.getState(), ctx: party.ctx },
+      content: {
+        action: 'game-start',
+        gameState: party.getState(),
+        ctx: party.ctx,
+        commander: {
+          id: sender.id,
+          name: sender.state.name,
+        },
+      },
     })
     ServerMessenger.broadcastRoomStatus({ room, status: ROOM_STATUS.playing })
   },
 
   onDraw: async (room, sender) => {
     partyStorageMiddleware(room, (party) => {
+      assert(sender.state)
       party.moves.draw(sender.id)
       party.ctx
       ServerMessenger.broadcastSystemEvent({
         room,
-        content: { action: 'draw', gameState: party.getState(), ctx: party.ctx },
+        content: {
+          action: 'draw',
+          gameState: party.getState(),
+          ctx: party.ctx,
+          commander: {
+            id: sender.id,
+            name: sender.state.name,
+          },
+        },
       })
     })
   },
 
   onPass: async (room, sender) => {
     partyStorageMiddleware(room, (party) => {
+      assert(sender.state)
       party.moves.pass(sender.id)
       ServerMessenger.broadcastSystemEvent({
         room,
-        content: { action: 'pass', gameState: party.getState(), ctx: party.ctx },
+        content: {
+          action: 'pass',
+          gameState: party.getState(),
+          ctx: party.ctx,
+
+          commander: {
+            id: sender.id,
+            name: sender.state.name,
+          },
+        },
       })
     })
   },
 
   onSubmit: async (room, sender, submitCardSet) => {
     partyStorageMiddleware(room, (party) => {
+      assert(sender.state)
       party.moves.submit(sender.id, submitCardSet.submit)
       ServerMessenger.broadcastSystemEvent({
         room,
-        content: { action: 'submit', gameState: party.getState(), ctx: party.ctx },
+        content: {
+          action: 'submit',
+          gameState: party.getState(),
+          ctx: party.ctx,
+          commander: {
+            id: sender.id,
+            name: sender.state.name,
+          },
+        },
       })
     })
   },

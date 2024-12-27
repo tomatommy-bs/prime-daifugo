@@ -5,14 +5,23 @@ import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game
 import { useSetState } from '@mantine/hooks'
 import * as serverToClient from '../../../interface/server-to-client'
 
+type GameEventParams = {
+  gameState: PrimeDaifugoGameState
+  ctx: Ctx
+  commander: {
+    id: string
+    name: string
+  }
+}
+
 type RoomEventHandlers = {
   onChat?: (params: { message: string; from: string }) => void
   onPresence?: (params: { presence: serverToClient.PresenceEvent['presence'] }) => void
   onStartGame?: (params: { gameState: PrimeDaifugoGameState; ctx: Ctx }) => void
-  onGameEvent?: (params: { gameState: PrimeDaifugoGameState; ctx: Ctx }) => void
-  onDraw?: (params: { gameState: PrimeDaifugoGameState; ctx: Ctx }) => void
-  onPass?: (params: { gameState: PrimeDaifugoGameState; ctx: Ctx }) => void
-  onSubmit?: (params: { gameState: PrimeDaifugoGameState; ctx: Ctx }) => void
+  onGameEvent?: (params: GameEventParams) => void
+  onDraw?: (params: GameEventParams) => void
+  onPass?: (params: GameEventParams) => void
+  onSubmit?: (params: GameEventParams) => void
   onRoomStatus?: (params: { status: (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS] }) => void
 }
 

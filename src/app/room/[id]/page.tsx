@@ -51,14 +51,14 @@ const Page = ({ params: { id } }: Props) => {
     onPresence: ({ presence }) => {
       setPresence(presence)
     },
-    onPass: () => {
-      notifications.show({ message: '相手がパスしました' })
+    onPass: ({ commander }) => {
+      notifications.show({ message: `${commander.name}がパスしました` })
     },
-    onSubmit: () => {
-      notifications.show({ message: '相手がカードを出しました' })
+    onSubmit: ({ commander }) => {
+      notifications.show({ message: `${commander.name}がカードを出しました` })
     },
-    onDraw: () => {
-      notifications.show({ message: '相手がドローしました' })
+    onDraw: ({ commander }) => {
+      notifications.show({ message: `${commander.name}がドローしました` })
     },
     onGameEvent: ({ gameState, ctx }) => {
       setGameServerState({ gameState: gameState, ctx })
@@ -104,27 +104,36 @@ const Page = ({ params: { id } }: Props) => {
   return (
     <div>
       <h1>Room {id}</h1>
-      <WaitingRoom
-        presence={presence}
-        myPresence={myPresence}
-        onGameStart={handleGameStart}
-        onSetReady={() => ClientMessenger.setReady({ ws })}
-        onUnsetReady={() => ClientMessenger.unsetReady({ ws })}
-      />
-      {roomStatus}
+      {roomStatus === 'waiting' && (
+        <WaitingRoom
+          presence={presence}
+          myPresence={myPresence}
+          onGameStart={handleGameStart}
+          onSetReady={() => ClientMessenger.setReady({ ws })}
+          onUnsetReady={() => ClientMessenger.unsetReady({ ws })}
+        />
+      )}
       {roomStatus === 'playing' && (
         <>
-          <Button
-            onClick={() => ClientMessenger.draw({ ws })}
-            disabled={
-              gameServerState?.gameState?.players[ws.id]?.drawRight === false || !isCommendable
-            }
-          >
-            draw
-          </Button>
-          <Button onClick={() => ClientMessenger.pass({ ws })} disabled={!isCommendable}>
-            pass
-          </Button>
+          <Button.Group>
+            <Button
+              disabled={
+                gameServerState?.gameState?.players[ws.id]?.drawRight === false || !isCommendable
+              }
+              onClick={() => ClientMessenger.draw({ ws })}
+            >
+              draw
+            </Button>
+            <Button disabled={!isCommendable} onClick={() => ClientMessenger.pass({ ws })}>
+              pass
+            </Button>
+            <Button
+              disabled={submitCardIds.length === 0 || !isCommendable}
+              onClick={() => ClientMessenger.submit({ ws, cardIds: submitCardIds })}
+            >
+              submit
+            </Button>
+          </Button.Group>
 
           <Group justify="center">
             <Paper p={'md'}>
@@ -181,12 +190,6 @@ const Page = ({ params: { id } }: Props) => {
             </SimpleGrid>
           </Paper>
           <Button onClick={reset}>reset</Button>
-          <Button
-            disabled={submitCardIds.length === 0 || !isCommendable}
-            onClick={() => ClientMessenger.submit({ ws, cardIds: submitCardIds })}
-          >
-            submit
-          </Button>
         </>
       )}
     </div>

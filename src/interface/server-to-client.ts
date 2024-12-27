@@ -31,6 +31,10 @@ const systemEventSchema = z.object({
   event: z.literal('system'),
   action: z.enum(['game-start', 'draw', 'pass', 'submit']),
   gameState: PrimeDaifugoGameStateSchema,
+  commander: z.object({
+    id: z.string(),
+    name: z.string(),
+  }),
   ctx: CtxSchema,
 })
 export type SystemEvent = z.infer<typeof systemEventSchema>
