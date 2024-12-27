@@ -1,3 +1,4 @@
+import { Analytics } from '@vercel/analytics/react'
 import type { Metadata } from 'next'
 import './globals.css'
 import '@mantine/core/styles.css'
@@ -19,6 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <Analytics />
         <ColorSchemeScript />
       </head>
       <body className="min-h-screen">
