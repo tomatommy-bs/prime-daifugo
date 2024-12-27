@@ -41,23 +41,31 @@ const Page = ({ params: { id } }: Props) => {
   } = useMyField({ all: [] })
 
   const { onMessage } = useMessageHandler({
-    onChat: (message, from, _socket) => {
+    onChat: ({ message, from }) => {
       const senderName = presence.find((p) => p.id === from)?.name
       notifications.show({
         title: senderName ? `${senderName} より` : null,
         message: message,
-        position: 'bottom-right',
       })
     },
-    onPresence: (presence) => {
+    onPresence: ({ presence }) => {
       setPresence(presence)
     },
-    onGameEvent: (serverState, ctx) => {
-      setGameServerState({ gameState: serverState, ctx })
-      const hand = serverState?.players?.[ws.id]?.hand
+    onPass: () => {
+      notifications.show({ message: '相手がパスしました' })
+    },
+    onSubmit: () => {
+      notifications.show({ message: '相手がカードを出しました' })
+    },
+    onDraw: () => {
+      notifications.show({ message: '相手がドローしました' })
+    },
+    onGameEvent: ({ gameState, ctx }) => {
+      setGameServerState({ gameState: gameState, ctx })
+      const hand = gameState?.players?.[ws.id]?.hand
       setHandCardIds(hand)
     },
-    onRoomStatus: (status) => {
+    onRoomStatus: ({ status }) => {
       setRoomStatus(status)
     },
   })
@@ -68,7 +76,7 @@ const Page = ({ params: { id } }: Props) => {
     room: id,
 
     onMessage: (e) => {
-      onMessage(e.data, ws)
+      onMessage(e.data)
     },
     onOpen: () => {
       ClientMessenger.sendName({ ws, name: Cookies.get('name') ?? 'unknown' })

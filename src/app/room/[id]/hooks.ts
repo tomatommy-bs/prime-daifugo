@@ -3,44 +3,46 @@ import type { CardId } from '@/game-card/src'
 import type { Ctx } from '@/partykit/room/logic/game-rule'
 import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
 import { useSetState } from '@mantine/hooks'
-import type PartySocket from 'partysocket'
 import * as serverToClient from '../../../interface/server-to-client'
 
-interface UseMessageHandlerProps {
-  onChat?: (message: string, from: string, socket: PartySocket) => void
-  onPresence?: (presence: serverToClient.PresenceEvent['presence']) => void
-  onStartGame?: (gameState: PrimeDaifugoGameState, ctx: Ctx) => void
-  onGameEvent?: (gameState: PrimeDaifugoGameState, ctx: Ctx) => void
-  onDraw?: (gameState: PrimeDaifugoGameState, ctx: Ctx) => void
-  onPass?: (gameState: PrimeDaifugoGameState, ctx: Ctx) => void
-  onSubmit?: (gameState: PrimeDaifugoGameState, ctx: Ctx) => void
-  onRoomStatus?: (status: (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS]) => void
+type RoomEventHandlers = {
+  onChat?: (params: { message: string; from: string }) => void
+  onPresence?: (params: { presence: serverToClient.PresenceEvent['presence'] }) => void
+  onStartGame?: (params: { gameState: PrimeDaifugoGameState; ctx: Ctx }) => void
+  onGameEvent?: (params: { gameState: PrimeDaifugoGameState; ctx: Ctx }) => void
+  onDraw?: (params: { gameState: PrimeDaifugoGameState; ctx: Ctx }) => void
+  onPass?: (params: { gameState: PrimeDaifugoGameState; ctx: Ctx }) => void
+  onSubmit?: (params: { gameState: PrimeDaifugoGameState; ctx: Ctx }) => void
+  onRoomStatus?: (params: { status: (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS] }) => void
 }
 
-export const useMessageHandler = (props: UseMessageHandlerProps) => {
-  const onMessage = (payload: string, socket: PartySocket) => {
+export const useMessageHandler = (props: RoomEventHandlers) => {
+  const onMessage = (payload: string) => {
     const data = serverToClient.serverToClientSchema.parse(JSON.parse(payload))
 
     switch (data.event) {
       case 'chat':
-        props.onChat?.(data.message, data.from, socket)
+        props.onChat?.({
+          message: data.message,
+          from: data.from,
+        })
         break
       case 'presence':
-        props.onPresence?.(data.presence)
+        props.onPresence?.(data)
         break
       case 'system': {
-        props.onGameEvent?.(data.gameState, data.ctx)
+        props.onGameEvent?.(data)
         switch (data.action) {
           case 'game-start':
             break
           case 'draw':
-            props.onDraw?.(data.gameState, data.ctx)
+            props.onDraw?.(data)
             break
           case 'pass':
-            props.onPass?.(data.gameState, data.ctx)
+            props.onPass?.(data)
             break
-          case "submit":
-            props.onSubmit?.(data.gameState, data.ctx)
+          case 'submit':
+            props.onSubmit?.(data)
             break
           default:
             throw new Error(data.action satisfies never)
@@ -48,7 +50,7 @@ export const useMessageHandler = (props: UseMessageHandlerProps) => {
         break
       }
       case 'room-status':
-        props.onRoomStatus?.(data.status)
+        props.onRoomStatus?.(data)
         break
       default:
         throw new Error(data satisfies never)
