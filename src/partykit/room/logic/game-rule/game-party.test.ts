@@ -1,5 +1,59 @@
 import { GameParty } from './game-party'
-import { PrimeDaifugoGame } from './game-rule'
+import { type Ctx, INVALID_MOVE, PrimeDaifugoGame } from './game-rule'
+import type { PrimeDaifugoGameState } from './game-state'
+
+const initialFixedState: PrimeDaifugoGameState = {
+  players: {
+    0: { hand: ['JS', '4C', '2D', '6C', '8H', '9D', 'KD', '3H'], drawRight: true },
+    1: { hand: ['3D', 'JC', 'KC', '8D', '10H', '2S', '7S', '10D'], drawRight: true },
+  },
+  field: [],
+  deck: [
+    '3S',
+    '5D',
+    '6S',
+    'JH',
+    'AH',
+    'KS',
+    '8S',
+    '9C',
+    '4D',
+    'KH',
+    'QC',
+    '2H',
+    '10C',
+    '7H',
+    '9S',
+    'AD',
+    '3C',
+    'QH',
+    'AS',
+    '5H',
+    '9H',
+    'QS',
+    '4S',
+    'JD',
+    '10S',
+    '2C',
+    '6H',
+    '5S',
+    '4H',
+    '7D',
+    '6D',
+    'AC',
+    '5C',
+    '8C',
+    '7C',
+    'QD',
+  ],
+  deckTopPlayer: null,
+}
+const initialFixedCtx: Ctx = {
+  numPlayers: 2,
+  activePlayers: { 0: 'play', 1: 'play' },
+  currentPlayer: '0',
+  playOrder: ['0', '1'],
+}
 
 describe('GameParty', () => {
   describe('constructor', () => {
@@ -139,37 +193,62 @@ describe('GameParty', () => {
 
   describe('move.submit', () => {
     it('現在のプレイヤーのみがmoveを実行できること', () => {
-      const client1Id = '0'
-      const client2Id = '1'
-
       const party = new GameParty<typeof PrimeDaifugoGame>({
         game: PrimeDaifugoGame,
-        playerIds: [client1Id, client2Id],
+        state: initialFixedState,
+        activePlayers: initialFixedCtx.activePlayers,
+        currentPlayer: initialFixedCtx.currentPlayer,
+        playOrder: initialFixedCtx.playOrder,
       })
+
+      const [client1Id, client2Id] = party.ctx.playOrder
 
       const state = party.getState()
       const initialDeckLength = state.deck.length
-      const initialHandLength = state.players[client1Id].hand.length
-      const topCard = state.players[client1Id].hand[0]
+      const initialHandLength = {
+        client1: state.players[client1Id].hand.length,
+        client2: state.players[client2Id].hand.length,
+      }
+      const submitCard = '2D'
       expect(party.ctx.currentPlayer).toBe(client1Id)
       expect(state.field).toHaveLength(0)
 
       // 他のプレイヤーは出せない
-      party.moves.submit(client2Id, [state.players[client2Id].hand[0]])
+      party.moves.submit(client2Id, ['3D'])
       expect(state.deck.length).toBe(initialDeckLength)
-      expect(state.players[client2Id].hand.length).toBe(initialHandLength)
+      expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2)
 
       // 現在のプレイヤーが出せる
-      party.moves.submit(client1Id, [state.players[client1Id].hand[0]])
+      party.moves.submit(client1Id, [submitCard]) // 素数を出す
       expect(state.deck.length).toBe(initialDeckLength)
-      expect(state.players[client1Id].hand.length).toBe(initialHandLength - 1)
+      expect(state.players[client1Id].hand.length).toBe(initialHandLength.client1 - 1)
 
       // field に出したカードが追加されている
       expect(state.field).toHaveLength(1)
-      expect(state.field[0]).toEqual([topCard])
+      expect(state.field[0]).toEqual([submitCard])
+
+      expect(state.deckTopPlayer).toBe(client1Id)
 
       // active player が変わる
       expect(party.ctx.currentPlayer).toBe(client2Id)
+
+      // もう一人のプレイヤーが出せる
+      expect(party.moves.submit(client2Id, ['AD'])).toBe(INVALID_MOVE) // 手札にないカードを出す
+      expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2) // 手札が変わらない
+
+      expect(party.moves.submit(client2Id, ['2S'])).toBe(INVALID_MOVE) // 場よりも小さいカードを出す
+      expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2) // 手札が変わらない
+
+      expect(party.moves.submit(client2Id, ['3D', 'JC'])).toBe(INVALID_MOVE) // 場とよりも多い枚数のカードを出す
+      expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2) // 手札が変わらない
+
+      expect(state.field[0]).toEqual([submitCard]) // field が変わらない
+      expect(party.moves.submit(client2Id, ['8D'])).not.toBe(INVALID_MOVE) // 素数でないカードを出す
+      expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2 + 1) // 失敗して手札が増える
+
+      expect(state.deckTopPlayer).toBeNull()
+      expect(state.field).toHaveLength(0)
+      expect(party.ctx.currentPlayer).toBe(client1Id)
     })
   })
 })

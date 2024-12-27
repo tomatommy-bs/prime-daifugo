@@ -32,7 +32,7 @@ export class GameParty<G extends Game = Game> {
     [K in keyof G['moves']]: (
       playerId: string,
       ...args: Tail<Parameters<MoveFn<ExtractStateFromGame<G>>>>
-    ) => void
+    ) => undefined | typeof INVALID_MOVE
   }
 
   constructor(args: Constructor<G> | ImportConstructor<G>) {
@@ -65,7 +65,7 @@ export class GameParty<G extends Game = Game> {
     [K in keyof G['moves']]: (
       playerId: string,
       ...args: Tail<Parameters<MoveFn<ExtractStateFromGame<G>>>>
-    ) => void
+    ) => undefined | typeof INVALID_MOVE
   } {
     const move = {} as any
     for (const moveName in this.game.moves) {

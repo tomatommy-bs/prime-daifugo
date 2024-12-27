@@ -71,10 +71,10 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
     }
 
     return {
-      playersStage: {},
       players,
       field: [],
       deck: deck,
+      deckTopPlayer: null,
     }
   },
   moves: {
@@ -97,7 +97,13 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
     pass: ({ ctx, state, events }) => {
       const player = state.players[ctx.currentPlayer]
       player.drawRight = true
+
       events.endTurn()
+      if (ctx.currentPlayer === state.deckTopPlayer) {
+        flowField(state)
+        state.deckTopPlayer = null
+      }
+
       return state
     },
 
@@ -116,16 +122,15 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       // field の一番上のカード
       const topFieldCard = _.last(state.field) ?? null
 
-      // rule: 場にカードがない場合
+      const result: { isPrime: boolean | null } = {
+        isPrime: null,
+      }
+      // case: 場にカードがない場合
       if (topFieldCard === null) {
-        // rule: 素数なら出せる
         if (isPrime(concatCardNumbers(submitCardIds))) {
-          state.field.push(submitCardIds) // 場に出す
-          _.pullAll(player.hand, submitCardIds) // 手札から削除
+          result.isPrime = true
         } else {
-          // rule: 素数でない場合, 出したカードと同じ枚数のカードを山から引く
-          const drawnCards = state.deck.splice(0, submitCardIds.length)
-          player.hand.push(...drawnCards)
+          result.isPrime = false
         }
       } else {
         // rule: 場にあるカードと同じ枚数のカードしか出せない
@@ -136,24 +141,44 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
         if (concatCardNumbers(submitCardIds) <= concatCardNumbers(topFieldCard)) {
           return INVALID_MOVE
         }
-        // rule: 素数なら出せる
+
         if (isPrime(concatCardNumbers(submitCardIds))) {
-          state.field.push(submitCardIds) // 場に出す
-          _.pullAll(player.hand, submitCardIds) // 手札から削除
+          result.isPrime = true
         } else {
-          // rule: 素数でない場合, 出したカードと同じ枚数のカードを山から引く
-          const drawnCards = state.deck.splice(0, submitCardIds.length)
-          player.hand.push(...drawnCards)
+          result.isPrime = false
         }
       }
 
+      switch (result.isPrime) {
+        case true: // rule: 素数なら出せる
+          {
+            state.field.push(submitCardIds) // 場に出す
+            _.pullAll(player.hand, submitCardIds) // 手札から削除
+            state.deckTopPlayer = ctx.currentPlayer
+          }
+          break
+        case false: // rule: 素数でない場合, 出したカードと同じ枚数のカードを山から引く
+          {
+            const drawnCards = state.deck.splice(0, submitCardIds.length)
+            player.hand.push(...drawnCards)
+          }
+          break
+        default:
+          return INVALID_MOVE
+      }
+
       events.endTurn()
+      if (ctx.currentPlayer === state.deckTopPlayer) {
+        flowField(state)
+        state.deckTopPlayer = null
+      }
+
       return state
     },
   },
 }
 
-const isPrime = (n: number) => {
+const isPrime = (n: number): boolean => {
   if (n === 1) {
     return false
   }
@@ -163,4 +188,14 @@ const isPrime = (n: number) => {
     }
   }
   return true
+}
+
+/**
+ * いわゆる「流れ」の処理
+ */
+const flowField = (state: PrimeDaifugoGameState): void => {
+  const fieldAllCards = _.flatten(state.field)
+  const newDeck = _.shuffle([...fieldAllCards, ...state.deck])
+  state.deck = newDeck
+  state.field = []
 }

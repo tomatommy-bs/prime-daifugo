@@ -12,4 +12,5 @@ export const PrimeDaifugoGameStateSchema = z.object({
   ),
   field: z.array(z.array(z.string() as z.ZodType<CardId>)),
   deck: z.array(z.string() as z.ZodType<CardId>),
+  deckTopPlayer: z.string().nullable(),
 })
