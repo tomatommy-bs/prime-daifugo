@@ -291,7 +291,7 @@ const Page = ({ params: { id } }: Props) => {
             </Grid.Col>
           </Grid>
           <Paper p={cardSize.p}>
-            <SimpleGrid cols={13} mt={'mt'}>
+            <SimpleGrid cols={{ xs: 12, md: 15 }} mt={'mt'}>
               {handCardIds.map((card) => (
                 <GameCard
                   key={card}

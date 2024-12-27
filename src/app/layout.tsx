@@ -23,7 +23,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen">
         <MantineProvider>
-          <Notifications position="bottom-right" />
+          <Notifications position="top-right" />
           {children}
         </MantineProvider>
       </body>
