@@ -5,7 +5,7 @@ import { GameCard } from '@/game-card/src'
 import type { Ctx } from '@/partykit/room/logic/game-rule'
 import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
 import { concatCardNumbers } from '@/utils/play-card'
-import { Button, Group, Paper, SimpleGrid, Stack } from '@mantine/core'
+import { Badge, Button, Grid, Group, Paper, PinInput, SimpleGrid, Stack } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import Cookies from 'js-cookie'
 import _ from 'lodash'
@@ -38,7 +38,7 @@ const Page = ({ params: { id } }: Props) => {
     setHandCardIds,
     removeSubmitCardId,
     reset,
-  } = useMyField({ all: [] })
+  } = useMyField({ all: [], field: gameServerState?.gameState.field ?? [] })
 
   const { onMessage } = useMessageHandler({
     onChat: ({ message, from }) => {
@@ -114,8 +114,35 @@ const Page = ({ params: { id } }: Props) => {
         />
       )}
       {roomStatus === 'playing' && (
-        <>
-          <Button.Group>
+        <Stack pb={'md'}>
+          <Grid justify="center">
+            <Grid.Col span={{ xs: 4, sm: 3 }}>
+              <Paper p={'md'}>
+                <Group>
+                  <GameCard card={'Back'} fontSize={'5rem'} /> x{' '}
+                  {gameServerState?.gameState?.deck.length}
+                </Group>
+              </Paper>
+            </Grid.Col>
+            <Grid.Col span={{ xs: 8, sm: 9 }}>
+              <SimpleGrid cols={{ xs: 2, sm: 3 }}>
+                {enemies.map((enemy) => (
+                  <Paper key={enemy.id} p={'xs'}>
+                    <Group>
+                      <span>{enemy.name}</span>
+                      <span>
+                        <GameCard card="Back" fontSize={'2rem'} />
+                      </span>
+                      <span>x {enemy.hand?.length}</span>
+                    </Group>
+                  </Paper>
+                ))}
+              </SimpleGrid>
+            </Grid.Col>
+          </Grid>
+          <Button.Group className={'justify-center'}>
+            <Button onClick={reset}>reset</Button>
+            <Button.GroupSection bg={'transparent'} />
             <Button
               disabled={
                 gameServerState?.gameState?.players[ws.id]?.drawRight === false || !isCommendable
@@ -129,55 +156,80 @@ const Page = ({ params: { id } }: Props) => {
             </Button>
             <Button
               disabled={submitCardIds.length === 0 || !isCommendable}
-              onClick={() => ClientMessenger.submit({ ws, cardIds: submitCardIds })}
+              onClick={() => {
+                const fieldTop = _.nth(gameServerState?.gameState.field, -1)
+                if (fieldTop !== undefined) {
+                  if (submitCardIds.length !== fieldTop?.length) {
+                    notifications.show({ message: '出すカードの枚数が合っていません' })
+                    return
+                  }
+                  if (concatCardNumbers(fieldTop) > concatCardNumbers(submitCardIds)) {
+                    notifications.show({ message: '場のカードの数より大きくないといけません' })
+                    return
+                  }
+                }
+                ClientMessenger.submit({ ws, cardIds: submitCardIds })
+              }}
             >
               submit
             </Button>
           </Button.Group>
-
-          <Group justify="center">
-            <Paper p={'md'}>
-              <Group>
-                <GameCard card={'Back'} fontSize={'5rem'} /> x{' '}
-                {gameServerState?.gameState?.deck.length}
-              </Group>
-            </Paper>
-            <Stack>
-              {enemies.map((enemy) => (
-                <Paper key={enemy.id} p={'md'}>
-                  <Group>
-                    <span>{enemy.name}</span>
-                    <span>
-                      <GameCard card="Back" fontSize={'2rem'} />
-                    </span>
-                    <span>x {enemy.hand?.length}</span>
-                  </Group>
-                </Paper>
-              ))}
-            </Stack>
-          </Group>
-          <Paper mt={'md'} p={'md'}>
-            <SimpleGrid cols={13} mt={'mt'}>
-              {_.nth(gameServerState?.gameState?.field, -1)?.map((card) => (
-                <GameCard key={card} card={card} fontSize={'5rem'} />
-              ))}
-            </SimpleGrid>
-          </Paper>
-          <Paper mt={'md'} p={'md'}>
-            <SimpleGrid cols={13} mt={'mt'}>
-              {submitCardIds.map((card) => (
-                <GameCard
-                  key={card}
-                  card={card}
-                  fontSize={'5rem'}
-                  onClick={() => removeSubmitCardId(card)}
-                />
-              ))}
-              <span>{concatCardNumbers(submitCardIds) || ''}</span>
-            </SimpleGrid>
-          </Paper>
-
-          <Paper mt={'md'} p={'md'}>
+          <Grid align="center">
+            <Grid.Col span={5}>
+              <Paper p={'md'}>
+                <SimpleGrid cols={4} mt={'mt'} mih={'5rem'}>
+                  {_.nth(gameServerState?.gameState?.field, -1)?.map((card) => (
+                    <GameCard key={card} card={card} fontSize={'5rem'} />
+                  ))}
+                </SimpleGrid>
+              </Paper>
+            </Grid.Col>
+            <Grid.Col span={1}>
+              <Badge size="xl" variant="white">
+                =
+              </Badge>
+            </Grid.Col>
+            <Grid.Col span={6}>
+              <PinInput
+                readOnly={true}
+                placeholder={''}
+                length={8}
+                value={(
+                  concatCardNumbers(_.nth(gameServerState?.gameState.field, -1) ?? []) || ''
+                ).toString()}
+              />
+            </Grid.Col>
+          </Grid>
+          <Grid align="center">
+            <Grid.Col span={5}>
+              <Paper p={'md'} bg={isCommendable ? 'default' : 'lightgray'}>
+                <SimpleGrid cols={4} mt={'mt'} mih={'5rem'}>
+                  {submitCardIds.map((card) => (
+                    <GameCard
+                      key={card}
+                      card={card}
+                      fontSize={'5rem'}
+                      onClick={() => removeSubmitCardId(card)}
+                    />
+                  ))}
+                </SimpleGrid>
+              </Paper>
+            </Grid.Col>
+            <Grid.Col span={1}>
+              <Badge size="xl" variant="white">
+                =
+              </Badge>
+            </Grid.Col>
+            <Grid.Col span={6}>
+              <PinInput
+                readOnly={true}
+                placeholder={''}
+                length={8}
+                value={(concatCardNumbers(submitCardIds) || '').toString()}
+              />
+            </Grid.Col>
+          </Grid>
+          <Paper p={'md'}>
             <SimpleGrid cols={13} mt={'mt'}>
               {handCardIds.map((card) => (
                 <GameCard
@@ -189,8 +241,7 @@ const Page = ({ params: { id } }: Props) => {
               ))}
             </SimpleGrid>
           </Paper>
-          <Button onClick={reset}>reset</Button>
-        </>
+        </Stack>
       )}
     </div>
   )

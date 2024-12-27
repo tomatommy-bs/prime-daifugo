@@ -3,6 +3,7 @@ import type { CardId } from '@/game-card/src'
 import type { Ctx } from '@/partykit/room/logic/game-rule'
 import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
 import { useSetState } from '@mantine/hooks'
+import { notifications } from '@mantine/notifications'
 import * as serverToClient from '../../../interface/server-to-client'
 
 type GameEventParams = {
@@ -69,7 +70,7 @@ export const useMessageHandler = (props: RoomEventHandlers) => {
   return { onMessage }
 }
 
-export const useMyField = (args: { all: CardId[] }) => {
+export const useMyField = (args: { all: CardId[]; field: CardId[][] }) => {
   const { all } = args
 
   const [state, setState] = useSetState<{
@@ -81,6 +82,11 @@ export const useMyField = (args: { all: CardId[] }) => {
   })
 
   const selectHandCardIdAsSubmit = (card: CardId) => {
+    if (state.submitCardIds.length >= 4) {
+      notifications.show({ message: '1度に出せるカードは4枚までです' })
+      return
+    }
+
     setState({
       handCardIds: state.handCardIds.filter((c) => c !== card),
       submitCardIds: [...state.submitCardIds, card],
