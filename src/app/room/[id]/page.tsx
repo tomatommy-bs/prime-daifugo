@@ -5,7 +5,19 @@ import { GameCard } from '@/game-card/src'
 import type { Ctx } from '@/partykit/room/logic/game-rule'
 import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
 import { concatCardNumbers } from '@/utils/play-card'
-import { Badge, Button, Grid, Group, Paper, PinInput, SimpleGrid, Stack } from '@mantine/core'
+import {
+  Badge,
+  Button,
+  Grid,
+  Group,
+  InputLabel,
+  InputWrapper,
+  Paper,
+  PinInput,
+  SegmentedControl,
+  SimpleGrid,
+  Stack,
+} from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import Cookies from 'js-cookie'
 import _ from 'lodash'
@@ -83,6 +95,35 @@ const Page = ({ params: { id } }: Props) => {
     },
   })
 
+  const [cardSizeOption, setCardSizeOption] = useState<'S' | 'M' | 'L'>('M')
+  const cardSize = useMemo(() => {
+    switch (cardSizeOption) {
+      case 'S':
+        return {
+          p: '0.25rem',
+          deckCard: '2rem',
+          fieldCard: '3rem',
+          submitCard: '3rem',
+        }
+      case 'M':
+        return {
+          p: '0.5rem',
+          deckCard: '3.5rem',
+          fieldCard: '4rem',
+          submitCard: '4rem',
+        }
+      case 'L':
+        return {
+          p: '1.0rem',
+          deckCard: '5rem',
+          fieldCard: '5rem',
+          submitCard: '5rem',
+        }
+      default:
+        throw new Error(cardSizeOption satisfies never)
+    }
+  }, [cardSizeOption])
+
   const myPresence = presence.find((p) => p.id === ws?.id)
 
   const handleGameStart = () => {
@@ -103,7 +144,23 @@ const Page = ({ params: { id } }: Props) => {
 
   return (
     <div>
-      <h1>Room {id}</h1>
+      <Group p={'xs'} align="center">
+        <h1>
+          <Badge variant="dot">RoomID: {id}</Badge>
+        </h1>
+        <InputWrapper>
+          <InputLabel mr={'md'}>
+            <Badge>Card Size</Badge>
+          </InputLabel>
+          <SegmentedControl
+            size="xs"
+            data={['S', 'M', 'L']}
+            color="blue"
+            value={cardSizeOption}
+            onChange={(e) => setCardSizeOption(e as 'S' | 'M' | 'L')}
+          />
+        </InputWrapper>
+      </Group>
       {roomStatus === 'waiting' && (
         <WaitingRoom
           presence={presence}
@@ -114,12 +171,12 @@ const Page = ({ params: { id } }: Props) => {
         />
       )}
       {roomStatus === 'playing' && (
-        <Stack pb={'md'}>
+        <Stack pb={'md'} gap={cardSize.p}>
           <Grid justify="center">
             <Grid.Col span={{ xs: 4, sm: 3 }}>
-              <Paper p={'md'}>
+              <Paper p={cardSize.p}>
                 <Group>
-                  <GameCard card={'Back'} fontSize={'5rem'} /> x{' '}
+                  <GameCard card={'Back'} fontSize={cardSize.deckCard} /> x{' '}
                   {gameServerState?.gameState?.deck.length}
                 </Group>
               </Paper>
@@ -127,7 +184,7 @@ const Page = ({ params: { id } }: Props) => {
             <Grid.Col span={{ xs: 8, sm: 9 }}>
               <SimpleGrid cols={{ xs: 2, sm: 3 }}>
                 {enemies.map((enemy) => (
-                  <Paper key={enemy.id} p={'xs'}>
+                  <Paper key={enemy.id} p={cardSize.p}>
                     <Group>
                       <span>{enemy.name}</span>
                       <span>
@@ -176,10 +233,10 @@ const Page = ({ params: { id } }: Props) => {
           </Button.Group>
           <Grid align="center">
             <Grid.Col span={5}>
-              <Paper p={'md'}>
-                <SimpleGrid cols={4} mt={'mt'} mih={'5rem'}>
+              <Paper p={cardSize.p}>
+                <SimpleGrid cols={4} mt={'mt'} mih={cardSize.fieldCard}>
                   {_.nth(gameServerState?.gameState?.field, -1)?.map((card) => (
-                    <GameCard key={card} card={card} fontSize={'5rem'} />
+                    <GameCard key={card} card={card} fontSize={cardSize.fieldCard} />
                   ))}
                 </SimpleGrid>
               </Paper>
@@ -202,13 +259,13 @@ const Page = ({ params: { id } }: Props) => {
           </Grid>
           <Grid align="center">
             <Grid.Col span={5}>
-              <Paper p={'md'} bg={isCommendable ? 'default' : 'lightgray'}>
-                <SimpleGrid cols={4} mt={'mt'} mih={'5rem'}>
+              <Paper p={cardSize.p} bg={isCommendable ? 'default' : 'lightgray'}>
+                <SimpleGrid cols={4} mt={'mt'} mih={cardSize.submitCard}>
                   {submitCardIds.map((card) => (
                     <GameCard
                       key={card}
                       card={card}
-                      fontSize={'5rem'}
+                      fontSize={cardSize.submitCard}
                       onClick={() => removeSubmitCardId(card)}
                     />
                   ))}
@@ -229,7 +286,7 @@ const Page = ({ params: { id } }: Props) => {
               />
             </Grid.Col>
           </Grid>
-          <Paper p={'md'}>
+          <Paper p={cardSize.p}>
             <SimpleGrid cols={13} mt={'mt'}>
               {handCardIds.map((card) => (
                 <GameCard
