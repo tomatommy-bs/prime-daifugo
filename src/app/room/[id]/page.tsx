@@ -18,6 +18,7 @@ import {
   SimpleGrid,
   Stack,
 } from '@mantine/core'
+import { useLocalStorage } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import Cookies from 'js-cookie'
 import _ from 'lodash'
@@ -95,7 +96,10 @@ const Page = ({ params: { id } }: Props) => {
     },
   })
 
-  const [cardSizeOption, setCardSizeOption] = useState<'S' | 'M' | 'L'>('M')
+  const [cardSizeOption, setCardSizeOption] = useLocalStorage<'S' | 'M' | 'L'>({
+    key: 'cardSizeOption',
+    defaultValue: 'M',
+  })
   const cardSize = useMemo(() => {
     switch (cardSizeOption) {
       case 'S':
