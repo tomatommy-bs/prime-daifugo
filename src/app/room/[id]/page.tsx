@@ -146,11 +146,6 @@ const Page = ({ params: { id } }: Props) => {
     })
   }, [gameServerState, presence, ws.id])
 
-  console.log(submitCardIds)
-  console.log(concatCardNumbers(submitCardIds))
-  console.log(concatCardNumbers(submitCardIds) || '')
-  console.log((concatCardNumbers(submitCardIds) || '').toString())
-
   return (
     <div>
       <Group p={'xs'} align="center">
