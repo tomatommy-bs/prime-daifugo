@@ -110,6 +110,8 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
     submit: ({ ctx, state, events }, submitCardIds: CardId[]) => {
       const player = state.players[ctx.currentPlayer]
 
+      player.drawRight = true
+
       // 出すカードがない
       if (submitCardIds.length === 0) {
         return INVALID_MOVE
