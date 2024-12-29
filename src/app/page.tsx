@@ -1,4 +1,4 @@
-import { Button, Group } from '@mantine/core'
+import { Button, Group, SimpleGrid } from '@mantine/core'
 import Link from 'next/link'
 
 function* primeNumberGenerator(): Generator<number, number> {
@@ -28,11 +28,11 @@ export default function Home() {
   return (
     <main className="md:container mx-auto">
       <h1 className="text-4xl text-center text-white">Welcome to prime-daifugo!</h1>
-      <div className="grid grid-cols-4 gap-4">
+      <SimpleGrid cols={{ base: 2, sm: 3 }} mx={'xs'}>
         {rooms.map((room) => (
-          <div key={room} className="card bg-base-100 shadow">
+          <div key={room} className="card card-bordered bg-white shadow">
             <div className="card-body">
-              <h2 className="card-title">{room}</h2>
+              <h2 className="card-title justify-center text-center">{room}</h2>
               <div className="card-actions justify-end">
                 <Link className="w-full" href={`room/${room}`}>
                   <button type="button" className="btn w-full btn-primary">
@@ -43,7 +43,7 @@ export default function Home() {
             </div>
           </div>
         ))}
-      </div>
+      </SimpleGrid>
       <Group className="flex justify-end m-4">
         <Link href={'/login'} className="text-right">
           <Button>Change Name</Button>
