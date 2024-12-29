@@ -263,7 +263,7 @@ const Page = ({ params: { id } }: Props) => {
           </Grid>
           <Grid align="center">
             <Grid.Col span={5}>
-              <Paper p={cardSize.p} bg={isCommendable ? 'default' : 'lightgray'}>
+              <Paper p={cardSize.p} bg={isCommendable ? 'white' : 'lightgray'}>
                 <SimpleGrid cols={4} mt={'mt'} mih={cardSize.submitCard}>
                   {submitCardIds.map((card) => (
                     <GameCard
@@ -290,7 +290,7 @@ const Page = ({ params: { id } }: Props) => {
               />
             </Grid.Col>
           </Grid>
-          <Paper p={cardSize.p}>
+          <Paper p={cardSize.p} bg={isCommendable ? 'white' : 'lightgray'}>
             <SimpleGrid cols={{ xs: 12, md: 15 }} mt={'mt'}>
               {handCardIds.map((card) => (
                 <GameCard
