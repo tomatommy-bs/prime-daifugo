@@ -99,7 +99,7 @@ const Page = ({ params: { id } }: Props) => {
           break
         case 'is-not-valid-factor':
           notifications.show({
-            message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)}を出しましたが素因数分解が成立しません`,
+            message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)} = ${concatFactCardIds(submissionResult.submitCardSet.factor)}を出しましたが素因数分解が成立しません`,
             color: 'red',
           })
           break
@@ -421,21 +421,29 @@ const validateSubmitCardSet = (
   submitCardSet: SubmitCardSet,
 ): string | null => {
   const asFactMode = submitCardSet.factor.length > 0
-  if (!asFactMode) {
-    if (fieldTop === undefined) {
-      return null
+
+  if (fieldTop !== undefined) {
+    if (concatCardNumbers(fieldTop) > concatCardNumbers(submitCardSet.submit)) {
+      return '場のカードの数より大きくないといけません'
     }
     if (submitCardSet.submit.length !== fieldTop.length) {
       return '出すカードの枚数が合っていません'
     }
-    if (concatCardNumbers(fieldTop) > concatCardNumbers(submitCardSet.submit)) {
-      return '場のカードの数より大きくないといけません'
+  }
+
+  if (!asFactMode) {
+    if (fieldTop === undefined) {
+      return null
     }
     return null
   }
-  if (!isValidFactCardIds(submitCardSet.factor)) {
-    return '素因数分解として成立していません'
+  if (fieldTop === undefined) {
+    if (!isValidFactCardIds(submitCardSet.factor)) {
+      return '素因数分解として成立していません'
+    }
+    return null
   }
+
   return null
 }
 

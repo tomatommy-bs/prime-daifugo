@@ -71,6 +71,10 @@ export default class Server implements Party.Server {
     this.room.storage.put('roomStatus', ROOM_STATUS.waiting)
     console.log(`room ${this.room.id} initialized`)
   }
+
+  onError(_connection: Party.Connection, error: Error): void | Promise<void> {
+    console.error(error)
+  }
 }
 
 Server satisfies Party.Worker
