@@ -2,6 +2,7 @@ import type { ROOM_STATUS } from '@/constants/status'
 import type { CardId } from '@/game-card/src'
 import type { Ctx } from '@/partykit/room/logic/game-rule'
 import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
+import { compareCard } from '@/utils/play-card'
 import { useSetState } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import * as serverToClient from '../../../interface/server-to-client'
@@ -98,7 +99,7 @@ export const useMyField = (args: { all: CardId[]; field: CardId[][] }) => {
   }
   const removeSubmitCardId = (card: CardId) => {
     const submitCardIds = state.submitCardIds.filter((c) => c !== card)
-    const sortedHandCardIds = [...state.handCardIds, card].sort()
+    const sortedHandCardIds = [...state.handCardIds, card].sort(compareCard)
     setState({
       handCardIds: sortedHandCardIds,
       submitCardIds: submitCardIds,
@@ -106,7 +107,7 @@ export const useMyField = (args: { all: CardId[]; field: CardId[][] }) => {
   }
 
   const reset = () => {
-    const sortedHandCardIds = [...state.handCardIds, ...state.submitCardIds].sort()
+    const sortedHandCardIds = [...state.handCardIds, ...state.submitCardIds].sort(compareCard)
     setState({
       handCardIds: sortedHandCardIds,
       submitCardIds: [],
@@ -114,7 +115,7 @@ export const useMyField = (args: { all: CardId[]; field: CardId[][] }) => {
   }
 
   const setHandCardIds = (handCardIds: CardId[]) => {
-    const sortedHandCardIds = handCardIds.sort()
+    const sortedHandCardIds = handCardIds.sort(compareCard)
     setState({ handCardIds: sortedHandCardIds, submitCardIds: [] })
   }
 
