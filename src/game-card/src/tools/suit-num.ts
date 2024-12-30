@@ -146,3 +146,4 @@ export function getCardNum(cardId: CardId): CardNum {
   }
   return cardId[0] as CardNum
 }
+export const isCardId = (cardId: string): cardId is CardId => cardIdSet.has(cardId as CardId)

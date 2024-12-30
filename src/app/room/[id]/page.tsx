@@ -1,7 +1,7 @@
 'use client'
 
 import type { ROOM_STATUS } from '@/constants/status'
-import { GameCard } from '@/game-card/src'
+import { GameCard, isCardId } from '@/game-card/src'
 import type { Ctx } from '@/partykit/room/logic/game-rule'
 import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
 import { concatCardNumbers } from '@/utils/play-card'
@@ -9,17 +9,19 @@ import {
   ActionIcon,
   Badge,
   Button,
+  Flex,
   Grid,
   Group,
   Indicator,
   Paper,
+  Popover,
   SegmentedControl,
   SimpleGrid,
   Stack,
 } from '@mantine/core'
 import { useLocalStorage } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
-import { IconReload } from '@tabler/icons-react'
+import { IconAsterisk, IconChevronUp, IconReload } from '@tabler/icons-react'
 import Cookies from 'js-cookie'
 import _ from 'lodash'
 import usePartySocket from 'partysocket/react'
@@ -46,9 +48,14 @@ const Page = ({ params: { id } }: Props) => {
   const {
     handCardIds,
     submitCardIds,
+    isFactorizationMode,
+    factCardIds,
     selectHandCardIdAsSubmit,
+    selectHandCardIdAsFact,
     setHandCardIds,
     removeSubmitCardId,
+    removeFactCard,
+    toggleMode,
     reset,
   } = useMyField({ all: [], field: gameServerState?.gameState.field ?? [] })
 
@@ -224,7 +231,6 @@ const Page = ({ params: { id } }: Props) => {
             </Grid.Col>
             <Grid.Col span={'auto'}>
               <Indicator
-                mr={16}
                 size={32}
                 label={`= ${(concatCardNumbers(submitCardIds) || '0').toString()}`}
               >
@@ -243,37 +249,98 @@ const Page = ({ params: { id } }: Props) => {
               </Indicator>
             </Grid.Col>
             <Grid.Col span={'content'}>
-              <Stack gap={componentSize.p}>
-                <Button
-                  size={componentSize.button}
-                  disabled={!isCommendable}
-                  onClick={() => ClientMessenger.pass({ ws })}
+              <Group>
+                <Popover
+                  position="top-end"
+                  withArrow={true}
+                  closeOnClickOutside={false}
+                  closeOnEscape={false}
+                  opened={isFactorizationMode}
                 >
-                  pass
-                </Button>
-                <Button
-                  size={componentSize.button}
-                  disabled={submitCardIds.length === 0 || !isCommendable}
-                  onClick={() => {
-                    const fieldTop = _.nth(gameServerState?.gameState.field, -1)
-                    if (fieldTop !== undefined) {
-                      if (submitCardIds.length !== fieldTop?.length) {
-                        notifications.show({ message: '出すカードの枚数が合っていません' })
-                        return
+                  <Popover.Target>
+                    <Button disabled={submitCardIds.length === 0} onClick={toggleMode}>
+                      {isFactorizationMode ? 'キャンセル' : '素因数分解'}
+                    </Button>
+                  </Popover.Target>
+                  <Popover.Dropdown>
+                    <Grid align="center">
+                      <Grid.Col span={'content'}>
+                        <Badge>{concatCardNumbers(submitCardIds) || 0} =</Badge>
+                      </Grid.Col>
+                      <Grid.Col span={'auto'}>
+                        <Paper p={componentSize.p} bg={isCommendable ? 'while' : 'lightgray'}>
+                          <Flex align={'center'} mih={componentSize.submitCard}>
+                            {factCardIds.map((card, idx) =>
+                              isCardId(card) ? (
+                                <GameCard
+                                  key={card}
+                                  card={card}
+                                  fontSize={componentSize.submitCard}
+                                  onClick={() => removeFactCard(idx)}
+                                />
+                              ) : (
+                                <ActionIcon
+                                  // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+                                  key={`${card}-${idx}`}
+                                  variant="white"
+                                  onClick={() => removeFactCard(idx)}
+                                >
+                                  {card === '*' ? (
+                                    <IconAsterisk size={componentSize.submitCard} />
+                                  ) : (
+                                    <IconChevronUp size={componentSize.submitCard} />
+                                  )}
+                                </ActionIcon>
+                              ),
+                            )}
+                          </Flex>
+                        </Paper>
+                      </Grid.Col>
+                      <Grid.Col span={'content'}>
+                        <Stack gap={'xs'}>
+                          <ActionIcon>
+                            <IconAsterisk onClick={() => selectHandCardIdAsFact('*')} />
+                          </ActionIcon>
+                          <ActionIcon>
+                            <IconChevronUp onClick={() => selectHandCardIdAsFact('^')} />
+                          </ActionIcon>
+                        </Stack>
+                      </Grid.Col>
+                    </Grid>
+                  </Popover.Dropdown>
+                </Popover>
+                <Stack gap={componentSize.p}>
+                  <Button
+                    size={componentSize.button}
+                    disabled={!isCommendable}
+                    onClick={() => ClientMessenger.pass({ ws })}
+                  >
+                    pass
+                  </Button>
+                  <Button
+                    size={componentSize.button}
+                    disabled={submitCardIds.length === 0 || !isCommendable}
+                    onClick={() => {
+                      const fieldTop = _.nth(gameServerState?.gameState.field, -1)
+                      if (fieldTop !== undefined) {
+                        if (submitCardIds.length !== fieldTop?.length) {
+                          notifications.show({ message: '出すカードの枚数が合っていません' })
+                          return
+                        }
+                        if (concatCardNumbers(fieldTop) > concatCardNumbers(submitCardIds)) {
+                          notifications.show({
+                            message: '場のカードの数より大きくないといけません',
+                          })
+                          return
+                        }
                       }
-                      if (concatCardNumbers(fieldTop) > concatCardNumbers(submitCardIds)) {
-                        notifications.show({
-                          message: '場のカードの数より大きくないといけません',
-                        })
-                        return
-                      }
-                    }
-                    ClientMessenger.submit({ ws, cardIds: submitCardIds })
-                  }}
-                >
-                  submit
-                </Button>
-              </Stack>
+                      ClientMessenger.submit({ ws, cardIds: submitCardIds })
+                    }}
+                  >
+                    submit
+                  </Button>
+                </Stack>
+              </Group>
             </Grid.Col>
           </Grid>
 
@@ -284,7 +351,11 @@ const Page = ({ params: { id } }: Props) => {
                   key={card}
                   card={card}
                   fontSize={'5rem'}
-                  onClick={() => selectHandCardIdAsSubmit(card)}
+                  onClick={() => {
+                    isFactorizationMode
+                      ? selectHandCardIdAsFact(card)
+                      : selectHandCardIdAsSubmit(card)
+                  }}
                   focusable={isCommendable}
                 />
               ))}
