@@ -6,20 +6,20 @@ import type { Ctx } from '@/partykit/room/logic/game-rule'
 import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
 import { concatCardNumbers } from '@/utils/play-card'
 import {
+  ActionIcon,
   Badge,
   Button,
   Grid,
   Group,
-  InputLabel,
-  InputWrapper,
+  Indicator,
   Paper,
-  PinInput,
   SegmentedControl,
   SimpleGrid,
   Stack,
 } from '@mantine/core'
 import { useLocalStorage } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
+import { IconReload } from '@tabler/icons-react'
 import Cookies from 'js-cookie'
 import _ from 'lodash'
 import usePartySocket from 'partysocket/react'
@@ -29,7 +29,6 @@ import type * as serverToClient from '../../../interface/server-to-client'
 import { WaitingRoom } from './_ui/waiting-room'
 import { ClientMessenger } from './client-messenger'
 import { useMessageHandler, useMyField } from './hooks'
-
 interface Props {
   params: Record<'id', string>
   searchParams: Record<string, string | string[] | undefined>
@@ -96,37 +95,11 @@ const Page = ({ params: { id } }: Props) => {
     },
   })
 
-  const [cardSizeOption, setCardSizeOption] = useLocalStorage<'S' | 'M' | 'L'>({
+  const [compSizeOption, setCompSizeOption] = useLocalStorage<'S' | 'M' | 'L'>({
     key: 'cardSizeOption',
     defaultValue: 'M',
   })
-  const cardSize = useMemo(() => {
-    switch (cardSizeOption) {
-      case 'S':
-        return {
-          p: '0.25rem',
-          deckCard: '2rem',
-          fieldCard: '3rem',
-          submitCard: '3rem',
-        }
-      case 'M':
-        return {
-          p: '0.5rem',
-          deckCard: '3.5rem',
-          fieldCard: '4rem',
-          submitCard: '4rem',
-        }
-      case 'L':
-        return {
-          p: '1.0rem',
-          deckCard: '5rem',
-          fieldCard: '5rem',
-          submitCard: '5rem',
-        }
-      default:
-        throw new Error(cardSizeOption satisfies never)
-    }
-  }, [cardSizeOption])
+  const componentSize = useMemo(() => sizeData[compSizeOption], [compSizeOption])
 
   const myPresence = presence.find((p) => p.id === ws?.id)
 
@@ -152,18 +125,13 @@ const Page = ({ params: { id } }: Props) => {
         <h1>
           <Badge variant="dot">RoomID: {id}</Badge>
         </h1>
-        <InputWrapper>
-          <InputLabel mr={'md'}>
-            <Badge>Card Size</Badge>
-          </InputLabel>
-          <SegmentedControl
-            size="xs"
-            data={['S', 'M', 'L']}
-            color="blue"
-            value={cardSizeOption}
-            onChange={(e) => setCardSizeOption(e as 'S' | 'M' | 'L')}
-          />
-        </InputWrapper>
+        <SegmentedControl
+          size="xs"
+          data={['S', 'M', 'L']}
+          color="blue"
+          value={compSizeOption}
+          onChange={(e) => setCompSizeOption(e as 'S' | 'M' | 'L')}
+        />
       </Group>
       {roomStatus === 'waiting' && (
         <WaitingRoom
@@ -175,20 +143,30 @@ const Page = ({ params: { id } }: Props) => {
         />
       )}
       {roomStatus === 'playing' && (
-        <Stack pb={'md'} gap={cardSize.p}>
+        <Stack pb={'md'} gap={componentSize.p}>
           <Grid justify="center">
             <Grid.Col span={{ xs: 4, sm: 3 }}>
-              <Paper p={cardSize.p}>
+              <Paper p={componentSize.p}>
                 <Group>
-                  <GameCard card={'Back'} fontSize={cardSize.deckCard} /> x{' '}
+                  <GameCard card={'Back'} fontSize={componentSize.deckCard} /> x{' '}
                   {gameServerState?.gameState?.deck.length}
+                  <Button
+                    size={componentSize.button}
+                    disabled={
+                      gameServerState?.gameState?.players[ws.id]?.drawRight === false ||
+                      !isCommendable
+                    }
+                    onClick={() => ClientMessenger.draw({ ws })}
+                  >
+                    draw
+                  </Button>
                 </Group>
               </Paper>
             </Grid.Col>
             <Grid.Col span={{ xs: 8, sm: 9 }}>
               <SimpleGrid cols={{ xs: 2, sm: 3 }}>
                 {enemies.map((enemy) => (
-                  <Paper key={enemy.id} p={cardSize.p}>
+                  <Paper key={enemy.id} p={componentSize.p}>
                     <Group>
                       <span>{enemy.name}</span>
                       <span>
@@ -201,96 +179,83 @@ const Page = ({ params: { id } }: Props) => {
               </SimpleGrid>
             </Grid.Col>
           </Grid>
-          <Button.Group className={'justify-center'}>
-            <Button onClick={reset}>reset</Button>
-            <Button.GroupSection bg={'transparent'} />
-            <Button
-              disabled={
-                gameServerState?.gameState?.players[ws.id]?.drawRight === false || !isCommendable
-              }
-              onClick={() => ClientMessenger.draw({ ws })}
-            >
-              draw
-            </Button>
-            <Button disabled={!isCommendable} onClick={() => ClientMessenger.pass({ ws })}>
-              pass
-            </Button>
-            <Button
-              disabled={submitCardIds.length === 0 || !isCommendable}
-              onClick={() => {
-                const fieldTop = _.nth(gameServerState?.gameState.field, -1)
-                if (fieldTop !== undefined) {
-                  if (submitCardIds.length !== fieldTop?.length) {
-                    notifications.show({ message: '出すカードの枚数が合っていません' })
-                    return
-                  }
-                  if (concatCardNumbers(fieldTop) > concatCardNumbers(submitCardIds)) {
-                    notifications.show({ message: '場のカードの数より大きくないといけません' })
-                    return
-                  }
-                }
-                ClientMessenger.submit({ ws, cardIds: submitCardIds })
-              }}
-            >
-              submit
-            </Button>
-          </Button.Group>
+          <Indicator
+            mr={16}
+            size={32}
+            label={`= ${(
+              concatCardNumbers(_.nth(gameServerState?.gameState.field, -1) ?? []) || '0'
+            ).toString()}`}
+          >
+            <Paper p={componentSize.p}>
+              <SimpleGrid cols={4} mt={'mt'} mih={componentSize.fieldCard}>
+                {_.nth(gameServerState?.gameState?.field, -1)?.map((card) => (
+                  <GameCard key={card} card={card} fontSize={componentSize.fieldCard} />
+                ))}
+              </SimpleGrid>
+            </Paper>
+          </Indicator>
           <Grid align="center">
-            <Grid.Col span={5}>
-              <Paper p={cardSize.p}>
-                <SimpleGrid cols={4} mt={'mt'} mih={cardSize.fieldCard}>
-                  {_.nth(gameServerState?.gameState?.field, -1)?.map((card) => (
-                    <GameCard key={card} card={card} fontSize={cardSize.fieldCard} />
-                  ))}
-                </SimpleGrid>
-              </Paper>
+            <Grid.Col span={'content'}>
+              <ActionIcon onClick={reset}>
+                <IconReload />
+              </ActionIcon>
             </Grid.Col>
-            <Grid.Col span={1}>
-              <Badge size="xl" variant="white">
-                =
-              </Badge>
+            <Grid.Col span={'auto'}>
+              <Indicator
+                mr={16}
+                size={32}
+                label={`= ${(concatCardNumbers(submitCardIds) || '0').toString()}`}
+              >
+                <Paper p={componentSize.p} bg={isCommendable ? 'white' : 'lightgray'}>
+                  <SimpleGrid cols={4} mt={'mt'} mih={componentSize.submitCard}>
+                    {submitCardIds.map((card) => (
+                      <GameCard
+                        key={card}
+                        card={card}
+                        fontSize={componentSize.submitCard}
+                        onClick={() => removeSubmitCardId(card)}
+                      />
+                    ))}
+                  </SimpleGrid>
+                </Paper>
+              </Indicator>
             </Grid.Col>
-            <Grid.Col span={6}>
-              <PinInput
-                readOnly={true}
-                placeholder={''}
-                length={8}
-                value={(
-                  concatCardNumbers(_.nth(gameServerState?.gameState.field, -1) ?? []) || ''
-                ).toString()}
-              />
+            <Grid.Col span={'content'}>
+              <Stack gap={componentSize.p}>
+                <Button
+                  size={componentSize.button}
+                  disabled={!isCommendable}
+                  onClick={() => ClientMessenger.pass({ ws })}
+                >
+                  pass
+                </Button>
+                <Button
+                  size={componentSize.button}
+                  disabled={submitCardIds.length === 0 || !isCommendable}
+                  onClick={() => {
+                    const fieldTop = _.nth(gameServerState?.gameState.field, -1)
+                    if (fieldTop !== undefined) {
+                      if (submitCardIds.length !== fieldTop?.length) {
+                        notifications.show({ message: '出すカードの枚数が合っていません' })
+                        return
+                      }
+                      if (concatCardNumbers(fieldTop) > concatCardNumbers(submitCardIds)) {
+                        notifications.show({
+                          message: '場のカードの数より大きくないといけません',
+                        })
+                        return
+                      }
+                    }
+                    ClientMessenger.submit({ ws, cardIds: submitCardIds })
+                  }}
+                >
+                  submit
+                </Button>
+              </Stack>
             </Grid.Col>
           </Grid>
-          <Grid align="center">
-            <Grid.Col span={5}>
-              <Paper p={cardSize.p} bg={isCommendable ? 'white' : 'lightgray'}>
-                <SimpleGrid cols={4} mt={'mt'} mih={cardSize.submitCard}>
-                  {submitCardIds.map((card) => (
-                    <GameCard
-                      key={card}
-                      card={card}
-                      fontSize={cardSize.submitCard}
-                      onClick={() => removeSubmitCardId(card)}
-                    />
-                  ))}
-                </SimpleGrid>
-              </Paper>
-            </Grid.Col>
-            <Grid.Col span={1}>
-              <Badge size="xl" variant="white">
-                =
-              </Badge>
-            </Grid.Col>
-            <Grid.Col span={6}>
-              <PinInput
-                readOnly={true}
-                placeholder={''}
-                length={8}
-                value={(concatCardNumbers(submitCardIds) || '').toString()}
-              />
-            </Grid.Col>
-          </Grid>
-          <Paper p={cardSize.p} bg={isCommendable ? 'white' : 'lightgray'}>
+
+          <Paper p={componentSize.p} bg={isCommendable ? 'white' : 'lightgray'}>
             <SimpleGrid cols={{ xs: 12, md: 15 }} mt={'mt'}>
               {handCardIds.map((card) => (
                 <GameCard
@@ -298,6 +263,7 @@ const Page = ({ params: { id } }: Props) => {
                   card={card}
                   fontSize={'5rem'}
                   onClick={() => selectHandCardIdAsSubmit(card)}
+                  focusable={isCommendable}
                 />
               ))}
             </SimpleGrid>
@@ -307,5 +273,32 @@ const Page = ({ params: { id } }: Props) => {
     </div>
   )
 }
+
+const sizeData = {
+  S: {
+    p: '0.25rem',
+    deckCard: '2rem',
+    fieldCard: '3rem',
+    submitCard: '3rem',
+    button: 'xs',
+  },
+  M: {
+    p: '0.5rem',
+    deckCard: '3.5rem',
+    fieldCard: '4rem',
+    submitCard: '4rem',
+    button: 'sm',
+  },
+  L: {
+    p: '1.0rem',
+    deckCard: '5rem',
+    fieldCard: '5rem',
+    submitCard: '5rem',
+    button: 'md',
+  },
+} as const satisfies Record<
+  'S' | 'M' | 'L',
+  { p: string; deckCard: string; fieldCard: string; submitCard: string; button: string }
+>
 
 export default Page
