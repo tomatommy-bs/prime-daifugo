@@ -1,4 +1,3 @@
-import type { CardId } from '@/game-card/src'
 import type * as clientToServer from '@/interface/client-to-server'
 import type PartySocket from 'partysocket'
 
@@ -66,14 +65,12 @@ export class ClientMessenger {
     ws.send(JSON.stringify(payload))
   }
 
-  static submit(args: { ws: PartySocket; cardIds: CardId[] }) {
-    const { ws, cardIds } = args
+  static submit(args: { ws: PartySocket; submitCardSet: clientToServer.SubmitCardSet }) {
+    const { ws, submitCardSet } = args
     const payload: clientToServer.GameEvent = {
       event: 'game',
       action: 'submit',
-      submitCardSet: {
-        submit: cardIds,
-      },
+      submitCardSet,
     }
     ws.send(JSON.stringify(payload))
   }

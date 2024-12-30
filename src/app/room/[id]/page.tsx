@@ -1,10 +1,11 @@
 'use client'
 
 import type { ROOM_STATUS } from '@/constants/status'
-import { GameCard, isCardId } from '@/game-card/src'
+import { type CardId, GameCard, isCardId } from '@/game-card/src'
+import type { SubmitCardSet } from '@/interface/client-to-server'
 import type { Ctx } from '@/partykit/room/logic/game-rule'
 import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
-import { concatCardNumbers } from '@/utils/play-card'
+import { concatCardNumbers, concatFactCardIds, isValidFactCardIds } from '@/utils/play-card'
 import {
   ActionIcon,
   Badge,
@@ -31,6 +32,7 @@ import type * as serverToClient from '../../../interface/server-to-client'
 import { WaitingRoom } from './_ui/waiting-room'
 import { ClientMessenger } from './client-messenger'
 import { useMessageHandler, useMyField } from './hooks'
+
 interface Props {
   params: Record<'id', string>
   searchParams: Record<string, string | string[] | undefined>
@@ -262,39 +264,42 @@ const Page = ({ params: { id } }: Props) => {
                       {isFactorizationMode ? 'キャンセル' : '素因数分解'}
                     </Button>
                   </Popover.Target>
-                  <Popover.Dropdown>
+                  <Popover.Dropdown maw={'100vw'}>
                     <Grid align="center">
                       <Grid.Col span={'content'}>
                         <Badge>{concatCardNumbers(submitCardIds) || 0} =</Badge>
                       </Grid.Col>
                       <Grid.Col span={'auto'}>
-                        <Paper p={componentSize.p} bg={isCommendable ? 'while' : 'lightgray'}>
-                          <Flex align={'center'} mih={componentSize.submitCard}>
-                            {factCardIds.map((card, idx) =>
-                              isCardId(card) ? (
-                                <GameCard
-                                  key={card}
-                                  card={card}
-                                  fontSize={componentSize.submitCard}
-                                  onClick={() => removeFactCard(idx)}
-                                />
-                              ) : (
-                                <ActionIcon
-                                  // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-                                  key={`${card}-${idx}`}
-                                  variant="white"
-                                  onClick={() => removeFactCard(idx)}
-                                >
-                                  {card === '*' ? (
-                                    <IconAsterisk size={componentSize.submitCard} />
-                                  ) : (
-                                    <IconChevronUp size={componentSize.submitCard} />
-                                  )}
-                                </ActionIcon>
-                              ),
-                            )}
-                          </Flex>
-                        </Paper>
+                        <Stack align="end" gap={'xs'}>
+                          <Paper p={componentSize.p} bg={isCommendable ? 'while' : 'lightgray'}>
+                            <Flex align={'center'} mih={componentSize.submitCard}>
+                              {factCardIds.map((card, idx) =>
+                                isCardId(card) ? (
+                                  <GameCard
+                                    key={card}
+                                    card={card}
+                                    fontSize={componentSize.submitCard}
+                                    onClick={() => removeFactCard(idx)}
+                                  />
+                                ) : (
+                                  <ActionIcon
+                                    // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+                                    key={`${card}-${idx}`}
+                                    variant="white"
+                                    onClick={() => removeFactCard(idx)}
+                                  >
+                                    {card === '*' ? (
+                                      <IconAsterisk size={componentSize.submitCard} />
+                                    ) : (
+                                      <IconChevronUp size={componentSize.submitCard} />
+                                    )}
+                                  </ActionIcon>
+                                ),
+                              )}
+                            </Flex>
+                          </Paper>
+                          <Badge>= {concatFactCardIds(factCardIds)}</Badge>
+                        </Stack>
                       </Grid.Col>
                       <Grid.Col span={'content'}>
                         <Stack gap={'xs'}>
@@ -322,19 +327,21 @@ const Page = ({ params: { id } }: Props) => {
                     disabled={submitCardIds.length === 0 || !isCommendable}
                     onClick={() => {
                       const fieldTop = _.nth(gameServerState?.gameState.field, -1)
-                      if (fieldTop !== undefined) {
-                        if (submitCardIds.length !== fieldTop?.length) {
-                          notifications.show({ message: '出すカードの枚数が合っていません' })
-                          return
-                        }
-                        if (concatCardNumbers(fieldTop) > concatCardNumbers(submitCardIds)) {
-                          notifications.show({
-                            message: '場のカードの数より大きくないといけません',
-                          })
-                          return
-                        }
+                      const errMessage = validateSubmitCardSet(fieldTop, {
+                        submit: submitCardIds,
+                        factor: factCardIds,
+                      })
+                      if (errMessage !== null) {
+                        notifications.show({ message: errMessage, color: 'red' })
+                        return
                       }
-                      ClientMessenger.submit({ ws, cardIds: submitCardIds })
+                      ClientMessenger.submit({
+                        ws,
+                        submitCardSet: {
+                          submit: submitCardIds,
+                          factor: factCardIds,
+                        },
+                      })
                     }}
                   >
                     submit
@@ -393,5 +400,28 @@ const sizeData = {
   'S' | 'M' | 'L',
   { p: string; deckCard: string; fieldCard: string; submitCard: string; button: string }
 >
+
+const validateSubmitCardSet = (
+  fieldTop: CardId[] | undefined,
+  submitCardSet: SubmitCardSet,
+): string | null => {
+  const asFactMode = submitCardSet.factor.length > 0
+  if (!asFactMode) {
+    if (fieldTop === undefined) {
+      return null
+    }
+    if (submitCardSet.submit.length !== fieldTop.length) {
+      return '出すカードの枚数が合っていません'
+    }
+    if (concatCardNumbers(fieldTop) > concatCardNumbers(submitCardSet.submit)) {
+      return '場のカードの数より大きくないといけません'
+    }
+    return null
+  }
+  if (!isValidFactCardIds(submitCardSet.factor)) {
+    return '素因数分解として成立していません'
+  }
+  return null
+}
 
 export default Page

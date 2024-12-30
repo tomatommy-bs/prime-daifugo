@@ -19,7 +19,8 @@
         "useNamingConvention": "off",
         "noDefaultExport": "off",
         "useFilenamingConvention": "off",
-        "useNodejsImportProtocol": "off"
+        "useNodejsImportProtocol": "off",
+        "noNegationElse": "off"
       },
       "complexity": {
         "useSimplifiedLogicExpression": "off",

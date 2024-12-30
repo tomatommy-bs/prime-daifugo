@@ -1,7 +1,8 @@
+import type { SubmitCardSet } from '@/interface/client-to-server'
+import _ from 'lodash'
 import { GameParty } from './game-party'
 import { type Ctx, INVALID_MOVE, PrimeDaifugoGame } from './game-rule'
 import type { PrimeDaifugoGameState } from './game-state'
-
 const initialFixedState: PrimeDaifugoGameState = {
   players: {
     0: { hand: ['JS', '4C', '2D', '6C', '8H', '9D', 'KD', '3H'], drawRight: true },
@@ -192,10 +193,10 @@ describe('GameParty', () => {
   })
 
   describe('move.submit', () => {
-    it('現在のプレイヤーのみがmoveを実行できること', () => {
+    it('現在のプレイヤーのみがmoveを実行できること - 基本の submit', () => {
       const party = new GameParty<typeof PrimeDaifugoGame>({
         game: PrimeDaifugoGame,
-        state: initialFixedState,
+        state: _.cloneDeep(initialFixedState),
         activePlayers: initialFixedCtx.activePlayers,
         currentPlayer: initialFixedCtx.currentPlayer,
         playOrder: initialFixedCtx.playOrder,
@@ -219,7 +220,10 @@ describe('GameParty', () => {
       expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2)
 
       // 現在のプレイヤーが出せる
-      party.moves.submit(client1Id, [submitCard]) // 素数を出す
+      party.moves.submit(client1Id, {
+        submit: [submitCard],
+        factor: [],
+      }) // 素数を出す
       expect(state.deck.length).toBe(initialDeckLength)
       expect(state.players[client1Id].hand.length).toBe(initialHandLength.client1 - 1)
 
@@ -233,17 +237,86 @@ describe('GameParty', () => {
       expect(party.ctx.currentPlayer).toBe(client2Id)
 
       // もう一人のプレイヤーが出せる
-      expect(party.moves.submit(client2Id, ['AD'])).toBe(INVALID_MOVE) // 手札にないカードを出す
+      expect(party.moves.submit(client2Id, { submit: ['AD'], factor: [] })).toBe(INVALID_MOVE) // 手札にないカードを出す
       expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2) // 手札が変わらない
 
-      expect(party.moves.submit(client2Id, ['2S'])).toBe(INVALID_MOVE) // 場よりも小さいカードを出す
+      expect(
+        party.moves.submit(client2Id, {
+          submit: ['2S'],
+          factor: [],
+        }),
+      ).toBe(INVALID_MOVE) // 場よりも小さいカードを出す
       expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2) // 手札が変わらない
 
-      expect(party.moves.submit(client2Id, ['3D', 'JC'])).toBe(INVALID_MOVE) // 場とよりも多い枚数のカードを出す
+      expect(party.moves.submit(client2Id, { submit: ['3D', 'JC'], factor: [] })).toBe(INVALID_MOVE) // 場とよりも多い枚数のカードを出す
       expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2) // 手札が変わらない
 
       expect(state.field[0]).toEqual([submitCard]) // field が変わらない
-      expect(party.moves.submit(client2Id, ['8D'])).not.toBe(INVALID_MOVE) // 素数でないカードを出す
+      expect(party.moves.submit(client2Id, { submit: ['8D'], factor: [] })).not.toBe(INVALID_MOVE) // 素数でないカードを出す
+      expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2 + 1) // 失敗して手札が増える
+
+      expect(state.deckTopPlayer).toBeNull()
+      expect(state.field).toHaveLength(0)
+      expect(party.ctx.currentPlayer).toBe(client1Id)
+    })
+
+    it('現在のプレイヤーのみがmoveを実行できること - 素因数分解の submit', () => {
+      const party = new GameParty<typeof PrimeDaifugoGame>({
+        game: PrimeDaifugoGame,
+        state: _.cloneDeep(initialFixedState),
+        activePlayers: initialFixedCtx.activePlayers,
+        currentPlayer: initialFixedCtx.currentPlayer,
+        playOrder: initialFixedCtx.playOrder,
+      })
+
+      const [client1Id, client2Id] = party.ctx.playOrder
+
+      const state = party.getState()
+      const initialDeckLength = state.deck.length
+      const initialHandLength = {
+        client1: state.players[client1Id].hand.length,
+        client2: state.players[client2Id].hand.length,
+      }
+      const submitCardSet: SubmitCardSet = { submit: ['6C'], factor: ['2D', '*', '3H'] }
+      expect(party.ctx.currentPlayer).toBe(client1Id)
+      expect(state.field).toHaveLength(0)
+
+      // 他のプレイヤーは出せない
+      party.moves.submit(client2Id, { submit: ['8D'], factor: ['2S', '^', '3D'] })
+      expect(state.deck.length).toBe(initialDeckLength)
+      expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2)
+
+      // 現在のプレイヤーが出せる
+      expect(party.moves.submit(client1Id, submitCardSet)).not.toBe(INVALID_MOVE) // 素数を出す
+      expect(state.deck.length).toBe(initialDeckLength + 2) // 素因数分解で用いたカードがデッキに戻る
+      expect(state.players[client1Id].hand.length).toBe(initialHandLength.client1 - 3) // 出したカードが手札から消える
+
+      // field に出したカードが追加されている
+      expect(state.field).toHaveLength(1)
+      expect(state.field[0]).toEqual(submitCardSet.submit)
+
+      expect(state.deckTopPlayer).toBe(client1Id)
+
+      // active player が変わる
+      expect(party.ctx.currentPlayer).toBe(client2Id)
+
+      // もう一人のプレイヤーが出せる
+      expect(party.moves.submit(client2Id, { submit: ['AD'], factor: [] })).toBe(INVALID_MOVE) // 手札にないカードを出す
+      expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2) // 手札が変わらない
+
+      expect(
+        party.moves.submit(client2Id, {
+          submit: ['2S'],
+          factor: [],
+        }),
+      ).toBe(INVALID_MOVE) // 場よりも小さいカードを出す
+      expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2) // 手札が変わらない
+
+      expect(party.moves.submit(client2Id, { submit: ['3D', 'JC'], factor: [] })).toBe(INVALID_MOVE) // 場とよりも多い枚数のカードを出す
+      expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2) // 手札が変わらない
+
+      expect(state.field[0]).toEqual(submitCardSet.submit) // field が変わらない
+      expect(party.moves.submit(client2Id, { submit: ['8D'], factor: [] })).not.toBe(INVALID_MOVE) // 素数でないカードを出す
       expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2 + 1) // 失敗して手札が増える
 
       expect(state.deckTopPlayer).toBeNull()

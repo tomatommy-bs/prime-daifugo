@@ -1,5 +1,6 @@
 import type { CardId } from '@/game-card/src'
 import { z } from 'zod'
+import type { FactCardId } from './common'
 
 const chatEventSchema = z.object({
   event: z.literal('chat'),
@@ -21,6 +22,7 @@ export type RoomEvent = z.infer<typeof roomEventSchema>
 
 export const submitCardSetSchema = z.object({
   submit: z.array(z.string() as z.ZodType<CardId>),
+  factor: z.array(z.string() as z.ZodType<FactCardId>),
 })
 export type SubmitCardSet = z.infer<typeof submitCardSetSchema>
 const gameEventSchema = z.union([

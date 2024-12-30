@@ -1,9 +1,9 @@
 import type { ROOM_STATUS } from '@/constants/status'
-import { type CardId, isCardId } from '@/game-card/src'
+import type { CardId } from '@/game-card/src'
 import type { FactCardId } from '@/interface/common'
 import type { Ctx } from '@/partykit/room/logic/game-rule'
 import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
-import { compareCard } from '@/utils/play-card'
+import { compareCard, extractCardIdsFromFactCardIds } from '@/utils/play-card'
 import { useSetState } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import _ from 'lodash'
@@ -186,8 +186,4 @@ export const useMyField = (args: { all: CardId[]; field: CardId[][] }) => {
     setHandCardIds,
     toggleMode,
   }
-}
-
-const extractCardIdsFromFactCardIds = (factCardIds: FactCardId[]): CardId[] => {
-  return factCardIds.filter(isCardId)
 }

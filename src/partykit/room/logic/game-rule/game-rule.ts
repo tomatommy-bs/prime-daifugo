@@ -1,6 +1,12 @@
 import assert from 'assert'
-import { type CardId, cardIds } from '@/game-card/src'
-import { concatCardNumbers } from '@/utils/play-card'
+import { cardIds, isCardId } from '@/game-card/src'
+import type { SubmitCardSet } from '@/interface/client-to-server'
+import {
+  concatCardNumbers,
+  evalFactCardIds,
+  extractCardIdsFromFactCardIds,
+  isValidFactCardIds,
+} from '@/utils/play-card'
 import _ from 'lodash'
 import { z } from 'zod'
 import type { PrimeDaifugoGameState } from './game-state'
@@ -107,62 +113,128 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       return state
     },
 
-    submit: ({ ctx, state, events }, submitCardIds: CardId[]) => {
+    submit: ({ ctx, state, events }, submitCardSet: SubmitCardSet) => {
       const player = state.players[ctx.currentPlayer]
-
+      const { submit: submitCards, factor: factorCards } = submitCardSet
+      const isFactMode = factorCards.length > 0
       player.drawRight = true
 
       // 出すカードがない
-      if (submitCardIds.length === 0) {
+      if (submitCards.length === 0) {
         return INVALID_MOVE
       }
       // 手札にないカードを出そうとしている
-      if (submitCardIds.some((submitCardId) => !player.hand.includes(submitCardId))) {
+      if (submitCards.some((submitCardId) => !player.hand.includes(submitCardId))) {
+        return INVALID_MOVE
+      }
+      if (
+        factorCards.filter(isCardId).some((factorCardId) => !player.hand.includes(factorCardId))
+      ) {
         return INVALID_MOVE
       }
 
       // field の一番上のカード
       const topFieldCard = _.last(state.field) ?? null
 
-      const result: { isPrime: boolean | null } = {
+      const result: {
+        isPrime: boolean | null
+        validateFactResult: 'INVALID_FACT' | 'INVALID_ANSWER' | null
+      } = {
         isPrime: null,
+        validateFactResult: null,
       }
+      console.log('in game-rule', result)
+
       // case: 場にカードがない場合
       if (topFieldCard === null) {
-        if (isPrime(concatCardNumbers(submitCardIds))) {
-          result.isPrime = true
+        if (!isFactMode) {
+          if (isPrime(concatCardNumbers(submitCards))) {
+            result.isPrime = true
+          } else {
+            result.isPrime = false
+          }
         } else {
-          result.isPrime = false
+          result.isPrime = isPrime(concatCardNumbers(submitCards))
+          if (!isValidFactCardIds(factorCards)) {
+            result.validateFactResult = 'INVALID_FACT'
+          }
+          const evalFactResult = evalFactCardIds(factorCards)
+
+          // rule: 素因数分解した結果は出したカードと等しくなければならない
+          if (evalFactResult !== concatCardNumbers(submitCards)) {
+            result.validateFactResult = 'INVALID_ANSWER'
+          }
         }
       } else {
         // rule: 場にあるカードと同じ枚数のカードしか出せない
-        if (submitCardIds.length !== topFieldCard.length) {
+        if (submitCards.length !== topFieldCard.length) {
           return INVALID_MOVE
         }
         // rule: 場のカードの合計値より大きい値を出すことができる
-        if (concatCardNumbers(submitCardIds) <= concatCardNumbers(topFieldCard)) {
+        if (concatCardNumbers(submitCards) <= concatCardNumbers(topFieldCard)) {
           return INVALID_MOVE
         }
 
-        if (isPrime(concatCardNumbers(submitCardIds))) {
-          result.isPrime = true
+        if (!isFactMode) {
+          if (isPrime(concatCardNumbers(submitCards))) {
+            result.isPrime = true
+          } else {
+            result.isPrime = false
+          }
         } else {
-          result.isPrime = false
+          result.isPrime = isPrime(concatCardNumbers(submitCards))
+          if (!isValidFactCardIds(factorCards)) {
+            result.validateFactResult = 'INVALID_FACT'
+          }
+          const evalFactResult = evalFactCardIds(factorCards)
+
+          // rule: 素因数分解した結果は出したカードと等しくなければならない
+          if (evalFactResult !== concatCardNumbers(submitCards)) {
+            result.validateFactResult = 'INVALID_ANSWER'
+          }
         }
       }
 
       switch (result.isPrime) {
         case true: // rule: 素数なら出せる
           {
-            state.field.push(submitCardIds) // 場に出す
-            _.pullAll(player.hand, submitCardIds) // 手札から削除
+            state.field.push(submitCards) // 場に出す
+            _.pullAll(player.hand, submitCards) // 手札から削除
             state.deckTopPlayer = ctx.currentPlayer
           }
           break
-        case false: // rule: 素数でない場合, 出したカードと同じ枚数のカードを山から引く
+        case false:
           {
-            const drawnCards = state.deck.splice(0, submitCardIds.length)
-            player.hand.push(...drawnCards)
+            switch (isFactMode) {
+              case true: {
+                // rule: 素因数分解に成功した場合, 素因数分解のカードは山札へ捨てる
+                if (result.validateFactResult === null) {
+                  state.field.push(submitCards)
+                  _.pullAll(player.hand, submitCards)
+                  _.pullAll(player.hand, factorCards)
+                  const newDeck = _.shuffle([
+                    ...state.deck,
+                    ...extractCardIdsFromFactCardIds(factorCards),
+                  ])
+                  state.deck = newDeck
+                  state.deckTopPlayer = ctx.currentPlayer
+                  break
+                }
+
+                // rule: 素因数分解に失敗した場合, 出したカードと同じ枚数のカードを山から引く
+                const drawnCards = state.deck.splice(0, submitCards.length)
+                player.hand.push(...drawnCards)
+                break
+              }
+              // rule: 素数でない場合, 出したカードと同じ枚数のカードを山から引く
+              case false: {
+                const drawnCards = state.deck.splice(0, submitCards.length)
+                player.hand.push(...drawnCards)
+                break
+              }
+              default:
+                throw new Error(isFactMode satisfies never)
+            }
           }
           break
         default:

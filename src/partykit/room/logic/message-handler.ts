@@ -105,7 +105,7 @@ export const messageHandler = new MessageManager({
   onSubmit: async (room, sender, submitCardSet) => {
     partyStorageMiddleware(room, (party) => {
       assert(sender.state)
-      party.moves.submit(sender.id, submitCardSet.submit)
+      party.moves.submit(sender.id, submitCardSet)
       ServerMessenger.broadcastSystemEvent({
         room,
         content: {
