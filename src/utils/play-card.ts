@@ -31,11 +31,18 @@ const translateAsEvalString = (cards: FactCardId[]): string => {
     .map((card) => (isCardId(card) ? getCardNumber(card) : card === '^' ? '**' : '*'))
     .join('')
 }
-const isEvaluable = (evalString: string): boolean => {
-  const regex = /^(\S+)(\s*(\*{1,2})\s*(\S+))*$/g
 
-  return regex.test(evalString)
+const evalRegex = /^[1-9]\d*(?:\s*\*{1,2}\s*[1-9]\d*)+$/
+const isEvaluable = (evalString: string): boolean => {
+  return evalRegex.test(evalString)
 }
+
+/**
+ * 素因数分解のためのカード配列として有効かどうかを判定する
+ * - 1 を素因数には含められない
+ * - * または ^ は1つ以上含まれる
+ * - 素因数には素数以外のカードが含まれていない
+ */
 export const isValidFactCardIds = (cards: FactCardId[]): boolean => {
   const evalString = translateAsEvalString(cards)
   if (cards.length === 0 || cards.length === 1) {

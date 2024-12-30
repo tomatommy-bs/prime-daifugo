@@ -143,7 +143,6 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
         isPrime: null,
         validateFactResult: null,
       }
-      console.log('in game-rule', result)
 
       // case: 場にカードがない場合
       if (topFieldCard === null) {
