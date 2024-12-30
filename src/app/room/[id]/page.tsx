@@ -270,7 +270,7 @@ const Page = ({ params: { id } }: Props) => {
           </Grid>
 
           <Paper p={componentSize.p} bg={isCommendable ? 'white' : 'lightgray'}>
-            <SimpleGrid cols={{ xs: 12, md: 15 }} mt={'mt'}>
+            <SimpleGrid cols={{ xs: 12, md: 15 }} mt={'mt'} className="justify-items-center">
               {handCardIds.map((card) => (
                 <GameCard
                   key={card}
