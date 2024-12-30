@@ -129,7 +129,7 @@ const Page = ({ params: { id } }: Props) => {
     return enemyIds.map((id) => {
       const name = presence.find((p) => p.id === id)?.name
       const hand = gameServerState?.gameState.players[id]?.hand
-      return { id, name, hand }
+      return { id, name, hand, isCommendable: gameServerState?.ctx?.currentPlayer === id }
     })
   }, [gameServerState, presence, ws.id])
 
@@ -180,15 +180,23 @@ const Page = ({ params: { id } }: Props) => {
             <Grid.Col span={{ xs: 8, sm: 9 }}>
               <SimpleGrid cols={{ xs: 2, sm: 3 }}>
                 {enemies.map((enemy) => (
-                  <Paper key={enemy.id} p={componentSize.p}>
-                    <Group>
-                      <span>{enemy.name}</span>
-                      <span>
-                        <GameCard card="Back" fontSize={'2rem'} />
-                      </span>
-                      <span>x {enemy.hand?.length}</span>
-                    </Group>
-                  </Paper>
+                  <Indicator
+                    key={enemy.id}
+                    disabled={!enemy.isCommendable}
+                    processing={true}
+                    size={16}
+                    color="green"
+                  >
+                    <Paper p={componentSize.p}>
+                      <Group>
+                        <span>{enemy.name}</span>
+                        <span>
+                          <GameCard card="Back" fontSize={'2rem'} />
+                        </span>
+                        <span>x {enemy.hand?.length}</span>
+                      </Group>
+                    </Paper>
+                  </Indicator>
                 ))}
               </SimpleGrid>
             </Grid.Col>
