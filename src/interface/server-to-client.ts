@@ -1,6 +1,7 @@
 import { CtxSchema } from '@/partykit/room/logic/game-rule'
 import { PrimeDaifugoGameStateSchema } from '@/partykit/room/logic/game-rule/game-state'
 import { z } from 'zod'
+import { submitCardSetSchema } from './client-to-server'
 
 const chatEventSchema = z.object({
   event: z.literal('chat'),
@@ -27,9 +28,8 @@ const roomStatusEventSchema = z.object({
 })
 export type RoomStatusEvent = z.infer<typeof roomStatusEventSchema>
 
-const systemEventSchema = z.object({
+const baseSystemEventSchema = z.object({
   event: z.literal('system'),
-  action: z.enum(['game-start', 'draw', 'pass', 'submit']),
   gameState: PrimeDaifugoGameStateSchema,
   commander: z.object({
     id: z.string(),
@@ -37,6 +37,28 @@ const systemEventSchema = z.object({
   }),
   ctx: CtxSchema,
 })
+
+const submissionResultSchema = z.object({
+  submitCardSet: submitCardSetSchema,
+  result: z.enum(['success', 'failure']),
+})
+export type SubmissionResult = z.infer<typeof submissionResultSchema>
+
+export const systemEventSchema = z.discriminatedUnion('action', [
+  baseSystemEventSchema.extend({
+    action: z.literal('game-start'),
+  }),
+  baseSystemEventSchema.extend({
+    action: z.literal('draw'),
+  }),
+  baseSystemEventSchema.extend({
+    action: z.literal('pass'),
+  }),
+  baseSystemEventSchema.extend({
+    action: z.literal('submit'),
+    submissionResult: submissionResultSchema,
+  }),
+])
 export type SystemEvent = z.infer<typeof systemEventSchema>
 
 export const serverToClientSchema = z.union([

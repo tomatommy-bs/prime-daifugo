@@ -19,7 +19,7 @@ const roomEventSchema = z.object({
 })
 export type RoomEvent = z.infer<typeof roomEventSchema>
 
-const submitCardSetSchema = z.object({
+export const submitCardSetSchema = z.object({
   submit: z.array(z.string() as z.ZodType<CardId>),
 })
 export type SubmitCardSet = z.infer<typeof submitCardSetSchema>

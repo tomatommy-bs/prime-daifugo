@@ -60,13 +60,10 @@ export class ServerMessenger {
    */
   static broadcastSystemEvent(args: {
     room: Party.Room
-    content: Omit<serverToClient.SystemEvent, 'event'>
+    content: serverToClient.SystemEvent
   }) {
     const { room, content } = args
-    const payload: serverToClient.SystemEvent = {
-      event: 'system',
-      ...content,
-    }
+    const payload: serverToClient.SystemEvent = content
     room.broadcast(JSON.stringify(payload))
   }
 }

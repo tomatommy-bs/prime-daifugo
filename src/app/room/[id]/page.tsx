@@ -66,8 +66,22 @@ const Page = ({ params: { id } }: Props) => {
     onPass: ({ commander }) => {
       notifications.show({ message: `${commander.name}がパスしました` })
     },
-    onSubmit: ({ commander }) => {
-      notifications.show({ message: `${commander.name}がカードを出しました` })
+    onSubmit: ({ commander, submissionResult }) => {
+      switch (submissionResult.result) {
+        case 'success':
+          notifications.show({
+            message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)}を出しました`,
+          })
+          break
+        case 'failure':
+          notifications.show({
+            message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)}を出しましたが素数ではありません`,
+            color: 'red',
+          })
+          break
+        default:
+          throw new Error(submissionResult.result satisfies never)
+      }
     },
     onDraw: ({ commander }) => {
       notifications.show({ message: `${commander.name}がドローしました` })

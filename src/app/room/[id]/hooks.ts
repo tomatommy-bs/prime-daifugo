@@ -22,7 +22,11 @@ type RoomEventHandlers = {
   onGameEvent?: (params: GameEventParams) => void
   onDraw?: (params: GameEventParams) => void
   onPass?: (params: GameEventParams) => void
-  onSubmit?: (params: GameEventParams) => void
+  onSubmit?: (
+    params: GameEventParams & {
+      submissionResult: serverToClient.SubmissionResult
+    },
+  ) => void
   onRoomStatus?: (params: { status: (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS] }) => void
 }
 
@@ -55,7 +59,7 @@ export const useMessageHandler = (props: RoomEventHandlers) => {
             props.onSubmit?.(data)
             break
           default:
-            throw new Error(data.action satisfies never)
+            throw new Error(data satisfies never)
         }
         break
       }

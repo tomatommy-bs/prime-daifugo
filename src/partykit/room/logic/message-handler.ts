@@ -48,6 +48,7 @@ export const messageHandler = new MessageManager({
     ServerMessenger.broadcastSystemEvent({
       room,
       content: {
+        event: 'system',
         action: 'game-start',
         gameState: party.getState(),
         ctx: party.ctx,
@@ -68,6 +69,7 @@ export const messageHandler = new MessageManager({
       ServerMessenger.broadcastSystemEvent({
         room,
         content: {
+          event: 'system',
           action: 'draw',
           gameState: party.getState(),
           ctx: party.ctx,
@@ -87,10 +89,10 @@ export const messageHandler = new MessageManager({
       ServerMessenger.broadcastSystemEvent({
         room,
         content: {
+          event: 'system',
           action: 'pass',
           gameState: party.getState(),
           ctx: party.ctx,
-
           commander: {
             id: sender.id,
             name: sender.state.name,
@@ -107,12 +109,17 @@ export const messageHandler = new MessageManager({
       ServerMessenger.broadcastSystemEvent({
         room,
         content: {
+          event: 'system',
           action: 'submit',
           gameState: party.getState(),
           ctx: party.ctx,
           commander: {
             id: sender.id,
             name: sender.state.name,
+          },
+          submissionResult: {
+            submitCardSet: submitCardSet,
+            result: party.getState().deckTopPlayer === sender.id ? 'success' : 'failure',
           },
         },
       })
