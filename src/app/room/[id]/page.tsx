@@ -77,14 +77,29 @@ const Page = ({ params: { id } }: Props) => {
     },
     onSubmit: ({ commander, submissionResult }) => {
       switch (submissionResult.result) {
-        case 'success':
-          notifications.show({
-            message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)}を出しました`,
-          })
+        case 'success': {
+          if (submissionResult.submitCardSet.factor.length > 0) {
+            notifications.show({
+              message: `${commander.name}が${concatCardNumbers(
+                submissionResult.submitCardSet.submit,
+              )} = ${concatFactCardIds(submissionResult.submitCardSet.factor)}を出しました`,
+            })
+          } else {
+            notifications.show({
+              message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)}を出しました`,
+            })
+          }
           break
-        case 'failure':
+        }
+        case 'is-not-prime':
           notifications.show({
             message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)}を出しましたが素数ではありません`,
+            color: 'red',
+          })
+          break
+        case 'is-not-valid-factor':
+          notifications.show({
+            message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)}を出しましたが素因数分解が成立しません`,
             color: 'red',
           })
           break

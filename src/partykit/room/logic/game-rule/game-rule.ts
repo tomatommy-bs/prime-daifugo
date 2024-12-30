@@ -7,6 +7,7 @@ import {
   extractCardIdsFromFactCardIds,
   isValidFactCardIds,
 } from '@/utils/play-card'
+import { isPrime } from '@/utils/prime'
 import _ from 'lodash'
 import { z } from 'zod'
 import type { PrimeDaifugoGameState } from './game-state'
@@ -249,18 +250,6 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       return state
     },
   },
-}
-
-const isPrime = (n: number): boolean => {
-  if (n === 1) {
-    return false
-  }
-  for (let i = 2; i <= Math.sqrt(n); i++) {
-    if (n % i === 0) {
-      return false
-    }
-  }
-  return true
 }
 
 /**

@@ -2,7 +2,7 @@
 import assert from 'assert'
 import { ROOM_STATUS } from '@/constants/status'
 import type * as Party from 'partykit/server'
-import { type Ctx, type Game, PrimeDaifugoGame } from './game-rule'
+import { type Ctx, type Game, INVALID_MOVE, PrimeDaifugoGame } from './game-rule'
 import { GameParty } from './game-rule/game-party'
 import type { PrimeDaifugoGameState } from './game-rule/game-state'
 import { MessageManager } from './message-manager'
@@ -105,7 +105,11 @@ export const messageHandler = new MessageManager({
   onSubmit: async (room, sender, submitCardSet) => {
     partyStorageMiddleware(room, (party) => {
       assert(sender.state)
-      party.moves.submit(sender.id, submitCardSet)
+      if (party.moves.submit(sender.id, submitCardSet) === INVALID_MOVE) {
+        return
+      }
+      const asFactMode = submitCardSet.factor.length > 0
+
       ServerMessenger.broadcastSystemEvent({
         room,
         content: {
@@ -119,7 +123,12 @@ export const messageHandler = new MessageManager({
           },
           submissionResult: {
             submitCardSet: submitCardSet,
-            result: party.getState().deckTopPlayer === sender.id ? 'success' : 'failure',
+            result:
+              party.getState().deckTopPlayer === sender.id
+                ? 'success'
+                : !asFactMode
+                  ? 'is-not-prime'
+                  : 'is-not-valid-factor',
           },
         },
       })
