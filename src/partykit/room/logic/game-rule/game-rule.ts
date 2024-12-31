@@ -5,6 +5,7 @@ import {
   concatCardNumbers,
   evalFactCardIds,
   extractCardIdsFromFactCardIds,
+  isValidFactCardIds,
   isValidFactCardIdsStrict,
 } from '@/utils/play-card'
 import { isPrime } from '@/utils/prime'
@@ -82,6 +83,7 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       field: [],
       deck: deck,
       deckTopPlayer: null,
+      lastSubmitError: null,
     }
   },
   moves: {
@@ -137,32 +139,30 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       // field の一番上のカード
       const topFieldCard = _.last(state.field) ?? null
 
-      const result: {
-        isPrime: boolean | null
-        validateFactResult: 'INVALID_FACT' | 'INVALID_ANSWER' | null
-      } = {
-        isPrime: null,
-        validateFactResult: null,
-      }
+      let submitResult: PrimeDaifugoGameState['lastSubmitError'] = null
 
       // case: 場にカードがない場合
       if (topFieldCard === null) {
         if (!isFactMode) {
+          // rule: 場にカードがない場合, 素数なら出せる
           if (isPrime(concatCardNumbers(submitCards))) {
-            result.isPrime = true
+            null
+            // rule: 場にカードがない場合, 素数でない場合, 出したカードと同じ枚数のカードを山から引く
           } else {
-            result.isPrime = false
+            submitResult = 'BASE_IS_NOT_PRIME'
           }
+          // 素因数分解モード
         } else {
-          result.isPrime = isPrime(concatCardNumbers(submitCards))
-          if (!isValidFactCardIdsStrict(factorCards)) {
-            result.validateFactResult = 'INVALID_FACT'
+          if (!isValidFactCardIds(factorCards)) {
+            submitResult = 'INVALID_FACT'
+          } else if (!isValidFactCardIdsStrict(factorCards)) {
+            submitResult = 'FACT_CONTAIN_NOT_PRIME'
           }
           const evalFactResult = evalFactCardIds(factorCards)
 
           // rule: 素因数分解した結果は出したカードと等しくなければならない
           if (evalFactResult !== concatCardNumbers(submitCards)) {
-            result.validateFactResult = 'INVALID_ANSWER'
+            submitResult = 'INCORRECT_ANSWER'
           }
         }
       } else {
@@ -177,84 +177,53 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
 
         if (!isFactMode) {
           if (isPrime(concatCardNumbers(submitCards))) {
-            result.isPrime = true
+            null
           } else {
-            result.isPrime = false
+            submitResult = 'BASE_IS_NOT_PRIME'
           }
         } else {
-          result.isPrime = isPrime(concatCardNumbers(submitCards))
-          if (!isValidFactCardIdsStrict(factorCards)) {
-            result.validateFactResult = 'INVALID_FACT'
+          if (!isValidFactCardIds(factorCards)) {
+            submitResult = 'INVALID_FACT'
+          } else if (!isValidFactCardIdsStrict(factorCards)) {
+            submitResult = 'FACT_CONTAIN_NOT_PRIME'
           }
           const evalFactResult = evalFactCardIds(factorCards)
 
           // rule: 素因数分解した結果は出したカードと等しくなければならない
           if (evalFactResult !== concatCardNumbers(submitCards)) {
-            result.validateFactResult = 'INVALID_ANSWER'
+            submitResult = 'INCORRECT_ANSWER'
           }
         }
       }
 
-      switch (result.isPrime) {
-        case true:
-          switch (isFactMode) {
-            case true: {
-              // rule: 素因数分解に失敗した場合, 出したカードと同じ枚数のカードを山から引く
-              if (result.validateFactResult !== null) {
-                const drawnCards = state.deck.splice(0, submitCards.length)
-                player.hand.push(...drawnCards)
-              }
-              // base が素数の場合, 絶対に素因数分解に失敗するので, 成功の処理は不要
-              break
-            }
-            // rule: 素数なら出せる
-            case false: {
-              state.field.push(submitCards) // 場に出す
-              _.pullAll(player.hand, submitCards) // 手札から削除
-              state.deckTopPlayer = ctx.currentPlayer
-              break
-            }
-            default:
-              throw new Error(isFactMode satisfies never)
-          }
+      switch (submitResult) {
+        case null: {
+          state.field.push(submitCards) // 場に出す
+          _.pullAll(player.hand, submitCards) // 手札から削除
+          _.pullAll(player.hand, factorCards) // 手札から削除
+          state.deckTopPlayer = ctx.currentPlayer
+          const newDeck = _.shuffle([...state.deck, ...extractCardIdsFromFactCardIds(factorCards)])
+          state.deck = newDeck
           break
-        case false:
-          {
-            switch (isFactMode) {
-              case true: {
-                // rule: 素因数分解に成功した場合, 素因数分解のカードは山札へ捨てる
-                if (result.validateFactResult === null) {
-                  state.field.push(submitCards)
-                  _.pullAll(player.hand, submitCards)
-                  _.pullAll(player.hand, factorCards)
-                  const newDeck = _.shuffle([
-                    ...state.deck,
-                    ...extractCardIdsFromFactCardIds(factorCards),
-                  ])
-                  state.deck = newDeck
-                  state.deckTopPlayer = ctx.currentPlayer
-                  break
-                }
-
-                // rule: 素因数分解に失敗した場合, 出したカードと同じ枚数のカードを山から引く
-                const drawnCards = state.deck.splice(0, submitCards.length)
-                player.hand.push(...drawnCards)
-                break
-              }
-              // rule: 素数でない場合, 出したカードと同じ枚数のカードを山から引く
-              case false: {
-                const drawnCards = state.deck.splice(0, submitCards.length)
-                player.hand.push(...drawnCards)
-                break
-              }
-              default:
-                throw new Error(isFactMode satisfies never)
-            }
-          }
+        }
+        case 'BASE_IS_NOT_PRIME': {
+          const drawnCards = state.deck.splice(0, submitCards.length)
+          player.hand.push(...drawnCards)
           break
-        default:
+        }
+        case 'FACT_CONTAIN_NOT_PRIME':
+        case 'INCORRECT_ANSWER': {
+          const drawnCards = state.deck.splice(0, submitCards.length)
+          player.hand.push(...drawnCards)
+          break
+        }
+        case 'INVALID_FACT': {
           return INVALID_MOVE
+        }
+        default:
+          throw new Error(submitResult satisfies never)
       }
+      state.lastSubmitError = submitResult
 
       events.endTurn()
       if (ctx.currentPlayer === state.deckTopPlayer) {

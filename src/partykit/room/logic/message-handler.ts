@@ -108,7 +108,6 @@ export const messageHandler = new MessageManager({
       if (party.moves.submit(sender.id, submitCardSet) === INVALID_MOVE) {
         return
       }
-      const asFactMode = submitCardSet.factor.length > 0
 
       ServerMessenger.broadcastSystemEvent({
         room,
@@ -123,12 +122,7 @@ export const messageHandler = new MessageManager({
           },
           submissionResult: {
             submitCardSet: submitCardSet,
-            result:
-              party.getState().deckTopPlayer === sender.id
-                ? 'success'
-                : !asFactMode
-                  ? 'is-not-prime'
-                  : 'is-not-valid-factor',
+            result: party.getState().lastSubmitError,
           },
         },
       })

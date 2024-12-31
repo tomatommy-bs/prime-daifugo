@@ -13,4 +13,7 @@ export const PrimeDaifugoGameStateSchema = z.object({
   field: z.array(z.array(z.string() as z.ZodType<CardId>)),
   deck: z.array(z.string() as z.ZodType<CardId>),
   deckTopPlayer: z.string().nullable(),
+  lastSubmitError: z
+    .enum(['BASE_IS_NOT_PRIME', 'INVALID_FACT', 'FACT_CONTAIN_NOT_PRIME', 'INCORRECT_ANSWER'])
+    .nullable(),
 })

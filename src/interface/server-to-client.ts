@@ -40,7 +40,9 @@ const baseSystemEventSchema = z.object({
 
 const submissionResultSchema = z.object({
   submitCardSet: submitCardSetSchema,
-  result: z.enum(['success', 'is-not-prime', 'is-not-valid-factor']),
+  result: z
+    .enum(['BASE_IS_NOT_PRIME', 'INVALID_FACT', 'FACT_CONTAIN_NOT_PRIME', 'INCORRECT_ANSWER'])
+    .nullable(),
 })
 export type SubmissionResult = z.infer<typeof submissionResultSchema>
 

@@ -77,7 +77,7 @@ const Page = ({ params: { id } }: Props) => {
     },
     onSubmit: ({ commander, submissionResult }) => {
       switch (submissionResult.result) {
-        case 'success': {
+        case null: {
           if (submissionResult.submitCardSet.factor.length > 0) {
             notifications.show({
               message: `${commander.name}が${concatCardNumbers(
@@ -91,15 +91,27 @@ const Page = ({ params: { id } }: Props) => {
           }
           break
         }
-        case 'is-not-prime':
+        case 'BASE_IS_NOT_PRIME':
           notifications.show({
             message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)}を出しましたが素数ではありません`,
             color: 'red',
           })
           break
-        case 'is-not-valid-factor':
+        case 'INVALID_FACT':
           notifications.show({
             message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)} = ${concatFactCardIds(submissionResult.submitCardSet.factor)}を出しましたが素因数分解が成立しません`,
+            color: 'red',
+          })
+          break
+        case 'FACT_CONTAIN_NOT_PRIME':
+          notifications.show({
+            message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)} = ${concatFactCardIds(submissionResult.submitCardSet.factor)}を出しましたが因数に素数以外のカードが含まれています`,
+            color: 'red',
+          })
+          break
+        case 'INCORRECT_ANSWER':
+          notifications.show({
+            message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)} = ${concatFactCardIds(submissionResult.submitCardSet.factor)}を出しましたが等式が間違っています`,
             color: 'red',
           })
           break

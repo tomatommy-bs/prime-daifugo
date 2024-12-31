@@ -48,6 +48,7 @@ const initialFixedState: PrimeDaifugoGameState = {
     'QD',
   ],
   deckTopPlayer: null,
+  lastSubmitError: null,
 }
 const initialFixedCtx: Ctx = {
   numPlayers: 2,
