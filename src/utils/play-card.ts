@@ -121,7 +121,7 @@ export const evalFactCardIds = (cards: FactCardId[]): number => {
 
   const processedCards = cards.map((card) => (isCardId(card) ? getCardNumber(card) : card))
   while (processedCards.includes('^')) {
-    const index = processedCards.indexOf('^')
+    const index = processedCards.lastIndexOf('^')
     const base = processedCards[index - 1]
     const power = processedCards[index + 1]
     assert(_.isNumber(base))
