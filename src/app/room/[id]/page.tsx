@@ -286,7 +286,11 @@ const Page = ({ params: { id } }: Props) => {
                       </Grid.Col>
                       <Grid.Col span={'auto'}>
                         <Stack align="end" gap={'xs'}>
-                          <Paper p={componentSize.p} bg={isCommendable ? 'while' : 'lightgray'}>
+                          <Paper
+                            p={componentSize.p}
+                            miw={200}
+                            bg={isCommendable ? 'while' : 'lightgray'}
+                          >
                             <Flex align={'center'} mih={componentSize.submitCard}>
                               {factCardIds.map((card, idx) =>
                                 isCardId(card) ? (

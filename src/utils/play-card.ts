@@ -2,6 +2,7 @@ import assert from 'assert'
 import { type CardId, type CardSuit, getCardNum, getCardSuit, isCardId } from '@/game-card/src'
 import type { FactCardId } from '@/interface/common'
 import _ from 'lodash'
+import { isPrime } from './prime'
 
 export const getCardNumber = (card: CardId): number => {
   switch (getCardNum(card)) {
@@ -41,7 +42,6 @@ const isEvaluable = (evalString: string): boolean => {
  * 素因数分解のためのカード配列として有効かどうかを判定する
  * - 1 を素因数には含められない
  * - * または ^ は1つ以上含まれる
- * - 素因数には素数以外のカードが含まれていない
  */
 export const isValidFactCardIds = (cards: FactCardId[]): boolean => {
   const evalString = translateAsEvalString(cards)
@@ -58,6 +58,54 @@ export const isValidFactCardIds = (cards: FactCardId[]): boolean => {
   // * が1つもない
   if (!evalString.includes('*')) {
     return false
+  }
+
+  return true
+}
+
+const regExAsterisk = /(\*|\^)/
+
+/**
+ * isValidFactCardIds に加えて、因数が素数であるかどうかも判定に含める
+ */
+export const isValidFactCardIdsStrict = (cards: FactCardId[]): boolean => {
+  if (!isValidFactCardIds(cards)) {
+    return false
+  }
+
+  const facts = _.flatten(concatFactCardIds(cards).split(regExAsterisk))
+  for (let idx = 0; idx < facts.length; idx += 2) {
+    const target = _.parseInt(facts[idx])
+    const former = facts[idx - 1] ?? '*' // 0番目の場合は * とする
+    const latter = facts[idx + 1] ?? '*' // 最後の場合は * とする
+
+    if (_.isNaN(target)) {
+      throw new Error(`invalid number: ${target}`)
+    }
+
+    if (former === '*' && latter === '*') {
+      if (!isPrime(target)) {
+        return false
+      }
+    }
+
+    // 指数の基底が素数でない場合は false
+    if (former === '*' && latter === '^') {
+      if (!isPrime(target)) {
+        return false
+      }
+    }
+
+    // 指数は素数でなくてもよい
+    if (former === '^' && latter === '*') {
+      null
+    }
+
+    if (former === '^' && latter === '^') {
+      if (!isPrime(target)) {
+        return false
+      }
+    }
   }
 
   return true

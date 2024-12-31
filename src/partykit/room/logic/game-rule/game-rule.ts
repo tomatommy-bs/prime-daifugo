@@ -5,7 +5,7 @@ import {
   concatCardNumbers,
   evalFactCardIds,
   extractCardIdsFromFactCardIds,
-  isValidFactCardIds,
+  isValidFactCardIdsStrict,
 } from '@/utils/play-card'
 import { isPrime } from '@/utils/prime'
 import _ from 'lodash'
@@ -155,7 +155,7 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
           }
         } else {
           result.isPrime = isPrime(concatCardNumbers(submitCards))
-          if (!isValidFactCardIds(factorCards)) {
+          if (!isValidFactCardIdsStrict(factorCards)) {
             result.validateFactResult = 'INVALID_FACT'
           }
           const evalFactResult = evalFactCardIds(factorCards)
@@ -183,7 +183,7 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
           }
         } else {
           result.isPrime = isPrime(concatCardNumbers(submitCards))
-          if (!isValidFactCardIds(factorCards)) {
+          if (!isValidFactCardIdsStrict(factorCards)) {
             result.validateFactResult = 'INVALID_FACT'
           }
           const evalFactResult = evalFactCardIds(factorCards)
@@ -196,11 +196,26 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       }
 
       switch (result.isPrime) {
-        case true: // rule: 素数なら出せる
-          {
-            state.field.push(submitCards) // 場に出す
-            _.pullAll(player.hand, submitCards) // 手札から削除
-            state.deckTopPlayer = ctx.currentPlayer
+        case true:
+          switch (isFactMode) {
+            case true: {
+              // rule: 素因数分解に失敗した場合, 出したカードと同じ枚数のカードを山から引く
+              if (result.validateFactResult !== null) {
+                const drawnCards = state.deck.splice(0, submitCards.length)
+                player.hand.push(...drawnCards)
+              }
+              // base が素数の場合, 絶対に素因数分解に失敗するので, 成功の処理は不要
+              break
+            }
+            // rule: 素数なら出せる
+            case false: {
+              state.field.push(submitCards) // 場に出す
+              _.pullAll(player.hand, submitCards) // 手札から削除
+              state.deckTopPlayer = ctx.currentPlayer
+              break
+            }
+            default:
+              throw new Error(isFactMode satisfies never)
           }
           break
         case false:
