@@ -42,11 +42,12 @@ const Page = ({ params: { id } }: Props) => {
   const [presence, setPresence] = useState<serverToClient.PresenceEvent['presence']>([])
   const [roomStatus, setRoomStatus] = useState<
     (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS] | null
-  >(null)
+  >('waitingNextRound')
   const [gameServerState, setGameServerState] = useState<{
     gameState: PrimeDaifugoGameState
     ctx: Ctx
   } | null>(null)
+
   const {
     handCardIds,
     submitCardIds,
@@ -122,6 +123,11 @@ const Page = ({ params: { id } }: Props) => {
     onDraw: ({ commander }) => {
       notifications.show({ message: `${commander.name}がドローしました` })
     },
+    onEndGame: ({ winner }) => {
+      notifications.show({
+        message: `${winner}の勝利です 🎉`,
+      })
+    },
     onGameEvent: ({ gameState, ctx }) => {
       setGameServerState({ gameState: gameState, ctx })
       const hand = gameState?.players?.[ws.id]?.hand
@@ -192,7 +198,7 @@ const Page = ({ params: { id } }: Props) => {
           onUnsetReady={() => ClientMessenger.unsetReady({ ws })}
         />
       )}
-      {roomStatus === 'playing' && (
+      {roomStatus !== 'waiting' && (
         <Stack pb={'md'} gap={componentSize.p}>
           <Grid justify="center">
             <Grid.Col span={{ xs: 4, sm: 3 }}>

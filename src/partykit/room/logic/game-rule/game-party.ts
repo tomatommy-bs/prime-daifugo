@@ -7,16 +7,19 @@ import {
   type MoveFnArgs,
 } from './game-rule'
 
-interface ImportConstructor<G extends Game = Game> {
+interface Base<G extends Game = Game> {
   game: G
+  onEnd?: (ctx: Ctx, state: ExtractStateFromGame<G>) => void
+}
+
+interface ImportConstructor<G extends Game = Game> extends Base<G> {
   state: ExtractStateFromGame<G>
   activePlayers: Ctx['activePlayers']
   currentPlayer: string
   playOrder: string[]
 }
 
-interface Constructor<G extends Game = Game> {
-  game: G
+interface Constructor<G extends Game = Game> extends Base<G> {
   playerIds: string[]
 }
 
@@ -28,6 +31,7 @@ export class GameParty<G extends Game = Game> {
   private readonly game: G
   private state: ExtractStateFromGame<G>
   readonly ctx: Ctx
+  readonly onEnd?: (ctx: Ctx, state: ExtractStateFromGame<G>) => void
   moves: {
     [K in keyof G['moves']]: (
       playerId: string,
@@ -59,6 +63,7 @@ export class GameParty<G extends Game = Game> {
       this.state = this.setup()
     }
     this.moves = this.initializeMoves()
+    this.onEnd = args.onEnd
   }
 
   private initializeMoves(): {
@@ -100,6 +105,10 @@ export class GameParty<G extends Game = Game> {
         const result = moveFn(moveArgs, ...args)
         if (result !== INVALID_MOVE) {
           this.state = result as ExtractStateFromGame<G>
+        }
+
+        if (this.game.endif(this.ctx, this.state)) {
+          this.onEnd?.(this.ctx, this.state)
         }
         return result
       }

@@ -24,7 +24,7 @@ export type PresenceEvent = z.infer<typeof presenceEventSchema>
 
 const roomStatusEventSchema = z.object({
   event: z.literal('room-status'),
-  status: z.enum(['waiting', 'playing']),
+  status: z.enum(['waiting', 'playing', 'waitingNextRound']),
 })
 export type RoomStatusEvent = z.infer<typeof roomStatusEventSchema>
 
@@ -59,6 +59,10 @@ export const systemEventSchema = z.discriminatedUnion('action', [
   baseSystemEventSchema.extend({
     action: z.literal('submit'),
     submissionResult: submissionResultSchema,
+  }),
+  baseSystemEventSchema.extend({
+    action: z.literal('game-end'),
+    winner: z.string(),
   }),
 ])
 export type SystemEvent = z.infer<typeof systemEventSchema>

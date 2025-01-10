@@ -41,6 +41,7 @@ export interface Game<State = any> {
     setActivePlayers?: boolean
   }
   setup: (ctx: Ctx) => State
+  endif: (ctx: Readonly<Ctx>, state: Readonly<State>) => boolean
 }
 
 export type MoveEvents = {
@@ -71,7 +72,7 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
     }
 
     const players: PrimeDaifugoGameState['players'] = {}
-    for (const playerID of Object.keys(ctx.activePlayers)) {
+    for (const playerID of _.shuffle(Object.keys(ctx.activePlayers))) {
       players[playerID] = {
         hand: deck.splice(0, config.initialNumCards),
         drawRight: true,
@@ -85,6 +86,11 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       deckTopPlayer: null,
       lastSubmitError: null,
     }
+  },
+  endif: (ctx, state) => {
+    return Object.keys(state.players)
+      .map((playerID) => state.players[playerID])
+      .some((player) => player.hand.length === 0)
   },
   moves: {
     draw: ({ ctx, state }) => {

@@ -30,6 +30,11 @@ type RoomEventHandlers = {
       submissionResult: serverToClient.SubmissionResult
     },
   ) => void
+  onEndGame?: (
+    params: GameEventParams & {
+      winner: string
+    },
+  ) => void
   onRoomStatus?: (params: { status: (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS] }) => void
 }
 
@@ -60,6 +65,9 @@ export const useMessageHandler = (props: RoomEventHandlers) => {
             break
           case 'submit':
             props.onSubmit?.(data)
+            break
+          case 'game-end':
+            props.onEndGame?.(data)
             break
           default:
             throw new Error(data satisfies never)

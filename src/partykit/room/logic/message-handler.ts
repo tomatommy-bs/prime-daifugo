@@ -1,6 +1,7 @@
 // biome-ignore lint/style/useNodejsImportProtocol: <explanation>
 import assert from 'assert'
 import { ROOM_STATUS } from '@/constants/status'
+import type { ConnectionState } from '@/interface/connection'
 import type * as Party from 'partykit/server'
 import { type Ctx, type Game, INVALID_MOVE, PrimeDaifugoGame } from './game-rule'
 import { GameParty } from './game-rule/game-party'
@@ -62,7 +63,7 @@ export const messageHandler = new MessageManager({
   },
 
   onDraw: async (room, sender) => {
-    partyStorageMiddleware(room, (party) => {
+    partyStorageMiddleware(room, sender, (party) => {
       assert(sender.state)
       party.moves.draw(sender.id)
       party.ctx
@@ -83,7 +84,7 @@ export const messageHandler = new MessageManager({
   },
 
   onPass: async (room, sender) => {
-    partyStorageMiddleware(room, (party) => {
+    partyStorageMiddleware(room, sender, (party) => {
       assert(sender.state)
       party.moves.pass(sender.id)
       ServerMessenger.broadcastSystemEvent({
@@ -103,7 +104,7 @@ export const messageHandler = new MessageManager({
   },
 
   onSubmit: async (room, sender, submitCardSet) => {
-    partyStorageMiddleware(room, (party) => {
+    partyStorageMiddleware(room, sender, (party) => {
       assert(sender.state)
       if (party.moves.submit(sender.id, submitCardSet) === INVALID_MOVE) {
         return
@@ -132,6 +133,7 @@ export const messageHandler = new MessageManager({
 
 const partyStorageMiddleware = async (
   room: Party.Room,
+  sender: Party.Connection<ConnectionState>,
   callback: (party: GameParty<Game<PrimeDaifugoGameState>>) => void,
 ) => {
   const gameState = await room.storage.get<PrimeDaifugoGameState>('gameState')
@@ -145,6 +147,29 @@ const partyStorageMiddleware = async (
     currentPlayer: gameCtx.currentPlayer,
     playOrder: gameCtx.playOrder,
     state: gameState,
+    onEnd: (_ctx, state) => {
+      assert(sender.state)
+      const winner = state.deckTopPlayer
+      if (winner === null) {
+        throw new Error('winner is null')
+      }
+
+      ServerMessenger.broadcastSystemEvent({
+        room,
+        content: {
+          event: 'system',
+          action: 'game-end',
+          commander: {
+            id: sender.id,
+            name: sender.state.name,
+          },
+          gameState: state,
+          ctx: gameCtx,
+          winner,
+        },
+      })
+      ServerMessenger.broadcastRoomStatus({ room, status: ROOM_STATUS.waitingNextRound })
+    },
   })
 
   callback(party)
