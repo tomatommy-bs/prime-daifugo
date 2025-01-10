@@ -44,7 +44,7 @@ const Page = ({ params: { id } }: Props) => {
   const [presence, setPresence] = useState<serverToClient.PresenceEvent['presence']>([])
   const [roomStatus, setRoomStatus] = useState<
     (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS] | null
-  >('waitingNextRound')
+  >(null)
   const [gameServerState, setGameServerState] = useState<{
     gameState: PrimeDaifugoGameState
     ctx: Ctx
