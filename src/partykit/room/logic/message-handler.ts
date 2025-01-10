@@ -150,7 +150,8 @@ const partyStorageMiddleware = async (
     onEnd: (_ctx, state) => {
       assert(sender.state)
       const winner = state.deckTopPlayer
-      if (winner === null) {
+      const winnerName = room.getConnection<ConnectionState>(winner ?? '')?.state?.name
+      if (winnerName == null) {
         throw new Error('winner is null')
       }
 
@@ -165,7 +166,7 @@ const partyStorageMiddleware = async (
           },
           gameState: state,
           ctx: gameCtx,
-          winner,
+          winner: winnerName,
         },
       })
       ServerMessenger.broadcastRoomStatus({ room, status: ROOM_STATUS.waitingNextRound })

@@ -14,11 +14,13 @@ import {
   Grid,
   Group,
   Indicator,
+  Modal,
   Paper,
   Popover,
   SegmentedControl,
   SimpleGrid,
   Stack,
+  Text,
 } from '@mantine/core'
 import { useLocalStorage } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
@@ -47,6 +49,7 @@ const Page = ({ params: { id } }: Props) => {
     gameState: PrimeDaifugoGameState
     ctx: Ctx
   } | null>(null)
+  const [winner, setWinner] = useState('')
 
   const {
     handCardIds,
@@ -127,6 +130,7 @@ const Page = ({ params: { id } }: Props) => {
       notifications.show({
         message: `${winner}の勝利です 🎉`,
       })
+      setWinner(winner)
     },
     onGameEvent: ({ gameState, ctx }) => {
       setGameServerState({ gameState: gameState, ctx })
@@ -407,6 +411,20 @@ const Page = ({ params: { id } }: Props) => {
           </Paper>
         </Stack>
       )}
+      <Modal
+        opened={roomStatus === 'waitingNextRound'}
+        onClose={() => false}
+        title={'GAME SET'}
+        closeOnClickOutside={false}
+        closeOnEscape={false}
+        withCloseButton={false}
+        centered={true}
+      >
+        <Stack>
+          <Text>{winner}の勝利です🎉</Text>
+          <Button onClick={handleGameStart}>次のラウンドを開始</Button>
+        </Stack>
+      </Modal>
     </div>
   )
 }
