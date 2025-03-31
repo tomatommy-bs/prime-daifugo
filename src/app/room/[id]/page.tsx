@@ -50,6 +50,7 @@ const Page = ({ params: { id } }: Props) => {
     ctx: Ctx
   } | null>(null)
   const [winner, setWinner] = useState('')
+  const [leftTime, setLeftTime] = useState<number | null>(null)
 
   const {
     handCardIds,
@@ -139,6 +140,16 @@ const Page = ({ params: { id } }: Props) => {
     },
     onRoomStatus: ({ status }) => {
       setRoomStatus(status)
+    },
+    onTimeCount: ({ leftTime: _leftTime }) => {
+      if (_leftTime === 0) {
+        notifications.show({ message: '時間切れです' })
+        if (gameServerState?.ctx.currentPlayer === ws.id) {
+          ClientMessenger.pass({ ws })
+        }
+      } else {
+        setLeftTime(_leftTime)
+      }
     },
   })
 
@@ -258,6 +269,7 @@ const Page = ({ params: { id } }: Props) => {
               </SimpleGrid>
             </Paper>
           </Indicator>
+          {leftTime}
           <Grid align="center">
             <Grid.Col span={'content'}>
               <ActionIcon onClick={reset}>

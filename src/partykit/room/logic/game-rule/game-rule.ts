@@ -85,6 +85,7 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       deck: deck,
       deckTopPlayer: null,
       lastSubmitError: null,
+      leftTime: 60,
     }
   },
   endif: (ctx, state) => {

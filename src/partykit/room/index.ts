@@ -61,8 +61,14 @@ export default class Server implements Party.Server {
     console.log(`room ${this.room.id} started`)
   }
 
-  onAlarm(): void | Promise<void> {
-    console.log('room  alarmed')
+  async onAlarm(): Promise<void> {
+    this.room.storage.setAlarm(new Date(Date.now() + 1 * 1000))
+    const leftTime = await this.room.storage.get<number | null>('leftTime')
+    this.room.storage.put('leftTime', (leftTime || 60) - 1)
+    ServerMessenger.broadcastLeftTime({
+      room: this.room,
+      leftTime: (leftTime || 60) - 1,
+    })
   }
 
   private initialize() {
