@@ -168,16 +168,14 @@ const Page = ({ params: { id } }: Props) => {
   }
 
   const isCommendable = gameServerState?.ctx?.currentPlayer === ws.id
-  const enemies = useMemo(() => {
-    const enemyIds = Object.keys(gameServerState?.gameState?.players ?? {}).filter(
-      (id) => id !== ws.id,
-    )
+  const playersState = useMemo(() => {
+    const enemyIds = Object.keys(gameServerState?.gameState?.players ?? {})
     return enemyIds.map((id) => {
       const name = presence.find((p) => p.id === id)?.name
       const hand = gameServerState?.gameState.players[id]?.hand
       return { id, name, hand, isCommendable: gameServerState?.ctx?.currentPlayer === id }
     })
-  }, [gameServerState, presence, ws.id])
+  }, [gameServerState, presence])
 
   return (
     <div>
@@ -224,27 +222,25 @@ const Page = ({ params: { id } }: Props) => {
               </Paper>
             </Grid.Col>
             <Grid.Col span={{ xs: 8, sm: 9 }}>
-              <SimpleGrid cols={{ xs: 2, sm: 3 }}>
-                {enemies.map((enemy) => (
+              <Flex gap={componentSize.p}>
+                {playersState.map((enemy) => (
                   <Indicator
                     key={enemy.id}
                     disabled={!enemy.isCommendable}
                     processing={true}
                     size={16}
                     color="green"
+                    inline={true}
                   >
-                    <Paper p={componentSize.p}>
+                    <Badge size={'md'} p={componentSize.p}>
                       <Group>
                         <span>{enemy.name}</span>
-                        <span>
-                          <GameCard card="Back" fontSize={'2rem'} />
-                        </span>
-                        <span>x {enemy.hand?.length}</span>
+                        <span>({enemy.hand?.length})</span>
                       </Group>
-                    </Paper>
+                    </Badge>
                   </Indicator>
                 ))}
-              </SimpleGrid>
+              </Flex>
             </Grid.Col>
           </Grid>
           <Indicator
