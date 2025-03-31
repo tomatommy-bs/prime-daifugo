@@ -67,9 +67,16 @@ export const systemEventSchema = z.discriminatedUnion('action', [
 ])
 export type SystemEvent = z.infer<typeof systemEventSchema>
 
+export const leftTimeEventSchema = z.object({
+  event: z.literal('left-time'),
+  leftTime: z.number(),
+})
+export type LeftTimeEvent = z.infer<typeof leftTimeEventSchema>
+
 export const serverToClientSchema = z.union([
   chatEventSchema,
   presenceEventSchema,
   roomStatusEventSchema,
   systemEventSchema,
+  leftTimeEventSchema,
 ])

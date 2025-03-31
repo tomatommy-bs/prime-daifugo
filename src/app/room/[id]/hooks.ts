@@ -36,6 +36,7 @@ type RoomEventHandlers = {
     },
   ) => void
   onRoomStatus?: (params: { status: (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS] }) => void
+  onTimeCount?: (params: { leftTime: number }) => void
 }
 
 export const useMessageHandler = (props: RoomEventHandlers) => {
@@ -76,6 +77,9 @@ export const useMessageHandler = (props: RoomEventHandlers) => {
       }
       case 'room-status':
         props.onRoomStatus?.(data)
+        break
+      case 'left-time':
+        props.onTimeCount?.(data)
         break
       default:
         throw new Error(data satisfies never)

@@ -66,4 +66,16 @@ export class ServerMessenger {
     const payload: serverToClient.SystemEvent = content
     room.broadcast(JSON.stringify(payload))
   }
+
+  static broadcastLeftTime(args: {
+    room: Party.Room
+    leftTime: number
+  }) {
+    const { room, leftTime } = args
+    const payload: serverToClient.LeftTimeEvent = {
+      event: 'left-time',
+      leftTime,
+    }
+    room.broadcast(JSON.stringify(payload))
+  }
 }
