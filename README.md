@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/create-next-app).
+# Getting Started
 
-## Getting Started
-
-First, run the development server:
+- hosting サーバーと、websocket サーバーを立ち上げる
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev:pk
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+# 素数大富豪のルール
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+https://primeqk.themedia.jp/pages/4500251/rules
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load Inter, a custom Google Font.
+## ルールのポイント（概略）
 
-## Learn More
+- 手札のカードを組み合わせて「素数」を作って出していき、早く手札をなくした人の勝ち
+- カードの数字を並べて読み、ひとつの数として取り扱う
+- 前の人が出した数と同じ枚数で、より大きな数を作って出さなければならない
 
-To learn more about Next.js, take a look at the following resources:
+## 基本ルール
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **勝利条件：** 参加プレイヤーの中で最も早く手札をなくす（出しきる）こと。
+- **カードの扱い：** \[A]=1, \[J]=11, \[Q]=12, \[K]=13 として扱う。
+- **数の作り方：** 2枚以上のカードを組み合わせて数を作る際は、カードに書かれた数を並べてひとつの数として扱う。 例：\\[Q]\[A] → 6,121（4桁の数）
+- **手札を増やす：** 自分の手番では、山札の上から1枚までカードを引いて手札に加えることができる。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 特殊ルール
 
-## Deploy on Vercel
+- **ジョーカー：** 1枚出しでは13（K）に勝つものとして出すことができ、さらに出すと場を流すことができる。 他のカードと組み合わせて2枚以上で出す際は、0～13のいずれかの数として使う。（出す際にどの数として出すのかを宣言する。）
+- **57【グロタンディーク素数切り】：** 57は「グロタンディーク素数」と呼ばれる特別な数で、出すと場を流すことができる。
+- **1729【ラマヌジャン革命】：** 1729は特別な数で、出すと「ラマヌジャン革命」が起きる。 革命下では、数の大小判定が逆転する。 効果は、再度ラマヌジャン革命が起こる（場に1729が出される）まで続く。
+- **合成数出し:** 合成数は、その数とともに素因数分解の式を作って一緒に出すことで、場に出すことができる。 素因数に使った札は即座に流れ、場には出された合成数のみが残る。
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 素数大富豪の遊び方［トランプで遊ぶ場合］
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**［用意するもの：トランプ1組（54枚）、対戦相手（1～5人程度）、素数判定員（または素数判定アプリ等）］**
+
+1.  トランプをよくきり、各プレイヤーに手札を11枚（原則は素数枚。5枚/7枚でもよい）ずつ配る。 残ったカードは、山札として場の中央に裏向きに積んでおく。
+2.  ジャンケン等で順番を決める。
+3.  プレイヤーは、自分の手番中に以下のことができる。
+    - ① 手札を増やしたい場合は、山札からカードを1枚引いて手札に加えることができる（任意）。
+    - ② 場に出ている数と同じ枚数の手札を組み合わせて、場に出ている数より大きな素数を作って場に出す。
+      - ※ 場に数が出ていない時は、好きな枚数で出してよい
+      - ※ 出す数ははっきりと宣言すること（並び順により異なる数となるため）
+    - ③ 出せるものがない場合や出したくない場合は、「パス」を宣言する。
+4.  場に数が出されたら、その数が素数であるかどうかを素数判定員が確認する。
+    - ※ 素数判定員はプレイヤーが兼任してもよい
+5.  出した数が素数でなかった場合は、ペナルティとして出した札を手札に戻し、さらに同じ枚数だけ山札からカードを引く。
+6.  場に出された数が更新されないまま手番が一周したら、場のカードを流して、最後の数を出したプレイヤーの手番になる。
+7.  これを繰り返して、より早く手札を出しきったプレイヤーの勝ちとなる。
