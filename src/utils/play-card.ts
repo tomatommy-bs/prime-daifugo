@@ -4,6 +4,12 @@ import type { FactCardId } from '@/interface/common'
 import _ from 'lodash'
 import { isPrime } from './prime'
 
+/**
+ * @example
+ * '2C' => 2
+ * '10C' => 10
+ * 'AC' => 1
+ */
 export const getCardNumber = (card: CardId): number => {
   switch (getCardNum(card)) {
     case 'A':
@@ -19,14 +25,31 @@ export const getCardNumber = (card: CardId): number => {
   }
 }
 
+/**
+ * @example
+ * ['2C', '3C'] => 23
+ * ['2C', '3C', '4C'] => 234
+ */
 export const concatCardNumbers = (cards: CardId[]): number => {
   return _.parseInt(cards.map(getCardNumber).map(_.toString).join(''))
 }
 
+/**
+ * @example
+ * ['2C', '*', '3C'] => '2*3'
+ * ['2C', '^', '3C'] => '2^3'
+ */
 export const concatFactCardIds = (cards: FactCardId[]): string => {
   return cards.map((card) => (isCardId(card) ? getCardNumber(card) : card)).join('')
 }
 
+/**
+ * @example
+ * ['2C', '3C'] => '23'
+ * ['2C', '3C', '4C'] => '234'
+ * ['2C', '*', '3C'] => '2*3'
+ * ['2C', '^', '3C'] => '2**3'
+ */
 const translateAsEvalString = (cards: FactCardId[]): string => {
   return cards
     .map((card) => (isCardId(card) ? getCardNumber(card) : card === '^' ? '**' : '*'))
@@ -42,6 +65,7 @@ const isEvaluable = (evalString: string): boolean => {
  * 素因数分解のためのカード配列として有効かどうかを判定する
  * - 1 を素因数には含められない
  * - * または ^ は1つ以上含まれる
+ * - 1つ以上の数字が含まれる
  */
 export const isValidFactCardIds = (cards: FactCardId[]): boolean => {
   const evalString = translateAsEvalString(cards)
@@ -120,6 +144,15 @@ export const evalFactCardIds = (cards: FactCardId[]): number => {
   }
 
   const processedCards = cards.map((card) => (isCardId(card) ? getCardNumber(card) : card))
+  for (let idx = 0; idx < processedCards.length; idx++) {
+    const current = processedCards[idx]
+    const next = processedCards[idx + 1]
+    if (typeof current === 'number' && typeof next === 'number') {
+      processedCards.splice(idx, 2, Number(`${current}${next}`))
+      idx--
+    }
+  }
+
   while (processedCards.includes('^')) {
     const index = processedCards.lastIndexOf('^')
     const base = processedCards[index - 1]
