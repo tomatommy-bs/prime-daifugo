@@ -143,8 +143,8 @@ const Page = ({ params: { id } }: Props) => {
     },
     onTimeCount: ({ leftTime: _leftTime }) => {
       if (_leftTime === 0) {
-        notifications.show({ message: '時間切れです' })
         if (gameServerState?.ctx.currentPlayer === ws.id) {
+          notifications.show({ message: '時間切れです', color: 'red' })
           ClientMessenger.pass({ ws })
         }
       } else {
@@ -242,6 +242,7 @@ const Page = ({ params: { id } }: Props) => {
                     size={16}
                     color="green"
                     inline={true}
+                    label={leftTime}
                   >
                     <Badge size={'md'} p={componentSize.p}>
                       <Group>
@@ -269,7 +270,6 @@ const Page = ({ params: { id } }: Props) => {
               </SimpleGrid>
             </Paper>
           </Indicator>
-          {leftTime}
           <Grid align="center">
             <Grid.Col span={'content'}>
               <ActionIcon onClick={reset}>

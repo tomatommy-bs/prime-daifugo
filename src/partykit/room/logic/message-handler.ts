@@ -60,7 +60,12 @@ export const messageHandler = new MessageManager({
       },
     })
     ServerMessenger.broadcastRoomStatus({ room, status: ROOM_STATUS.playing })
+    room.storage.put('leftTime', 60)
     room.storage.setAlarm(Date.now() + 1 * 1000)
+    ServerMessenger.broadcastLeftTime({
+      room,
+      leftTime: 60,
+    })
   },
 
   onDraw: async (room, sender) => {
@@ -185,6 +190,7 @@ const partyStorageMiddleware = async (
         },
       })
       ServerMessenger.broadcastRoomStatus({ room, status: ROOM_STATUS.waitingNextRound })
+      room.storage.deleteAlarm()
     },
   })
 
