@@ -8,6 +8,7 @@ describe('isValidFactCardIds', () => {
     expect(isValidFactCardIds(['2C', '^', '4D', '*', '3C'])).toBe(true)
     expect(isValidFactCardIds(['2C', '*', '4D', '*', '3C'])).toBe(true)
     expect(isValidFactCardIds(['2C', '^', '4D', '^', '3C'])).toBe(true)
+    expect(isValidFactCardIds(['2C', '*', 'AC', '3C'])).toBe(true)
   })
 
   it("returns false when the cards don't contain * or ^", () => {
@@ -42,6 +43,14 @@ describe('isValidFactCardIdsStrict', () => {
     expect(isValidFactCardIdsStrict(['2C', '^', '4C', '*', '5C'])).toBe(true)
   })
 
+  it('returns true when 2枚以上のカードで表現される要素が素数でないとき', () => {
+    expect(isValidFactCardIdsStrict(['2C', '*', 'AC', '3C'])).toBe(true)
+  })
+
+  it('returns false when 2枚以上のカードで表現される要素が素数でないとき', () => {
+    expect(isValidFactCardIdsStrict(['2C', '*', 'AC', '4C'])).toBe(false)
+  })
+
   it('returns false when 因数が素数でないとき', () => {
     expect(isValidFactCardIdsStrict(['2C', '*', '4C', '*', '5C'])).toBe(false)
     expect(isValidFactCardIdsStrict(['2C', '*', '4C', '^', '5C'])).toBe(false)
@@ -58,5 +67,7 @@ describe('evalFactCardIds', () => {
     expect(evalFactCardIds(['2C', '*', '2C', '*', '2C'])).toBe(2 * 2 * 2)
     expect(evalFactCardIds(['2C', '*', '3C', '*', '4C'])).toBe(2 * 3 * 4)
     expect(evalFactCardIds(['2C', '^', '3C', '^', '4C'])).toBe(2 ** (3 ** 4))
+    expect(evalFactCardIds(['2C', '*', 'AC', '3C'])).toBe(2 * 13)
+    expect(evalFactCardIds(['2C', '*', 'AC', '3C', '*', '3D', 'AD'])).toBe(2 * 13 * 31)
   })
 })
