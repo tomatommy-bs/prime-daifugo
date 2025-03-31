@@ -141,12 +141,16 @@ export const messageHandler = new MessageManager({
         },
       })
 
-      room.storage.setAlarm(Date.now() + 1 * 1000)
       room.storage.put('leftTime', 60)
-      ServerMessenger.broadcastLeftTime({
-        room,
-        leftTime: 60,
-      })
+      if (party.getState().field.length > 0) {
+        room.storage.setAlarm(Date.now() + 1 * 1000)
+        ServerMessenger.broadcastLeftTime({
+          room,
+          leftTime: 60,
+        })
+      } else {
+        room.storage.deleteAlarm()
+      }
     })
   },
 })
@@ -190,7 +194,6 @@ const partyStorageMiddleware = async (
         },
       })
       ServerMessenger.broadcastRoomStatus({ room, status: ROOM_STATUS.waitingNextRound })
-      room.storage.deleteAlarm()
     },
   })
 
