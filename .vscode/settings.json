@@ -1,11 +1,22 @@
 {
-  "eslint.enable": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
-  "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit"
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[javascript]": {
+    "editor.defaultFormatter": "biomejs.biome"
   },
-  "eslint.run": "onSave",
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "editor.codeActionsOnSave": {
+    "quickfix.biome": "explicit",
+    "source.organizeImports.biome": "explicit"
+  },
   // gitmoji
   "gitmoji.outputType": "emoji", // 文字列形式で絵文字を出力する
   "gitmoji.onlyUseCustomEmoji": true, // カスタマイズした絵文字のみ表示する
@@ -68,5 +79,5 @@
       "description": "作業中の commit (非推奨)"
     }
   ],
-  "cSpell.words": ["daisyui", "partykit", "tailwindcss"]
+  "cSpell.words": ["Daifugo", "daisyui", "Evaluable", "partykit", "tailwindcss"]
 }
