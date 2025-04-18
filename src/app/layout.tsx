@@ -12,15 +12,17 @@ const openGraphImage = {
 }
 
 export const metadata: Metadata = {
-  title: '素数大富豪🃏',
-  description: '新たな素数との出会いを',
-  icons:
-    'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text x=%2250%%22 y=%2250%%22 style=%22dominant-baseline:central;text-anchor:middle;font-size:90px;%22>🃏</text></svg>',
+  title: '素数大富豪 - 素数で遊ぶカードゲーム',
+  description:
+    '素数大富豪は、素数を使って遊ぶカードゲームです。オンラインで気楽に遊ぶことができるようになりました。',
   openGraph: {
-    title: '素数大富豪🃏',
-    description: '素数を使った大富豪ゲームです。新たな素数との出会いを。',
+    title: '素数大富豪',
+    description:
+      '素数大富豪は、素数を使って遊ぶカードゲームです。オンラインで気楽に遊ぶことができるようになりました。',
     type: 'website',
     images: [`/api/og?${new URLSearchParams(openGraphImage)}`],
+    locale: 'ja-JP',
+    siteName: '素数大富豪',
   },
 }
 
