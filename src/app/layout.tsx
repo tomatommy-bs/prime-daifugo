@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   description:
     '素数大富豪は、素数を使って遊ぶカードゲームです。オンラインで気楽に遊ぶことができるようになりました。',
   openGraph: {
-    title: '素数大富豪',
+    title: '素数大富豪 - 素数で遊ぶカードゲーム',
     description:
       '素数大富豪は、素数を使って遊ぶカードゲームです。オンラインで気楽に遊ぶことができるようになりました。',
     type: 'website',
