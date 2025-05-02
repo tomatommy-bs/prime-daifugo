@@ -31,6 +31,7 @@ import usePartySocket from 'partysocket/react'
 import { useMemo, useState } from 'react'
 import { PARTYKIT_HOST } from '../../../constants/env'
 import type * as serverToClient from '../../../interface/server-to-client'
+import { QRButton } from './_ui/QRButton'
 import { WaitingRoom } from './_ui/waiting-room'
 import { ClientMessenger } from './client-messenger'
 import { useMessageHandler, useMyField } from './hooks'
@@ -194,6 +195,8 @@ const Page = ({ params: { id } }: Props) => {
         <h1>
           <Badge variant="dot">RoomID: {id}</Badge>
         </h1>
+        <QRButton url={window.location.href} />
+
         <SegmentedControl
           size="xs"
           data={['S', 'M', 'L']}
