@@ -1,3 +1,4 @@
+import { CONFIG } from '@/constants/config'
 import { ROOM_STATUS } from '@/constants/status'
 import type { ConnectionState } from '@/interface/connection'
 import type * as Party from 'partykit/server'
@@ -37,6 +38,14 @@ export default class Server implements Party.Server {
       room: this.room,
       status: roomStatus,
     })
+
+    this.room.context.parties.lobby.get(CONFIG.SINGLETON_LOBBY_ROOM_ID).fetch('/', {
+      method: 'PUT',
+      body: JSON.stringify({
+        roomId: this.room.id,
+        number: Array.from(this.room.getConnections()).length,
+      }),
+    })
   }
 
   onMessage(payload: string, sender: Party.Connection<ConnectionState>) {
@@ -54,6 +63,13 @@ export default class Server implements Party.Server {
       room: this.room,
     })
 
+    this.room.context.parties.lobby.get(CONFIG.SINGLETON_LOBBY_ROOM_ID).fetch('/', {
+      method: 'PUT',
+      body: JSON.stringify({
+        roomId: this.room.id,
+        number: Array.from(this.room.getConnections()).length,
+      }),
+    })
     if (connections.length === 0) this.initialize()
   }
 
