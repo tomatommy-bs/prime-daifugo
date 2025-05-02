@@ -1,6 +1,6 @@
 const primeMemo: Set<number> = new Set()
 let maxPrimeMemo = 2
-function* primeNumberGenerator(): Generator<number, number> {
+export function* primeNumberGenerator(): Generator<number, number> {
   let num = 2
   primeMemo.add(num)
   while (true) {

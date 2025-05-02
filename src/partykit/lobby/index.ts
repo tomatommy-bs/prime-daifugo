@@ -1,4 +1,5 @@
 import type { ConnectionState } from '@/interface/connection'
+import { primeNumberGenerator } from '@/utils/prime'
 import type * as Party from 'partykit/server'
 import { z } from 'zod'
 
@@ -13,11 +14,34 @@ export default class Server implements Party.Server {
   async onRequest(req: Party.Request): Promise<Response> {
     switch (req.method) {
       case 'GET': {
-        const lobby = Array.from(this.room.getConnections()).length
+        const params = new URL(req.url).searchParams
+        const q = params.get('q')
+        switch (q) {
+          case 'random': {
+            const room = (await this.room.storage.get<Record<string, number>>('room')) ?? {}
+            const exists = Object.keys(room)
+            let ans: null | number = null
+            const generator = primeNumberGenerator()
+            while (ans == null) {
+              const num = generator.next().value
+              if (!exists.includes(String(num))) {
+                ans = num
+              }
+            }
+            return new Response(JSON.stringify({ roomId: ans }), { status: 200 })
+          }
+          default: {
+            const lobby = Array.from(this.room.getConnections()).length
+            const room = (await this.room.storage.get<Record<string, number>>('room')) ?? {}
+            const body: Storage = { lobby, room }
+            const payload = JSON.stringify(body)
+            return new Response(payload, { status: 200 })
+          }
+        }
+      }
+      case 'POST': {
         const room = (await this.room.storage.get<Record<string, number>>('room')) ?? {}
-        const body: Storage = { lobby, room }
-        const payload = JSON.stringify(body)
-        return new Response(payload, { status: 200 })
+        return new Response(null, { status: 200 })
       }
       case 'PUT': {
         const bodySchema = z.object({
