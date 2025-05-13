@@ -1,0 +1,13 @@
+{
+  "name": "素数大富豪 - 素数で遊ぶカードゲーム",
+  "short_name": "素数大富豪",
+  "description": "新たな素数との出会いを",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

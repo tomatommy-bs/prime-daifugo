@@ -1,0 +1,10 @@
+{
+  "$schema": "https://www.partykit.io/schema.json",
+  "name": "prime-daifugo",
+  "main": "src/partykit/main.ts",
+  "parties": {
+    "room": "src/partykit/room/index.ts",
+    "lobby": "src/partykit/lobby/index.ts"
+  },
+  "compatibilityDate": "2024-09-10"
+}
