@@ -1,14 +1,23 @@
-import { ActionIcon, CopyButton, Flex, Popover, TextInput, Tooltip } from '@mantine/core'
+import {
+  ActionIcon,
+  CopyButton,
+  Flex,
+  Popover,
+  type PopoverProps,
+  TextInput,
+  Tooltip,
+} from '@mantine/core'
 import { IconCheck, IconCopy, IconQrcode } from '@tabler/icons-react'
 import QRCode from 'react-qr-code'
 
 type Props = {
   url: string
+  popoverProps?: PopoverProps
 }
 
-const QRButton: React.FC<Props> = ({ url }) => {
+const QRButton: React.FC<Props> = ({ url, popoverProps }) => {
   return (
-    <Popover>
+    <Popover {...popoverProps}>
       <Popover.Target>
         <ActionIcon variant="white">
           <IconQrcode />

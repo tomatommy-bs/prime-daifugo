@@ -195,7 +195,7 @@ const Page = ({ params: { id } }: Props) => {
         <h1>
           <Badge variant="dot">RoomID: {id}</Badge>
         </h1>
-        <QRButton url={window.location.href} />
+        <QRButton url={window.location.href} popoverProps={{ defaultOpened: true }} />
 
         <SegmentedControl
           size="xs"
