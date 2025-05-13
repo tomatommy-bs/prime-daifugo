@@ -1,12 +1,13 @@
 import type { SubmitCardSet } from '@/interface/client-to-server'
+import { describe, expect, it } from '@jest/globals'
 import _ from 'lodash'
 import { GameParty } from './game-party'
 import { type Ctx, INVALID_MOVE, PrimeDaifugoGame } from './game-rule'
 import type { PrimeDaifugoGameState } from './game-state'
 const initialFixedState: PrimeDaifugoGameState = {
   players: {
-    0: { hand: ['JS', '4C', '2D', '6C', '8H', '9D', 'KD', '3H'], drawRight: true },
-    1: { hand: ['3D', 'JC', 'KC', '8D', '10H', '2S', '7S', '10D'], drawRight: true },
+    0: { hand: ['JS', '4C', '2D', '6C', '8H', '9D', 'KD', '3H', '2C'], drawRight: true },
+    1: { hand: ['3D', 'JC', 'KC', '8D', '10H', '2S', '7S', '10D', '5D'], drawRight: true },
   },
   field: [],
   deck: [
@@ -323,6 +324,36 @@ describe('GameParty', () => {
       expect(state.deckTopPlayer).toBeNull()
       expect(state.field).toHaveLength(0)
       expect(party.ctx.currentPlayer).toBe(client1Id)
+    })
+
+    describe('move.submit - グロタンディーク素数切り', () => {
+      it('57になる数は出すことができる', () => {
+        const party = new GameParty<typeof PrimeDaifugoGame>({
+          game: PrimeDaifugoGame,
+          state: _.cloneDeep(initialFixedState),
+          activePlayers: initialFixedCtx.activePlayers,
+          currentPlayer: initialFixedCtx.currentPlayer,
+          playOrder: initialFixedCtx.playOrder,
+        })
+        const [client1Id, client2Id] = party.ctx.playOrder
+        const initialState = party.getState()
+        const initialDeckLength = initialState.deck.length
+        const initialHandLength = {
+          client1: initialState.players[client1Id].hand.length,
+          client2: initialState.players[client2Id].hand.length,
+        }
+        const submitCardSet: SubmitCardSet = { submit: ['5D', '7S'], factor: [] }
+
+        party.ctx.currentPlayer = client2Id
+        party.moves.submit(client2Id, submitCardSet) // 57
+        const state = party.getState()
+
+        expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2 - 2) // 出したカードが手札から消える
+        expect(state.deck.length).toBe(initialDeckLength + 2) // 57 で出した枚数だけ増える
+        expect(state.field).toHaveLength(0) // 場は流れる
+        expect(state.deckTopPlayer).toBeNull() // デッキトップは null
+        expect(party.ctx.currentPlayer).toBe(client2Id) // active player は変わらない
+      })
     })
   })
 })

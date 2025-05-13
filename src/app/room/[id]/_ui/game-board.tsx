@@ -1,3 +1,4 @@
+import { WORLD_CONFIG } from '@/constants/config'
 import { PARTYKIT_HOST } from '@/constants/env'
 import type { ROOM_STATUS } from '@/constants/status'
 import { type CardId, GameCard, isCardId } from '@/game-card/src'
@@ -82,15 +83,21 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M' }) => {
     onSubmit: ({ commander, submissionResult }) => {
       switch (submissionResult.result) {
         case null: {
+          const submitCardNumber = concatCardNumbers(submissionResult.submitCardSet.submit)
           if (submissionResult.submitCardSet.factor.length > 0) {
             notifications.show({
-              message: `${commander.name}が${concatCardNumbers(
-                submissionResult.submitCardSet.submit,
-              )} = ${concatFactCardIds(submissionResult.submitCardSet.factor)}を出しました`,
+              message: `${commander.name}が${submitCardNumber} = ${concatFactCardIds(submissionResult.submitCardSet.factor)}を出しました`,
             })
           } else {
             notifications.show({
-              message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)}を出しました`,
+              message: `${commander.name}が${submitCardNumber}を出しました`,
+            })
+          }
+
+          if (submitCardNumber === WORLD_CONFIG.GROTHENDIECK_PRIME) {
+            notifications.show({
+              message: `${commander.name}がグロタンディーク素数を出しました`,
+              color: 'green',
             })
           }
           break
