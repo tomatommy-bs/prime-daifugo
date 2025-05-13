@@ -8,12 +8,14 @@ import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game
 import { concatCardNumbers, concatFactCardIds, isValidFactCardIds } from '@/utils/play-card'
 import {
   ActionIcon,
+  Alert,
   Badge,
   Button,
   Flex,
   Grid,
   Group,
   Indicator,
+  Loader,
   Modal,
   Paper,
   Popover,
@@ -22,7 +24,7 @@ import {
   Text,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconAsterisk, IconChevronUp, IconReload } from '@tabler/icons-react'
+import { IconAsterisk, IconChevronUp, IconExclamationCircle, IconReload } from '@tabler/icons-react'
 import Cookies from 'js-cookie'
 import _ from 'lodash'
 import usePartySocket from 'partysocket/react'
@@ -180,6 +182,23 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M' }) => {
       return { id, name, hand, isCommendable: gameServerState?.ctx?.currentPlayer === id }
     })
   }, [gameServerState, presence])
+
+  if (ws.readyState === ws.CONNECTING) {
+    return <Loader />
+  }
+
+  if (ws.readyState !== ws.OPEN) {
+    return (
+      <Alert
+        variant="filled"
+        color="red"
+        title={'サーバーへの接続に失敗'}
+        icon={<IconExclamationCircle />}
+      >
+        <Button onClick={() => ws.reconnect()}>再接続</Button>
+      </Alert>
+    )
+  }
 
   return (
     <>
