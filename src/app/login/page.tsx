@@ -17,7 +17,8 @@ export default function Page() {
     const callback = searchParams.get('callback')
     if (typeof callback === 'string') {
       // CHECK: router.push() では, middleware の cache 処理によりすでに `/room/[id]` からリダイレクトされているため, ページ遷移が行われない
-      location.pathname = callback
+      // location.pathname = callback
+      router.replace(callback)
     } else {
       router.push('/')
     }

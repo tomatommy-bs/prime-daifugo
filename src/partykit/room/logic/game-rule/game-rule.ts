@@ -1,4 +1,5 @@
 import assert from 'assert'
+import { WORLD_CONFIG } from '@/constants/config'
 import { cardIds, isCardId } from '@/game-card/src'
 import type { SubmitCardSet } from '@/interface/client-to-server'
 import {
@@ -147,12 +148,13 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       const topFieldCard = _.last(state.field) ?? null
 
       let submitResult: PrimeDaifugoGameState['lastSubmitError'] = null
+      const submitCardNumber = concatCardNumbers(submitCards)
 
       // case: 場にカードがない場合
       if (topFieldCard === null) {
         if (!isFactMode) {
           // rule: 場にカードがない場合, 素数なら出せる
-          if (isPrime(concatCardNumbers(submitCards))) {
+          if (isPrime(submitCardNumber) || submitCardNumber === WORLD_CONFIG.GROTHENDIECK_PRIME) {
             null
             // rule: 場にカードがない場合, 素数でない場合, 出したカードと同じ枚数のカードを山から引く
           } else {
@@ -178,12 +180,12 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
           return INVALID_MOVE
         }
         // rule: 場のカードの合計値より大きい値を出すことができる
-        if (concatCardNumbers(submitCards) <= concatCardNumbers(topFieldCard)) {
+        if (submitCardNumber <= concatCardNumbers(topFieldCard)) {
           return INVALID_MOVE
         }
 
         if (!isFactMode) {
-          if (isPrime(concatCardNumbers(submitCards))) {
+          if (isPrime(submitCardNumber) || submitCardNumber === WORLD_CONFIG.GROTHENDIECK_PRIME) {
             null
           } else {
             submitResult = 'BASE_IS_NOT_PRIME'
@@ -232,7 +234,12 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       }
       state.lastSubmitError = submitResult
 
-      events.endTurn()
+      if (submitCardNumber === WORLD_CONFIG.GROTHENDIECK_PRIME) {
+        events.endTurn({ next: ctx.currentPlayer })
+      } else {
+        events.endTurn()
+      }
+
       if (ctx.currentPlayer === state.deckTopPlayer) {
         flowField(state)
         state.deckTopPlayer = null
