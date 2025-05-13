@@ -96,7 +96,7 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M' }) => {
 
           if (submitCardNumber === WORLD_CONFIG.GROTHENDIECK_PRIME) {
             notifications.show({
-              message: `${commander.name}がグロタンディーク素数を出しました`,
+              message: `${commander.name}のグロタンディーク素数切り！`,
               color: 'green',
             })
           }
@@ -287,6 +287,12 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M' }) => {
               <Indicator
                 size={32}
                 label={`= ${(concatCardNumbers(submitCardIds) || '0').toString()}`}
+                color={
+                  concatCardNumbers(submitCardIds) === WORLD_CONFIG.GROTHENDIECK_PRIME
+                    ? 'green'
+                    : undefined
+                }
+                processing={concatCardNumbers(submitCardIds) === WORLD_CONFIG.GROTHENDIECK_PRIME}
               >
                 <Paper p={componentSize.p} bg={isCommendable ? 'white' : 'lightgray'}>
                   <SimpleGrid cols={4} mt={'mt'} mih={componentSize.submitCard}>
