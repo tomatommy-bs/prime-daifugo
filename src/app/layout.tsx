@@ -34,6 +34,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta
+          name="google-site-verification"
+          content="OM6MabqtLgm91v3FViWdePee1L56MH4XggcWidSiJFk"
+        />
         <Analytics />
         <ColorSchemeScript />
       </head>
