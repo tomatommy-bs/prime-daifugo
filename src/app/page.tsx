@@ -3,6 +3,7 @@
 import { CONFIG } from '@/constants/config'
 import { PARTYKIT_HOST } from '@/constants/env'
 import { Button, Tooltip } from '@mantine/core'
+import { IconExternalLink } from '@tabler/icons-react'
 import _ from 'lodash'
 import Link from 'next/link'
 import usePartySocket from 'partysocket/react'
@@ -36,9 +37,11 @@ export default function Home() {
         現在 {lobbyInfo?.lobby ?? '--'} 名がロビーにいます <br />
         {nRooms} つの部屋でゲームプレイ中 <br />
       </p>
-      <section className="p-4 bg-white rounded w-fit mx-auto mt-8 flex gap-4">
+      <section className="p-4 bg-white rounded w-fit mx-auto mt-8 flex gap-4 flex-col md:flex-row items-center">
         <Link href={'https://primeqk.themedia.jp/pages/4500251/rules'}>
-          <Button variant="outline">ゲームルール</Button>
+          <Button variant="outline" rightSection={<IconExternalLink />}>
+            ゲームルール
+          </Button>
         </Link>
         <Link href={'/room/new'}>
           <Button className="uppercase">ルーム作成</Button>
