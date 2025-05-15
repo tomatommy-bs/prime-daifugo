@@ -39,6 +39,13 @@ export default class Server implements Party.Server {
       status: roomStatus,
     })
 
+    if (roomStatus === 'playing') {
+      ServerMessenger.broadcastServerGameState({
+        room: this.room,
+        only: [conn.id],
+      })
+    }
+
     this.room.context.parties.lobby.get(CONFIG.SINGLETON_LOBBY_ROOM_ID).fetch('/', {
       method: 'PUT',
       body: JSON.stringify({

@@ -3,7 +3,7 @@ import assert from 'assert'
 import { ROOM_STATUS } from '@/constants/status'
 import type { ConnectionState } from '@/interface/connection'
 import type * as Party from 'partykit/server'
-import { type Ctx, type Game, INVALID_MOVE, PrimeDaifugoGame } from './game-rule'
+import { type Ctx, type Game, INVALID_MOVE, PLAYER_STATE, PrimeDaifugoGame } from './game-rule'
 import { GameParty } from './game-rule/game-party'
 import type { PrimeDaifugoGameState } from './game-rule/game-state'
 import { MessageManager } from './message-manager'
@@ -41,7 +41,10 @@ export const messageHandler = new MessageManager({
     await room.storage.put('roomStatus', ROOM_STATUS.playing)
     const party = new GameParty({
       game: PrimeDaifugoGame,
-      playerIds: Array.from(room.getConnections()).map((conn) => conn.id),
+      players: Array.from(room.getConnections<ConnectionState>()).map((conn) => ({
+        id: conn.id,
+        state: conn.state?.status === 'ready' ? PLAYER_STATE.PLAY : PLAYER_STATE.OBSERVE,
+      })),
     })
 
     await room.storage.put('gameState', party.getState())

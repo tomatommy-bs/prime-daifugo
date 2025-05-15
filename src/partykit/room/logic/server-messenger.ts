@@ -1,7 +1,10 @@
+import assert from 'assert'
 import type { ROOM_STATUS } from '@/constants/status'
 import type { ConnectionState } from '@/interface/connection'
 import type * as serverToClient from '@/interface/server-to-client'
 import type * as Party from 'partykit/server'
+import type { Ctx } from './game-rule'
+import type { PrimeDaifugoGameState } from './game-rule/game-state'
 
 export class ServerMessenger {
   /**
@@ -65,6 +68,32 @@ export class ServerMessenger {
     const { room, content } = args
     const payload: serverToClient.SystemEvent = content
     room.broadcast(JSON.stringify(payload))
+  }
+
+  static async broadcastServerGameState(args: {
+    room: Party.Room
+    without?: string[]
+    /** if only set, without only will be ignored */
+    only?: string[]
+  }) {
+    const { room, without, only = [] } = args
+    const gameState = await room.storage.get<PrimeDaifugoGameState>('gameState')
+    const ctx = await room.storage.get<Ctx>('ctx')
+    assert(gameState)
+    assert(ctx)
+    const content: serverToClient.SystemEvent = {
+      action: 'sync',
+      event: 'system',
+      ctx,
+      gameState,
+    }
+    room.broadcast(
+      JSON.stringify(content),
+      without ??
+        Array.from(room.getConnections())
+          .map((c) => c.id)
+          .filter((id) => !only.includes(id)),
+    )
   }
 
   static broadcastLeftTime(args: {

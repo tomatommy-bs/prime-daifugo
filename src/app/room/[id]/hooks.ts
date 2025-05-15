@@ -35,6 +35,7 @@ type RoomEventHandlers = {
       winner: string
     },
   ) => void
+  onSyncGameState?: (params: Omit<GameEventParams, 'commander'>) => void
   onRoomStatus?: (params: { status: (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS] }) => void
   onTimeCount?: (params: { leftTime: number }) => void
 }
@@ -54,7 +55,9 @@ export const useMessageHandler = (props: RoomEventHandlers) => {
         props.onPresence?.(data)
         break
       case 'system': {
-        props.onGameEvent?.(data)
+        if (data.action !== 'sync') {
+          props.onGameEvent?.(data)
+        }
         switch (data.action) {
           case 'game-start':
             break
@@ -69,6 +72,9 @@ export const useMessageHandler = (props: RoomEventHandlers) => {
             break
           case 'game-end':
             props.onEndGame?.(data)
+            break
+          case 'sync':
+            props.onSyncGameState?.(data)
             break
           default:
             throw new Error(data satisfies never)

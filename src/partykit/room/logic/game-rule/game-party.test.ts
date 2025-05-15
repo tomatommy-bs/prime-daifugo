@@ -66,7 +66,10 @@ describe('GameParty', () => {
       const client2Id = '1'
       const party = new GameParty({
         game: PrimeDaifugoGame,
-        playerIds: ['0', '1'],
+        players: [
+          { id: '0', state: PLAYER_STATE.PLAY },
+          { id: '1', state: PLAYER_STATE.PLAY },
+        ],
       })
 
       const state = party.getState()
@@ -99,7 +102,10 @@ describe('GameParty', () => {
       // state を生成
       const party = new GameParty({
         game: PrimeDaifugoGame,
-        playerIds: [client1Id, client2Id],
+        players: [
+          { id: client1Id, state: PLAYER_STATE.PLAY },
+          { id: client2Id, state: PLAYER_STATE.PLAY },
+        ],
       })
       const exportedState = party.getState()
       const exportedCtx = party.ctx
@@ -124,7 +130,10 @@ describe('GameParty', () => {
 
       const party = new GameParty<typeof PrimeDaifugoGame>({
         game: PrimeDaifugoGame,
-        playerIds: [client1Id, client2Id],
+        players: [
+          { id: client1Id, state: PLAYER_STATE.PLAY },
+          { id: client2Id, state: PLAYER_STATE.PLAY },
+        ],
       })
 
       const state = party.getState()
@@ -162,7 +171,10 @@ describe('GameParty', () => {
 
       const party = new GameParty<typeof PrimeDaifugoGame>({
         game: PrimeDaifugoGame,
-        playerIds: [client1Id, client2Id],
+        players: [
+          { id: client1Id, state: PLAYER_STATE.PLAY },
+          { id: client2Id, state: PLAYER_STATE.PLAY },
+        ],
       })
 
       const state = party.getState()
