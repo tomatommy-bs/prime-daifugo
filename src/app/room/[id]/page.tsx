@@ -3,6 +3,7 @@ import {} from '@/utils/play-card'
 import { Badge, Group, SegmentedControl } from '@mantine/core'
 import { useLocalStorage } from '@mantine/hooks'
 import {} from '@tabler/icons-react'
+import { usePathname } from 'next/navigation'
 import { QRButton } from './_ui/QRButton'
 import { GameBoard } from './_ui/game-board'
 import {} from './hooks'
@@ -17,6 +18,7 @@ const Page = ({ params: { id } }: Props) => {
     key: 'cardSizeOption',
     defaultValue: 'M',
   })
+  const pathname = usePathname()
 
   return (
     <div>
@@ -24,7 +26,7 @@ const Page = ({ params: { id } }: Props) => {
         <h1>
           <Badge variant="dot">RoomID: {id}</Badge>
         </h1>
-        <QRButton url={window.location.href} popoverProps={{ defaultOpened: true }} />
+        <QRButton url={pathname} popoverProps={{ defaultOpened: true }} />
 
         <SegmentedControl
           size="xs"

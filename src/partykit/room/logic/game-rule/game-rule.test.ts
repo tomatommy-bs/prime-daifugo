@@ -1,4 +1,5 @@
-import { type Ctx, PrimeDaifugoGame } from './game-rule'
+import { PrimeDaifugoGame } from './game-rule'
+import { type Ctx, PLAYER_STATE } from './game-rule.pkg'
 
 describe('PrimeDaifugoGame', () => {
   describe('setup', () => {
@@ -6,8 +7,8 @@ describe('PrimeDaifugoGame', () => {
       const ctx: Ctx = {
         numPlayers: 2,
         activePlayers: {
-          '0': 'play',
-          '1': 'play',
+          '0': PLAYER_STATE.PLAY,
+          '1': PLAYER_STATE.PLAY,
         },
         currentPlayer: '0',
         playOrder: ['0', '1'],
@@ -30,11 +31,11 @@ describe('PrimeDaifugoGame', () => {
       const ctx: Ctx = {
         numPlayers: 5,
         activePlayers: {
-          '0': 'play',
-          '1': 'play',
-          '2': 'play',
-          '3': 'play',
-          '4': 'play',
+          '0': PLAYER_STATE.PLAY,
+          '1': PLAYER_STATE.PLAY,
+          '2': PLAYER_STATE.PLAY,
+          '3': PLAYER_STATE.PLAY,
+          '4': PLAYER_STATE.PLAY,
         },
         currentPlayer: '0',
         playOrder: ['0', '1', '2', '3', '4'],
@@ -47,7 +48,7 @@ describe('PrimeDaifugoGame', () => {
       const ctx: Ctx = {
         numPlayers: 1,
         activePlayers: {
-          '0': 'play',
+          '0': PLAYER_STATE.PLAY,
         },
         currentPlayer: '0',
         playOrder: ['0'],

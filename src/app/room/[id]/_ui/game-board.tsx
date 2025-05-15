@@ -29,7 +29,6 @@ import { IconAsterisk, IconChevronUp, IconExclamationCircle, IconReload } from '
 import Cookies from 'js-cookie'
 import _ from 'lodash'
 import usePartySocket from 'partysocket/react'
-import ws from 'partysocket/ws'
 import { useMemo, useState } from 'react'
 import { ClientMessenger } from '../client-messenger'
 import { useMessageHandler, useMyField } from '../hooks'
@@ -190,7 +189,7 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M' }) => {
     })
   }, [gameServerState, presence])
 
-  if (ws.readyState === ws.CONNECTING) {
+  if ([ws.CONNECTING, ws.CLOSED].includes(ws.readyState)) {
     return <Loader />
   }
 

@@ -5,7 +5,8 @@ import {
   type MoveEvents,
   type MoveFn,
   type MoveFnArgs,
-} from './game-rule'
+  PLAYER_STATE,
+} from './game-rule.pkg'
 
 interface Base<G extends Game = Game> {
   game: G
@@ -52,7 +53,7 @@ export class GameParty<G extends Game = Game> {
     } else {
       const activePlayers: Ctx['activePlayers'] = {}
       for (const playerId of args.playerIds) {
-        activePlayers[playerId] = 'play'
+        activePlayers[playerId] = PLAYER_STATE.PLAY
       }
       this.ctx = {
         numPlayers: args.playerIds.length,
@@ -107,7 +108,7 @@ export class GameParty<G extends Game = Game> {
           this.state = result as ExtractStateFromGame<G>
         }
 
-        if (this.game.endif(this.ctx, this.state)) {
+        if (this.game.endIf(this.ctx, this.state)) {
           this.onEnd?.(this.ctx, this.state)
         }
         return result

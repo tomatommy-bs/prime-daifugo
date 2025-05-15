@@ -2,7 +2,8 @@ import type { SubmitCardSet } from '@/interface/client-to-server'
 import { describe, expect, it } from '@jest/globals'
 import _ from 'lodash'
 import { GameParty } from './game-party'
-import { type Ctx, INVALID_MOVE, PrimeDaifugoGame } from './game-rule'
+import { PrimeDaifugoGame } from './game-rule'
+import { type Ctx, INVALID_MOVE, PLAYER_STATE } from './game-rule.pkg'
 import type { PrimeDaifugoGameState } from './game-state'
 const initialFixedState: PrimeDaifugoGameState = {
   players: {
@@ -53,7 +54,7 @@ const initialFixedState: PrimeDaifugoGameState = {
 }
 const initialFixedCtx: Ctx = {
   numPlayers: 2,
-  activePlayers: { 0: 'play', 1: 'play' },
+  activePlayers: { 0: PLAYER_STATE.PLAY, 1: PLAYER_STATE.PLAY },
   currentPlayer: '0',
   playOrder: ['0', '1'],
 }
