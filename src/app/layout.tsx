@@ -7,20 +7,19 @@ import { ColorSchemeScript, MantineProvider } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
 import type { ReactNode } from 'react'
 
-const openGraphImage = {
-  title: '新たな素数との出会いを',
-}
-
 export const metadata: Metadata = {
   title: '素数大富豪 - 素数で遊ぶカードゲーム',
-  description:
-    '素数大富豪は、素数を使って遊ぶカードゲームです。オンラインで気楽に遊ぶことができるようになりました。',
+  description: '素数大富豪は、素数を使って遊ぶカードゲームです。オンラインで気楽に遊びましょう',
   openGraph: {
     title: '素数大富豪 - 素数で遊ぶカードゲーム',
-    description:
-      '素数大富豪は、素数を使って遊ぶカードゲームです。オンラインで気楽に遊ぶことができるようになりました。',
+    description: '素数大富豪は、素数を使って遊ぶカードゲームです。オンラインで気楽に遊びましょう',
     type: 'website',
-    images: [`/api/og?${new URLSearchParams(openGraphImage)}`],
+    images: [
+      {
+        url: '/prime-icon-dark.png',
+        alt: '素数大富豪 - 素数で遊ぶカードゲーム',
+      },
+    ],
     locale: 'ja-JP',
     siteName: '素数大富豪',
   },
