@@ -11,45 +11,8 @@ import {
 } from '@/utils/play-card'
 import { isPrime } from '@/utils/prime'
 import _ from 'lodash'
-import { z } from 'zod'
+import { type Game, INVALID_MOVE, PLAYER_STATE } from './game-rule.pkg'
 import type { PrimeDaifugoGameState } from './game-state'
-
-export const INVALID_MOVE = 'INVALID_MOVE'
-export type PlayerStage = 'observe' | 'wait' | 'play' | 'end'
-
-export const CtxSchema = z.object({
-  numPlayers: z.number(),
-  activePlayers: z.record(z.string(), z.enum(['observe', 'wait', 'play', 'end'])),
-  currentPlayer: z.string(),
-  playOrder: z.array(z.string()),
-})
-
-export type Ctx = z.infer<typeof CtxSchema>
-
-export interface Game<State = any> {
-  name?: string
-  minPlayers?: number
-  maxPlayers?: number
-  moves: Record<string, MoveFn<State>>
-  events?: {
-    endGame?: boolean
-    endPhase?: boolean
-    endTurn?: boolean
-    setPhase?: boolean
-    endStage?: boolean
-    setStage?: boolean
-    pass?: boolean
-    setActivePlayers?: boolean
-  }
-  setup: (ctx: Ctx) => State
-  endif: (ctx: Readonly<Ctx>, state: Readonly<State>) => boolean
-}
-
-export type MoveEvents = {
-  endTurn: (args?: { next?: string }) => void
-}
-export type MoveFnArgs<S> = { ctx: Ctx; state: S; events: MoveEvents }
-export type MoveFn<S> = (args: MoveFnArgs<S>, ...input: any[]) => S | typeof INVALID_MOVE
 
 const config = {
   initialNumCards: 8,
@@ -73,7 +36,10 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
     }
 
     const players: PrimeDaifugoGameState['players'] = {}
-    for (const playerID of _.shuffle(Object.keys(ctx.activePlayers))) {
+    const activePlyerIds = Object.keys(ctx.activePlayers).filter(
+      (playerID) => ctx.activePlayers[playerID] === PLAYER_STATE.PLAY,
+    )
+    for (const playerID of _.shuffle(activePlyerIds)) {
       players[playerID] = {
         hand: deck.splice(0, config.initialNumCards),
         drawRight: true,
@@ -89,7 +55,7 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       leftTime: 60,
     }
   },
-  endif: (ctx, state) => {
+  endIf: (_ctx, state) => {
     return Object.keys(state.players)
       .map((playerID) => state.players[playerID])
       .some((player) => player.hand.length === 0)

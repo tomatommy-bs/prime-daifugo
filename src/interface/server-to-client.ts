@@ -64,6 +64,12 @@ export const systemEventSchema = z.discriminatedUnion('action', [
     action: z.literal('game-end'),
     winner: z.string(),
   }),
+  z.object({
+    action: z.literal('sync'),
+    event: z.literal('system'),
+    gameState: PrimeDaifugoGameStateSchema,
+    ctx: CtxSchema,
+  }),
 ])
 export type SystemEvent = z.infer<typeof systemEventSchema>
 

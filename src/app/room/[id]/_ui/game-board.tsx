@@ -29,7 +29,6 @@ import { IconAsterisk, IconChevronUp, IconExclamationCircle, IconReload } from '
 import Cookies from 'js-cookie'
 import _ from 'lodash'
 import usePartySocket from 'partysocket/react'
-import ws from 'partysocket/ws'
 import { useMemo, useState } from 'react'
 import { ClientMessenger } from '../client-messenger'
 import { useMessageHandler, useMyField } from '../hooks'
@@ -141,6 +140,10 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M' }) => {
     },
     onGameEvent: ({ gameState, ctx }) => {
       setGameServerState({ gameState: gameState, ctx })
+      if (myPresence?.status === 'not-ready') {
+        return
+      }
+
       const hand = gameState?.players?.[ws.id]?.hand
       setHandCardIds(hand)
     },
@@ -190,7 +193,7 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M' }) => {
     })
   }, [gameServerState, presence])
 
-  if (ws.readyState === ws.CONNECTING) {
+  if ([ws.CONNECTING, ws.CLOSED].includes(ws.readyState)) {
     return <Loader />
   }
 
@@ -414,7 +417,12 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M' }) => {
           </Grid>
 
           <Paper p={componentSize.p} bg={isCommendable ? 'white' : 'lightgray'}>
-            <SimpleGrid cols={{ xs: 12, md: 15 }} mt={'mt'} className="justify-items-center">
+            <SimpleGrid
+              cols={{ xs: 12, md: 15 }}
+              mt={'mt'}
+              className="justify-items-center"
+              mih={componentSize.submitCard}
+            >
               {handCardIds.map((card) => (
                 <GameCard
                   key={card}

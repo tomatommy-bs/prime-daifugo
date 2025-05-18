@@ -5,7 +5,8 @@ import {
   type MoveEvents,
   type MoveFn,
   type MoveFnArgs,
-} from './game-rule'
+  type PLAYER_STATE,
+} from './game-rule.pkg'
 
 interface Base<G extends Game = Game> {
   game: G
@@ -20,7 +21,7 @@ interface ImportConstructor<G extends Game = Game> extends Base<G> {
 }
 
 interface Constructor<G extends Game = Game> extends Base<G> {
-  playerIds: string[]
+  players: { id: string; state: PLAYER_STATE }[]
 }
 
 // Tail ユーティリティ型: タプル型の最初の要素を除外
@@ -51,14 +52,14 @@ export class GameParty<G extends Game = Game> {
       }
     } else {
       const activePlayers: Ctx['activePlayers'] = {}
-      for (const playerId of args.playerIds) {
-        activePlayers[playerId] = 'play'
+      for (const player of args.players) {
+        activePlayers[player.id] = player.state
       }
       this.ctx = {
-        numPlayers: args.playerIds.length,
+        numPlayers: args.players.length,
         activePlayers: activePlayers,
-        currentPlayer: args.playerIds[0],
-        playOrder: args.playerIds,
+        currentPlayer: args.players[0].id,
+        playOrder: args.players.map((player) => player.id),
       }
       this.state = this.setup()
     }
@@ -107,7 +108,7 @@ export class GameParty<G extends Game = Game> {
           this.state = result as ExtractStateFromGame<G>
         }
 
-        if (this.game.endif(this.ctx, this.state)) {
+        if (this.game.endIf(this.ctx, this.state)) {
           this.onEnd?.(this.ctx, this.state)
         }
         return result
