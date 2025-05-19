@@ -11,7 +11,7 @@ interface Props extends SimpleGridProps {
 
 const PlayingCardLine: FC<Props> = (props) => {
   return (
-    <SimpleGrid cols={{ xs: 12, md: 15 }} mt={'mt'} className="justify-items-center">
+    <SimpleGrid cols={{ xs: 12, md: 15 }} className="justify-items-center">
       {props.cardIds.map((card, idx) => (
         <GameCard
           // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
