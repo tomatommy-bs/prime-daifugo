@@ -2,8 +2,8 @@
 
 import { CONFIG } from '@/constants/config'
 import { PARTYKIT_HOST } from '@/constants/env'
-import { Button, Tooltip } from '@mantine/core'
-import { IconExternalLink } from '@tabler/icons-react'
+import { Button, Group, Tooltip } from '@mantine/core'
+import { IconBrandX, IconExternalLink, IconMessageReport } from '@tabler/icons-react'
 import _ from 'lodash'
 import Link from 'next/link'
 import usePartySocket from 'partysocket/react'
@@ -53,6 +53,14 @@ export default function Home() {
             </Button>
           </Tooltip>
         </Link>
+        <Group>
+          <Link href={'https://forms.gle/1Aaexb2zNy39nPPF8'}>
+            <IconMessageReport />
+          </Link>
+          <Link href={'https://x.com/TomaTommy123'}>
+            <IconBrandX />
+          </Link>
+        </Group>
       </section>
     </main>
   )
