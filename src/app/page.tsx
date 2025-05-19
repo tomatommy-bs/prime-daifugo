@@ -2,8 +2,14 @@
 
 import { CONFIG } from '@/constants/config'
 import { PARTYKIT_HOST } from '@/constants/env'
-import { Button, Group, Tooltip } from '@mantine/core'
-import { IconBrandX, IconExternalLink, IconMessageReport } from '@tabler/icons-react'
+import { ActionIcon, Button, Group, Tooltip } from '@mantine/core'
+import {
+  IconBrandX,
+  IconCalculator,
+  IconExternalLink,
+  IconMessageReport,
+  IconTreadmill,
+} from '@tabler/icons-react'
 import _ from 'lodash'
 import Link from 'next/link'
 import usePartySocket from 'partysocket/react'
@@ -61,6 +67,21 @@ export default function Home() {
             <IconBrandX />
           </Link>
         </Group>
+      </section>
+
+      <section className="p-4  rounded w-fit mx-auto mt-8 flex gap-4 flex-col md:flex-row items-center">
+        <Link href={'/labo/calc'} className="flex items-center gap-2">
+          <ActionIcon size={'xl'} variant="white">
+            <IconCalculator />
+          </ActionIcon>
+        </Link>
+        <Link href={'/labo/training'} className="flex items-center gap-2">
+          <Tooltip label="coming soon ..." withArrow={true}>
+            <ActionIcon size={'xl'} variant="white" disabled={true}>
+              <IconTreadmill />
+            </ActionIcon>
+          </Tooltip>
+        </Link>
       </section>
     </main>
   )
