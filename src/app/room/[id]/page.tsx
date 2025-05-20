@@ -35,7 +35,7 @@ const Page = ({ params: { id } }: Props) => {
         />
       </Group>
 
-      <GameBoard id={id} />
+      <GameBoard id={id} size={compSizeOption} />
     </div>
   )
 }

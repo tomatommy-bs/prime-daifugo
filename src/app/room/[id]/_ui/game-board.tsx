@@ -1,3 +1,4 @@
+import { PlayingCardLine } from '@/components/playing-card-line'
 import { WORLD_CONFIG } from '@/constants/config'
 import { PARTYKIT_HOST } from '@/constants/env'
 import type { ROOM_STATUS } from '@/constants/status'
@@ -417,26 +418,12 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M' }) => {
           </Grid>
 
           <Paper p={componentSize.p} bg={isCommendable ? 'white' : 'lightgray'}>
-            <SimpleGrid
-              cols={{ xs: 12, md: 15 }}
-              mt={'mt'}
-              className="justify-items-center"
-              mih={componentSize.submitCard}
-            >
-              {handCardIds.map((card) => (
-                <GameCard
-                  key={card}
-                  card={card}
-                  fontSize={'5rem'}
-                  onClick={() => {
-                    isFactorizationMode
-                      ? selectHandCardIdAsFact(card)
-                      : selectHandCardIdAsSubmit(card)
-                  }}
-                  focusable={isCommendable}
-                />
-              ))}
-            </SimpleGrid>
+            <PlayingCardLine
+              cardIds={handCardIds}
+              onClickCard={(card) => {
+                isFactorizationMode ? selectHandCardIdAsFact(card) : selectHandCardIdAsSubmit(card)
+              }}
+            />
           </Paper>
         </Stack>
       )}
