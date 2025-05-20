@@ -42,7 +42,7 @@ export default function RootLayout({
         <Analytics />
         <ColorSchemeScript />
       </head>
-      <body className="min-h-screen">
+      <body className="min-h-[calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))]">
         <MantineProvider>
           <Notifications position="top-right" />
           {children}
