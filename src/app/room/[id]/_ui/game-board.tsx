@@ -1,3 +1,4 @@
+import { PlayingCardLine } from '@/components/playing-card-line'
 import { WORLD_CONFIG } from '@/constants/config'
 import { PARTYKIT_HOST } from '@/constants/env'
 import type { ROOM_STATUS } from '@/constants/status'
@@ -311,132 +312,126 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M' }) => {
                 </Paper>
               </Indicator>
             </Grid.Col>
-            <Grid.Col span={'content'}>
-              <Group>
-                <Popover
-                  position="top-end"
-                  withArrow={true}
-                  closeOnClickOutside={false}
-                  closeOnEscape={false}
-                  opened={isFactorizationMode}
-                >
-                  <Popover.Target>
-                    <Button disabled={submitCardIds.length === 0} onClick={toggleMode}>
-                      {isFactorizationMode ? 'キャンセル' : '素因数分解'}
-                    </Button>
-                  </Popover.Target>
-                  <Popover.Dropdown maw={'100vw'}>
-                    <Grid align="center">
-                      <Grid.Col span={'content'}>
-                        <Badge>{concatCardNumbers(submitCardIds) || 0} =</Badge>
-                      </Grid.Col>
-                      <Grid.Col span={'auto'}>
-                        <Stack align="end" gap={'xs'}>
-                          <Paper
-                            p={componentSize.p}
-                            miw={200}
-                            bg={isCommendable ? 'while' : 'lightgray'}
-                          >
-                            <Flex align={'center'} mih={componentSize.submitCard}>
-                              {factCardIds.map((card, idx) =>
-                                isCardId(card) ? (
-                                  <GameCard
-                                    key={card}
-                                    card={card}
-                                    fontSize={componentSize.submitCard}
-                                    onClick={() => removeFactCard(idx)}
-                                  />
-                                ) : (
-                                  <ActionIcon
-                                    // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-                                    key={`${card}-${idx}`}
-                                    variant="white"
-                                    onClick={() => removeFactCard(idx)}
-                                  >
-                                    {card === '*' ? (
-                                      <IconAsterisk size={componentSize.submitCard} />
-                                    ) : (
-                                      <IconChevronUp size={componentSize.submitCard} />
-                                    )}
-                                  </ActionIcon>
-                                ),
-                              )}
-                            </Flex>
-                          </Paper>
-                          <Badge>= {concatFactCardIds(factCardIds)}</Badge>
-                        </Stack>
-                      </Grid.Col>
-                      <Grid.Col span={'content'}>
-                        <Stack gap={'xs'}>
-                          <ActionIcon>
-                            <IconAsterisk onClick={() => selectHandCardIdAsFact('*')} />
-                          </ActionIcon>
-                          <ActionIcon>
-                            <IconChevronUp onClick={() => selectHandCardIdAsFact('^')} />
-                          </ActionIcon>
-                        </Stack>
-                      </Grid.Col>
-                    </Grid>
-                  </Popover.Dropdown>
-                </Popover>
-                <Stack gap={componentSize.p}>
-                  <Button
-                    size={componentSize.button}
-                    disabled={!isCommendable}
-                    onClick={() => ClientMessenger.pass({ ws })}
+            <Grid.Col span={{ xs: 4, sm: 'content' }}>
+              <Grid>
+                <Grid.Col span={{ xs: 12, sm: 'content' }}>
+                  <Popover
+                    position="top-end"
+                    withArrow={true}
+                    closeOnClickOutside={false}
+                    closeOnEscape={false}
+                    opened={isFactorizationMode}
                   >
-                    pass
-                  </Button>
-                  <Button
-                    size={componentSize.button}
-                    disabled={submitCardIds.length === 0 || !isCommendable}
-                    onClick={() => {
-                      const fieldTop = _.nth(gameServerState?.gameState.field, -1)
-                      const errMessage = validateSubmitCardSet(fieldTop, {
-                        submit: submitCardIds,
-                        factor: factCardIds,
-                      })
-                      if (errMessage !== null) {
-                        notifications.show({ message: errMessage, color: 'red' })
-                        return
-                      }
-                      ClientMessenger.submit({
-                        ws,
-                        submitCardSet: {
+                    <Popover.Target>
+                      <Button
+                        disabled={submitCardIds.length === 0}
+                        onClick={toggleMode}
+                        fullWidth={true}
+                      >
+                        {isFactorizationMode ? 'キャンセル' : '素因数分解'}
+                      </Button>
+                    </Popover.Target>
+                    <Popover.Dropdown maw={'100vw'}>
+                      <Grid align="center">
+                        <Grid.Col span={'content'}>
+                          <Badge>{concatCardNumbers(submitCardIds) || 0} =</Badge>
+                        </Grid.Col>
+                        <Grid.Col span={'auto'}>
+                          <Stack align="end" gap={'xs'}>
+                            <Paper
+                              p={componentSize.p}
+                              miw={200}
+                              bg={isCommendable ? 'while' : 'lightgray'}
+                            >
+                              <Flex align={'center'} mih={componentSize.submitCard}>
+                                {factCardIds.map((card, idx) =>
+                                  isCardId(card) ? (
+                                    <GameCard
+                                      key={card}
+                                      card={card}
+                                      fontSize={componentSize.submitCard}
+                                      onClick={() => removeFactCard(idx)}
+                                    />
+                                  ) : (
+                                    <ActionIcon
+                                      // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+                                      key={`${card}-${idx}`}
+                                      variant="white"
+                                      onClick={() => removeFactCard(idx)}
+                                    >
+                                      {card === '*' ? (
+                                        <IconAsterisk size={componentSize.submitCard} />
+                                      ) : (
+                                        <IconChevronUp size={componentSize.submitCard} />
+                                      )}
+                                    </ActionIcon>
+                                  ),
+                                )}
+                              </Flex>
+                            </Paper>
+                            <Badge>= {concatFactCardIds(factCardIds)}</Badge>
+                          </Stack>
+                        </Grid.Col>
+                        <Grid.Col span={'content'}>
+                          <Stack gap={'xs'}>
+                            <ActionIcon>
+                              <IconAsterisk onClick={() => selectHandCardIdAsFact('*')} />
+                            </ActionIcon>
+                            <ActionIcon>
+                              <IconChevronUp onClick={() => selectHandCardIdAsFact('^')} />
+                            </ActionIcon>
+                          </Stack>
+                        </Grid.Col>
+                      </Grid>
+                    </Popover.Dropdown>
+                  </Popover>
+                </Grid.Col>
+                <Grid.Col span={'auto'}>
+                  <Stack gap={componentSize.p}>
+                    <Button
+                      size={componentSize.button}
+                      disabled={!isCommendable}
+                      onClick={() => ClientMessenger.pass({ ws })}
+                    >
+                      pass
+                    </Button>
+                    <Button
+                      size={componentSize.button}
+                      disabled={submitCardIds.length === 0 || !isCommendable}
+                      onClick={() => {
+                        const fieldTop = _.nth(gameServerState?.gameState.field, -1)
+                        const errMessage = validateSubmitCardSet(fieldTop, {
                           submit: submitCardIds,
                           factor: factCardIds,
-                        },
-                      })
-                    }}
-                  >
-                    submit
-                  </Button>
-                </Stack>
-              </Group>
+                        })
+                        if (errMessage !== null) {
+                          notifications.show({ message: errMessage, color: 'red' })
+                          return
+                        }
+                        ClientMessenger.submit({
+                          ws,
+                          submitCardSet: {
+                            submit: submitCardIds,
+                            factor: factCardIds,
+                          },
+                        })
+                      }}
+                    >
+                      submit
+                    </Button>
+                  </Stack>
+                </Grid.Col>
+              </Grid>
             </Grid.Col>
           </Grid>
 
           <Paper p={componentSize.p} bg={isCommendable ? 'white' : 'lightgray'}>
-            <SimpleGrid
-              cols={{ xs: 12, md: 15 }}
-              mt={'mt'}
-              className="justify-items-center"
-              mih={componentSize.submitCard}
-            >
-              {handCardIds.map((card) => (
-                <GameCard
-                  key={card}
-                  card={card}
-                  fontSize={'5rem'}
-                  onClick={() => {
-                    isFactorizationMode
-                      ? selectHandCardIdAsFact(card)
-                      : selectHandCardIdAsSubmit(card)
-                  }}
-                  focusable={isCommendable}
-                />
-              ))}
-            </SimpleGrid>
+            <PlayingCardLine
+              cardIds={handCardIds}
+              onClickCard={(card) => {
+                isFactorizationMode ? selectHandCardIdAsFact(card) : selectHandCardIdAsSubmit(card)
+              }}
+            />
           </Paper>
         </Stack>
       )}
