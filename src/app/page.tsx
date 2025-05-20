@@ -69,7 +69,7 @@ export default function Home() {
         </Group>
       </section>
 
-      <section className="p-4  rounded w-fit mx-auto mt-8 flex gap-4 flex-col md:flex-row items-center">
+      <section className="p-4 rounded w-fit mx-auto mt-8 flex gap-4 flex-row items-center flex-nowrap">
         <Link href={'/labo/calc'} className="flex items-center gap-2">
           <ActionIcon size={'xl'} variant="white">
             <IconCalculator />

@@ -1,6 +1,7 @@
 import type { Preview } from '@storybook/react'
 import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
+import "../src/app/globals.css"
 import { ColorSchemeScript, MantineProvider } from '@mantine/core'
 
 const preview: Preview = {
