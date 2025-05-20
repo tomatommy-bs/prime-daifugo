@@ -20,6 +20,8 @@ const DeviceRotateRecommender: React.FC = () => {
     if (checkboxRef.current?.checked) {
       setShouldShow(false)
     }
+    const dialog = document.getElementById(modal_ID) as HTMLDialogElement
+    dialog.close()
   }
 
   useEffect(() => {
@@ -32,8 +34,8 @@ const DeviceRotateRecommender: React.FC = () => {
   }, [shouldShow, shouldRotate])
 
   return (
-    <dialog id={modal_ID} className="modal bg-white">
-      <div className="modal-box">
+    <dialog id={modal_ID} className="modal">
+      <div className="modal-box bg-white">
         <p className="text-center text-2xl font-bold">
           RECOMMENDS :
           <br />
