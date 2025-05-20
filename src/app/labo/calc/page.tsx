@@ -106,7 +106,11 @@ const Page: NextPage = () => {
                   onClick={() => handleClickInputCard(cardId)}
                 >
                   <Kbd className="absolute translate-x-1/2 -translate-y-1/3">
-                    {getCardNum(cardId) === '10' ? '0' : getCardNum(cardId)}
+                    {getCardNum(cardId) === '10'
+                      ? '0'
+                      : getCardNum(cardId) === 'A'
+                        ? '1'
+                        : getCardNum(cardId)}
                   </Kbd>
                   <GameCard card={cardId} fontSize={width < 1000 ? '3rem' : '4rem'} />
                 </button>
