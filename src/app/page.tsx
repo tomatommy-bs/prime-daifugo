@@ -34,7 +34,7 @@ export default function Home() {
   const nRooms = Object.keys(lobbyInfo?.room ?? {}).length
   const nOnline = _.sum(Object.values(lobbyInfo?.room ?? {})) + (lobbyInfo?.lobby ?? 0)
   return (
-    <main className="md:container mx-auto py-32">
+    <main className="md:container mx-auto h-screen flex flex-col justify-center">
       <h1 className="text-4xl text-center text-white font-bold">素数大富豪</h1>
       <p className="text-center text-white text-xl">Prime Daifugō</p>
 

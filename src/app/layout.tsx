@@ -7,6 +7,7 @@ import { ColorSchemeScript, MantineProvider } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
 import {} from '@tabler/icons-react'
 import type { ReactNode } from 'react'
+import DeviceRotateRecommender from './_ui/device-rotate-recommender'
 import { NavBurger } from './_ui/nav-burger'
 
 export const metadata: Metadata = {
@@ -42,11 +43,12 @@ export default function RootLayout({
         <Analytics />
         <ColorSchemeScript />
       </head>
-      <body className="min-h-[calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))]">
+      <body className="min-h-screen">
         <MantineProvider>
           <Notifications position="top-right" />
           {children}
           <NavBurger />
+          <DeviceRotateRecommender />
         </MantineProvider>
       </body>
     </html>
