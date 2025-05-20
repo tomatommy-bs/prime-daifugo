@@ -38,3 +38,5 @@ next-env.d.ts
 # partykit
 .partykit
 .env*.local
+
+*storybook.log

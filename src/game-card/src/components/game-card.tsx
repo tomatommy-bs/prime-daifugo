@@ -58,10 +58,11 @@ const cardIdToModuleName: Record<CardId | 'Back', keyof typeof svgCards> = {
   Back: 'Back',
 } as const
 
-interface Props extends SVGProps<SVGSVGElement> {
+export interface GameCardProps extends SVGProps<SVGSVGElement> {
   card: CardId | 'Back'
 }
 
-export const GameCard: React.FC<Props> = ({ card, ...props }) => {
+export const GameCard: React.FC<GameCardProps> = ({ card, ...props }) => {
+  props.role ??= 'option'
   return svgCards[cardIdToModuleName[card]](props)
 }
