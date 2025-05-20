@@ -5,7 +5,9 @@ import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
 import { ColorSchemeScript, MantineProvider } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
+import {} from '@tabler/icons-react'
 import type { ReactNode } from 'react'
+import { NavBurger } from './_ui/nav-burger'
 
 export const metadata: Metadata = {
   title: '素数大富豪 - 素数で遊ぶカードゲーム',
@@ -44,6 +46,7 @@ export default function RootLayout({
         <MantineProvider>
           <Notifications position="top-right" />
           {children}
+          <NavBurger />
         </MantineProvider>
       </body>
     </html>
