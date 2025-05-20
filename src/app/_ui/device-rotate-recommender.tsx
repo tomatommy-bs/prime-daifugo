@@ -32,7 +32,7 @@ const DeviceRotateRecommender: React.FC = () => {
   }, [shouldShow, shouldRotate])
 
   return (
-    <dialog id={modal_ID} className="modal">
+    <dialog id={modal_ID} className="modal bg-white">
       <div className="modal-box">
         <p className="text-center text-2xl font-bold">
           RECOMMENDS :
