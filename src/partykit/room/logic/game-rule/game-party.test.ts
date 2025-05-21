@@ -74,8 +74,8 @@ describe('GameParty', () => {
 
       const state = party.getState()
 
-      expect(state.players[client1Id].hand).toHaveLength(8)
-      expect(state.players[client2Id].hand).toHaveLength(8)
+      expect(state.players[client1Id].hand).toHaveLength(11)
+      expect(state.players[client2Id].hand).toHaveLength(11)
       expect(state.field).toHaveLength(0)
       expect(state.deck).toBeDefined()
 
@@ -87,12 +87,12 @@ describe('GameParty', () => {
         [client2Id]: 'play',
       })
 
-      expect(state.players[client1Id].hand).toHaveLength(8)
+      expect(state.players[client1Id].hand).toHaveLength(11)
       expect(state.players[client1Id].drawRight).toBe(true)
-      expect(state.players[client2Id].hand).toHaveLength(8)
+      expect(state.players[client2Id].hand).toHaveLength(11)
       expect(state.players[client2Id].drawRight).toBe(true)
       expect(state.field).toHaveLength(0)
-      expect(state.deck.length).toBe(52 - 8 * 2)
+      expect(state.deck.length).toBe(52 - 11 * 2)
     })
 
     it('state を import してインスタンスが生成されること', () => {

@@ -15,7 +15,7 @@ import { type Game, INVALID_MOVE, PLAYER_STATE } from './game-rule.pkg'
 import type { PrimeDaifugoGameState } from './game-state'
 
 const config = {
-  initialNumCards: 8,
+  initialNumCards: 11,
 } as const
 
 export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
