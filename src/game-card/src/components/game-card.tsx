@@ -1,4 +1,4 @@
-import type { SVGProps } from 'react'
+import type { SVGAttributes, SVGProps } from 'react'
 import type { CardId } from '../tools/suit-num'
 import * as svgCards from './icons'
 
@@ -64,5 +64,6 @@ export interface GameCardProps extends SVGProps<SVGSVGElement> {
 
 export const GameCard: React.FC<GameCardProps> = ({ card, ...props }) => {
   props.role ??= 'option'
-  return svgCards[cardIdToModuleName[card]](props)
+  const className: SVGAttributes<SVGSVGElement>['className'] = `select-none ${props.className}`
+  return svgCards[cardIdToModuleName[card]]({ ...props, className })
 }
