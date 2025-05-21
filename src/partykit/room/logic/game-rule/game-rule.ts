@@ -9,8 +9,8 @@ import {
   isValidFactCardIds,
   isValidFactCardIdsStrict,
 } from '@/utils/play-card'
-import { isPrime } from '@/utils/prime'
 import _ from 'lodash'
+import pf from 'primes-and-factors'
 import { type Game, INVALID_MOVE, PLAYER_STATE } from './game-rule.pkg'
 import type { PrimeDaifugoGameState } from './game-state'
 
@@ -120,7 +120,10 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       if (topFieldCard === null) {
         if (!isFactMode) {
           // rule: 場にカードがない場合, 素数なら出せる
-          if (isPrime(submitCardNumber) || submitCardNumber === WORLD_CONFIG.GROTHENDIECK_PRIME) {
+          if (
+            pf.isPrime(submitCardNumber) ||
+            submitCardNumber === WORLD_CONFIG.GROTHENDIECK_PRIME
+          ) {
             null
             // rule: 場にカードがない場合, 素数でない場合, 出したカードと同じ枚数のカードを山から引く
           } else {
@@ -151,7 +154,10 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
         }
 
         if (!isFactMode) {
-          if (isPrime(submitCardNumber) || submitCardNumber === WORLD_CONFIG.GROTHENDIECK_PRIME) {
+          if (
+            pf.isPrime(submitCardNumber) ||
+            submitCardNumber === WORLD_CONFIG.GROTHENDIECK_PRIME
+          ) {
             null
           } else {
             submitResult = 'BASE_IS_NOT_PRIME'
