@@ -26,7 +26,13 @@ import {
   Text,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconAsterisk, IconChevronUp, IconExclamationCircle, IconReload } from '@tabler/icons-react'
+import {
+  IconAsterisk,
+  IconCards,
+  IconChevronUp,
+  IconExclamationCircle,
+  IconReload,
+} from '@tabler/icons-react'
 import Cookies from 'js-cookie'
 import _ from 'lodash'
 import usePartySocket from 'partysocket/react'
@@ -258,7 +264,9 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M' }) => {
                     <Badge size={'md'} p={componentSize.p}>
                       <Group>
                         <span>{enemy.name}</span>
-                        <span>({enemy.hand?.length})</span>
+                        <Group gap={0}>
+                          <IconCards />x {enemy.hand?.length}
+                        </Group>
                       </Group>
                     </Badge>
                   </Indicator>
