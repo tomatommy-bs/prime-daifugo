@@ -17,8 +17,8 @@ describe('PrimeDaifugoGame', () => {
       const initialState = PrimeDaifugoGame.setup(ctx)
 
       // 各プレイヤーが8枚のカードを持っていることを確認
-      expect(initialState.players['0']?.hand).toHaveLength(8)
-      expect(initialState.players['1']?.hand).toHaveLength(8)
+      expect(initialState.players['0']?.hand).toHaveLength(11)
+      expect(initialState.players['1']?.hand).toHaveLength(11)
 
       // フィールドが空であることを確認
       expect(initialState.field).toHaveLength(0)

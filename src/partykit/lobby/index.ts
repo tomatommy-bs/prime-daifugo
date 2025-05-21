@@ -1,6 +1,6 @@
 import type { ConnectionState } from '@/interface/connection'
-import { primeNumberGenerator } from '@/utils/prime'
 import type * as Party from 'partykit/server'
+import pf from 'primes-and-factors'
 import { z } from 'zod'
 
 type Storage = {
@@ -21,12 +21,15 @@ export default class Server implements Party.Server {
             const room = (await this.room.storage.get<Record<string, number>>('room')) ?? {}
             const exists = Object.keys(room)
             let ans: null | number = null
-            const generator = primeNumberGenerator()
-            while (ans == null) {
-              const num = generator.next().value
-              if (!exists.includes(String(num))) {
-                ans = num
+            for (let n = 2; n < 10 ** 6; n++) {
+              if (!pf.isPrime(n)) {
+                continue
               }
+              if (exists.includes(n.toString())) {
+                continue
+              }
+              ans = n
+              break
             }
             return new Response(JSON.stringify({ roomId: ans }), { status: 200 })
           }

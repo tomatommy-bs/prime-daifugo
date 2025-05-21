@@ -8,6 +8,7 @@ import {
   IconCalculator,
   IconExternalLink,
   IconMessageReport,
+  IconSpeakerphone,
   IconTreadmill,
 } from '@tabler/icons-react'
 import _ from 'lodash'
@@ -60,9 +61,18 @@ export default function Home() {
           </Tooltip>
         </Link>
         <Group>
-          <Link href={'https://forms.gle/1Aaexb2zNy39nPPF8'}>
-            <IconMessageReport />
-          </Link>
+          <Tooltip label="フィードバック">
+            <Link href={'https://forms.gle/1Aaexb2zNy39nPPF8'}>
+              <IconMessageReport />
+            </Link>
+          </Tooltip>
+          <Tooltip label="リリースノート">
+            <Link
+              href={'https://tomatommy.notion.site/Prime-Daifugo-1fa4870920958036adabf9f4a7185fa2'}
+            >
+              <IconSpeakerphone />
+            </Link>
+          </Tooltip>
           <Link href={'https://x.com/TomaTommy123'}>
             <IconBrandX />
           </Link>
@@ -70,11 +80,13 @@ export default function Home() {
       </section>
 
       <section className="p-4 rounded w-fit mx-auto mt-8 flex gap-4 flex-row items-center flex-nowrap">
-        <Link href={'/labo/calc'} className="flex items-center gap-2">
-          <ActionIcon size={'xl'} variant="white">
-            <IconCalculator />
-          </ActionIcon>
-        </Link>
+        <Tooltip label="素数判定機">
+          <Link href={'/labo/calc'} className="flex items-center gap-2">
+            <ActionIcon size={'xl'} variant="white">
+              <IconCalculator />
+            </ActionIcon>
+          </Link>
+        </Tooltip>
         <Link href={'/labo/training'} className="flex items-center gap-2">
           <Tooltip label="coming soon ..." withArrow={true}>
             <ActionIcon size={'xl'} variant="white" disabled={true}>

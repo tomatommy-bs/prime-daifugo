@@ -9,13 +9,13 @@ import {
   isValidFactCardIds,
   isValidFactCardIdsStrict,
 } from '@/utils/play-card'
-import { isPrime } from '@/utils/prime'
 import _ from 'lodash'
+import pf from 'primes-and-factors'
 import { type Game, INVALID_MOVE, PLAYER_STATE } from './game-rule.pkg'
-import type { PrimeDaifugoGameState } from './game-state'
+import { LAST_SUBMIT_ERROR, type PrimeDaifugoGameState } from './game-state'
 
 const config = {
-  initialNumCards: 8,
+  initialNumCards: 11,
 } as const
 
 export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
@@ -120,24 +120,27 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       if (topFieldCard === null) {
         if (!isFactMode) {
           // rule: 場にカードがない場合, 素数なら出せる
-          if (isPrime(submitCardNumber) || submitCardNumber === WORLD_CONFIG.GROTHENDIECK_PRIME) {
+          if (
+            pf.isPrime(submitCardNumber) ||
+            submitCardNumber === WORLD_CONFIG.GROTHENDIECK_PRIME
+          ) {
             null
             // rule: 場にカードがない場合, 素数でない場合, 出したカードと同じ枚数のカードを山から引く
           } else {
-            submitResult = 'BASE_IS_NOT_PRIME'
+            submitResult = LAST_SUBMIT_ERROR.BASE_IS_NOT_PRIME
           }
           // 素因数分解モード
         } else {
           if (!isValidFactCardIds(factorCards)) {
-            submitResult = 'INVALID_FACT'
+            submitResult = LAST_SUBMIT_ERROR.INVALID_FACT
           } else if (!isValidFactCardIdsStrict(factorCards)) {
-            submitResult = 'FACT_CONTAIN_NOT_PRIME'
+            submitResult = LAST_SUBMIT_ERROR.FACT_CONTAIN_NOT_PRIME
           }
           const evalFactResult = evalFactCardIds(factorCards)
 
           // rule: 素因数分解した結果は出したカードと等しくなければならない
           if (evalFactResult !== concatCardNumbers(submitCards)) {
-            submitResult = 'INCORRECT_ANSWER'
+            submitResult = LAST_SUBMIT_ERROR.INCORRECT_ANSWER
           }
         }
       } else {
@@ -151,22 +154,25 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
         }
 
         if (!isFactMode) {
-          if (isPrime(submitCardNumber) || submitCardNumber === WORLD_CONFIG.GROTHENDIECK_PRIME) {
+          if (
+            pf.isPrime(submitCardNumber) ||
+            submitCardNumber === WORLD_CONFIG.GROTHENDIECK_PRIME
+          ) {
             null
           } else {
-            submitResult = 'BASE_IS_NOT_PRIME'
+            submitResult = LAST_SUBMIT_ERROR.BASE_IS_NOT_PRIME
           }
         } else {
           if (!isValidFactCardIds(factorCards)) {
-            submitResult = 'INVALID_FACT'
+            submitResult = LAST_SUBMIT_ERROR.INVALID_FACT
           } else if (!isValidFactCardIdsStrict(factorCards)) {
-            submitResult = 'FACT_CONTAIN_NOT_PRIME'
+            submitResult = LAST_SUBMIT_ERROR.FACT_CONTAIN_NOT_PRIME
           }
           const evalFactResult = evalFactCardIds(factorCards)
 
           // rule: 素因数分解した結果は出したカードと等しくなければならない
           if (evalFactResult !== concatCardNumbers(submitCards)) {
-            submitResult = 'INCORRECT_ANSWER'
+            submitResult = LAST_SUBMIT_ERROR.INCORRECT_ANSWER
           }
         }
       }
@@ -181,18 +187,19 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
           state.deck = newDeck
           break
         }
-        case 'BASE_IS_NOT_PRIME': {
+        case LAST_SUBMIT_ERROR.BASE_IS_NOT_PRIME: {
           const drawnCards = state.deck.splice(0, submitCards.length)
           player.hand.push(...drawnCards)
           break
         }
-        case 'FACT_CONTAIN_NOT_PRIME':
-        case 'INCORRECT_ANSWER': {
-          const drawnCards = state.deck.splice(0, submitCards.length)
+        case LAST_SUBMIT_ERROR.FACT_CONTAIN_NOT_PRIME:
+        case LAST_SUBMIT_ERROR.INCORRECT_ANSWER: {
+          const shouldDrawCardQty = submitCards.length + factorCards.filter(isCardId).length
+          const drawnCards = state.deck.splice(0, shouldDrawCardQty)
           player.hand.push(...drawnCards)
           break
         }
-        case 'INVALID_FACT': {
+        case LAST_SUBMIT_ERROR.INVALID_FACT: {
           return INVALID_MOVE
         }
         default:

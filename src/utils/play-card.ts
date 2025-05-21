@@ -2,7 +2,7 @@ import assert from 'assert'
 import { type CardId, type CardSuit, getCardNum, getCardSuit, isCardId } from '@/game-card/src'
 import type { FactCardId } from '@/interface/common'
 import _ from 'lodash'
-import { isPrime } from './prime'
+import pf from 'primes-and-factors'
 
 /**
  * @example
@@ -108,14 +108,14 @@ export const isValidFactCardIdsStrict = (cards: FactCardId[]): boolean => {
     }
 
     if (former === '*' && latter === '*') {
-      if (!isPrime(target)) {
+      if (!pf.isPrime(target)) {
         return false
       }
     }
 
     // 指数の基底が素数でない場合は false
     if (former === '*' && latter === '^') {
-      if (!isPrime(target)) {
+      if (!pf.isPrime(target)) {
         return false
       }
     }
@@ -126,7 +126,7 @@ export const isValidFactCardIdsStrict = (cards: FactCardId[]): boolean => {
     }
 
     if (former === '^' && latter === '^') {
-      if (!isPrime(target)) {
+      if (!pf.isPrime(target)) {
         return false
       }
     }
