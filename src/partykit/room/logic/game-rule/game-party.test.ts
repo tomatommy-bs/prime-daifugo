@@ -4,7 +4,7 @@ import _ from 'lodash'
 import { GameParty } from './game-party'
 import { PrimeDaifugoGame } from './game-rule'
 import { type Ctx, INVALID_MOVE, PLAYER_STATE } from './game-rule.pkg'
-import type { PrimeDaifugoGameState } from './game-state'
+import { LAST_SUBMIT_ERROR, type PrimeDaifugoGameState } from './game-state'
 const initialFixedState: PrimeDaifugoGameState = {
   players: {
     0: { hand: ['JS', '4C', '2D', '6C', '8H', '9D', 'KD', '3H', '2C'], drawRight: true },
@@ -208,7 +208,7 @@ describe('GameParty', () => {
   })
 
   describe('move.submit', () => {
-    it('現在のプレイヤーのみがmoveを実行できること - 基本の submit', () => {
+    it('シナリオ - 基本の submit', () => {
       const party = new GameParty<typeof PrimeDaifugoGame>({
         game: PrimeDaifugoGame,
         state: _.cloneDeep(initialFixedState),
@@ -275,7 +275,7 @@ describe('GameParty', () => {
       expect(party.ctx.currentPlayer).toBe(client1Id)
     })
 
-    it('現在のプレイヤーのみがmoveを実行できること - 素因数分解の submit', () => {
+    it('シナリオ - 素因数分解の submit', () => {
       const party = new GameParty<typeof PrimeDaifugoGame>({
         game: PrimeDaifugoGame,
         state: _.cloneDeep(initialFixedState),
@@ -339,34 +339,108 @@ describe('GameParty', () => {
       expect(party.ctx.currentPlayer).toBe(client1Id)
     })
 
-    describe('move.submit - グロタンディーク素数切り', () => {
-      it('57になる数は出すことができる', () => {
-        const party = new GameParty<typeof PrimeDaifugoGame>({
-          game: PrimeDaifugoGame,
-          state: _.cloneDeep(initialFixedState),
-          activePlayers: initialFixedCtx.activePlayers,
-          currentPlayer: initialFixedCtx.currentPlayer,
-          playOrder: initialFixedCtx.playOrder,
-        })
-        const [client1Id, client2Id] = party.ctx.playOrder
-        const initialState = party.getState()
-        const initialDeckLength = initialState.deck.length
-        const initialHandLength = {
-          client1: initialState.players[client1Id].hand.length,
-          client2: initialState.players[client2Id].hand.length,
-        }
-        const submitCardSet: SubmitCardSet = { submit: ['5D', '7S'], factor: [] }
-
-        party.ctx.currentPlayer = client2Id
-        party.moves.submit(client2Id, submitCardSet) // 57
-        const state = party.getState()
-
-        expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2 - 2) // 出したカードが手札から消える
-        expect(state.deck.length).toBe(initialDeckLength + 2) // 57 で出した枚数だけ増える
-        expect(state.field).toHaveLength(0) // 場は流れる
-        expect(state.deckTopPlayer).toBeNull() // デッキトップは null
-        expect(party.ctx.currentPlayer).toBe(client2Id) // active player は変わらない
+    it('57になる数は出すことができる', () => {
+      const party = new GameParty<typeof PrimeDaifugoGame>({
+        game: PrimeDaifugoGame,
+        state: _.cloneDeep(initialFixedState),
+        activePlayers: initialFixedCtx.activePlayers,
+        currentPlayer: initialFixedCtx.currentPlayer,
+        playOrder: initialFixedCtx.playOrder,
       })
+      const [client1Id, client2Id] = party.ctx.playOrder
+      const initialState = party.getState()
+      const initialDeckLength = initialState.deck.length
+      const initialHandLength = {
+        client1: initialState.players[client1Id].hand.length,
+        client2: initialState.players[client2Id].hand.length,
+      }
+      const submitCardSet: SubmitCardSet = { submit: ['5D', '7S'], factor: [] }
+
+      party.ctx.currentPlayer = client2Id
+      party.moves.submit(client2Id, submitCardSet) // 57
+      const state = party.getState()
+
+      expect(state.players[client2Id].hand.length).toBe(initialHandLength.client2 - 2) // 出したカードが手札から消える
+      expect(state.deck.length).toBe(initialDeckLength + 2) // 57 で出した枚数だけ増える
+      expect(state.field).toHaveLength(0) // 場は流れる
+      expect(state.deckTopPlayer).toBeNull() // デッキトップは null
+      expect(party.ctx.currentPlayer).toBe(client2Id) // active player は変わらない
+    })
+
+    it('素因数分解失敗<計算誤り>した場合, 提出した枚数と構成カードの枚数がペナルティで増える', () => {
+      const party = new GameParty<typeof PrimeDaifugoGame>({
+        game: PrimeDaifugoGame,
+        state: _.cloneDeep(initialFixedState),
+        activePlayers: initialFixedCtx.activePlayers,
+        currentPlayer: initialFixedCtx.currentPlayer,
+        playOrder: initialFixedCtx.playOrder,
+      })
+      const [client1Id] = party.ctx.playOrder
+      const initialState = _.cloneDeep(party.getState())
+
+      // 素因数分解失敗
+      party.moves.submit(client1Id, {
+        submit: ['8H'],
+        factor: ['2D', '*', '3H'],
+      })
+      const state = party.getState()
+
+      expect(state.lastSubmitError).toBe(LAST_SUBMIT_ERROR.INCORRECT_ANSWER)
+      expect(state.players[client1Id].hand.length).toBe(
+        initialState.players[client1Id].hand.length + 3, // 提出した枚数 + 構成カードの枚数
+      )
+    })
+
+    it('素因数分解失敗<因数が素数でない>場合, 提出した枚数と構成カードの枚数がペナルティで増える', () => {
+      const party = new GameParty<typeof PrimeDaifugoGame>({
+        game: PrimeDaifugoGame,
+        state: _.cloneDeep(initialFixedState),
+        activePlayers: initialFixedCtx.activePlayers,
+        currentPlayer: initialFixedCtx.currentPlayer,
+        playOrder: initialFixedCtx.playOrder,
+      })
+      const [client1Id] = party.ctx.playOrder
+      const initialState = _.cloneDeep(party.getState())
+
+      // 素因数分解失敗
+      party.moves.submit(client1Id, {
+        submit: ['8H'],
+        factor: ['2D', '*', '4C'],
+      })
+      const state = party.getState()
+
+      expect(state.lastSubmitError).toBe(LAST_SUBMIT_ERROR.FACT_CONTAIN_NOT_PRIME)
+      expect(state.players[client1Id].hand.length).toBe(
+        initialState.players[client1Id].hand.length + 3, // 提出した枚数 + 構成カードの枚数
+      )
+    })
+
+    it('所持していないカードを出そうとした場合, INVALID_MOVE になる', () => {
+      const party = new GameParty<typeof PrimeDaifugoGame>({
+        game: PrimeDaifugoGame,
+        state: _.cloneDeep(initialFixedState),
+        activePlayers: initialFixedCtx.activePlayers,
+        currentPlayer: initialFixedCtx.currentPlayer,
+        playOrder: initialFixedCtx.playOrder,
+      })
+      const [client1Id] = party.ctx.playOrder
+
+      const state = party.getState()
+      const initialHandLength = {
+        client1: state.players[client1Id].hand.length,
+      }
+      expect(party.ctx.currentPlayer).toBe(client1Id)
+      expect(state.field).toHaveLength(0)
+
+      // 所持していないカードを出そうとする
+      expect(
+        party.moves.submit(client1Id, {
+          submit: ['7H'],
+          factor: [],
+        }),
+      ).toBe(INVALID_MOVE)
+      expect(state.players[client1Id].hand.length).toBe(initialHandLength.client1) // 手札が変わらない
+      expect(party.ctx.currentPlayer).toBe(client1Id) // active player が変わらない
     })
   })
 })
