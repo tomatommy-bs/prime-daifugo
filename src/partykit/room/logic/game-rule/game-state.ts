@@ -31,4 +31,13 @@ export const PrimeDaifugoGameStateSchema = z.object({
       LAST_SUBMIT_ERROR.INCORRECT_ANSWER,
     ])
     .nullable(),
+  rule: z.object({
+    initNumCards: z.number(),
+    maxSubmitNumCards: z.number(),
+  }),
 })
+
+export type PrimeDaifugoSetupData = Partial<{
+  initNumCards: number
+  maxSubmitNumCards: number
+}>

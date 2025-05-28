@@ -22,13 +22,17 @@ interface ImportConstructor<G extends Game = Game> extends Base<G> {
 
 interface Constructor<G extends Game = Game> extends Base<G> {
   players: { id: string; state: PLAYER_STATE }[]
+  setupData?: ExtractSetupDataFromGame<G>
 }
 
 // Tail ユーティリティ型: タプル型の最初の要素を除外
 type Tail<T extends any[]> = T extends [any, ...infer Rest] ? Rest : never
 type ExtractStateFromGame<G extends Game<unknown>> = G extends Game<infer S> ? S : never
+type ExtractSetupDataFromGame<G extends Game<unknown>> = G extends Game<unknown, infer D>
+  ? D
+  : never
 
-export class GameParty<G extends Game = Game> {
+export class GameParty<G extends Game = Game<any, any>> {
   private readonly game: G
   private state: ExtractStateFromGame<G>
   readonly ctx: Ctx
@@ -61,7 +65,7 @@ export class GameParty<G extends Game = Game> {
         currentPlayer: args.players[0].id,
         playOrder: args.players.map((player) => player.id),
       }
-      this.state = this.setup()
+      this.state = this.setup(args.setupData)
     }
     this.moves = this.initializeMoves()
     this.onEnd = args.onEnd
@@ -117,10 +121,10 @@ export class GameParty<G extends Game = Game> {
     return move
   }
 
-  private setup(): ExtractStateFromGame<G> {
+  private setup(setupData?: ExtractSetupDataFromGame<G>): ExtractStateFromGame<G> {
     this.ctx.currentPlayer = this.ctx.playOrder[0]
 
-    return this.game.setup(this.ctx) as ExtractStateFromGame<G>
+    return this.game.setup(this.ctx, setupData) as ExtractStateFromGame<G>
   }
 
   getState(): ExtractStateFromGame<G> {

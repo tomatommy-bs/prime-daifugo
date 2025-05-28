@@ -12,18 +12,28 @@ import {
 import _ from 'lodash'
 import pf from 'primes-and-factors'
 import { type Game, INVALID_MOVE, PLAYER_STATE } from './game-rule.pkg'
-import { LAST_SUBMIT_ERROR, type PrimeDaifugoGameState } from './game-state'
+import {
+  LAST_SUBMIT_ERROR,
+  type PrimeDaifugoGameState,
+  type PrimeDaifugoSetupData,
+} from './game-state'
 
 const config = {
   initialNumCards: 11,
+  maxSubmitNumCards: 4,
 } as const
 
-export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
+export const PrimeDaifugoGame: Game<PrimeDaifugoGameState, PrimeDaifugoSetupData> = {
   name: 'prime-daifugo',
   minPlayers: 2,
   maxPlayers: 4,
-  setup: function (ctx) {
+  setup: function (ctx, setupData) {
     const deck = _.shuffle([...cardIds])
+
+    const rule = {
+      initNumCards: setupData?.initNumCards ?? config.initialNumCards,
+      maxSubmitNumCards: setupData?.maxSubmitNumCards ?? config.maxSubmitNumCards,
+    }
 
     if (
       ctx.numPlayers > (this.maxPlayers ?? Number.POSITIVE_INFINITY) ||
@@ -41,7 +51,7 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
     )
     for (const playerID of _.shuffle(activePlyerIds)) {
       players[playerID] = {
-        hand: deck.splice(0, config.initialNumCards),
+        hand: deck.splice(0, rule.initNumCards),
         drawRight: true,
       }
     }
@@ -53,6 +63,7 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       deckTopPlayer: null,
       lastSubmitError: null,
       leftTime: 60,
+      rule,
     }
   },
   endIf: (_ctx, state) => {
@@ -100,6 +111,11 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       if (submitCards.length === 0) {
         return INVALID_MOVE
       }
+      // ルールの上限を超える枚数を出そうとしている
+      if (submitCards.length > state.rule.maxSubmitNumCards) {
+        return INVALID_MOVE
+      }
+
       // 手札にないカードを出そうとしている
       if (submitCards.some((submitCardId) => !player.hand.includes(submitCardId))) {
         return INVALID_MOVE
@@ -221,7 +237,7 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       return state
     },
   },
-}
+} as const
 
 /**
  * いわゆる「流れ」の処理
