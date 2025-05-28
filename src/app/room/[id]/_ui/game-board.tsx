@@ -1,9 +1,10 @@
 import { PlayingCardLine } from '@/components/playing-card-line'
-import { WORLD_CONFIG } from '@/constants/config'
+import { GAME_CONFIG, WORLD_CONFIG } from '@/constants/config'
 import { PARTYKIT_HOST } from '@/constants/env'
 import type { ROOM_STATUS } from '@/constants/status'
 import { type CardId, GameCard, isCardId } from '@/game-card/src'
 import type { SubmitCardSet } from '@/interface/client-to-server'
+import type { PrimeDaifugoSetupData } from '@/interface/common'
 import type * as serverToClient from '@/interface/server-to-client'
 import type { Ctx } from '@/partykit/room/logic/game-rule'
 import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
@@ -25,6 +26,7 @@ import {
   Stack,
   Text,
 } from '@mantine/core'
+import { useSetState } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import {
   IconAsterisk,
@@ -49,6 +51,12 @@ type Props = {
 }
 
 const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }) => {
+  const [rule, setRule] = useSetState<PrimeDaifugoSetupData>({
+    initNumCards: GAME_CONFIG.initialNumCards as number,
+    timeLimit: GAME_CONFIG.timeLimit as number,
+    maxSubmitNumCards: GAME_CONFIG.maxSubmitNumCards as number,
+    halfEvenNumbers: false,
+  })
   const [presence, setPresence] = useState<serverToClient.PresenceEvent['presence']>([])
   const [roomStatus, setRoomStatus] = useState<
     (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS] | null
@@ -72,7 +80,11 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
     removeFactCard,
     toggleMode,
     reset,
-  } = useMyField({ all: [], field: gameServerState?.gameState.field ?? [] })
+  } = useMyField({
+    all: [],
+    field: gameServerState?.gameState.field ?? [],
+    maxSubmitNumberCards: gameServerState?.gameState.rule.maxSubmitNumCards,
+  })
 
   const { onMessage } = useMessageHandler({
     onChat: ({ message, from }) => {
@@ -243,6 +255,12 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
         setLeftTime(_leftTime)
       }
     },
+    onChangeRule: ({ rule }) => {
+      setRule(rule)
+      props.onLogNotification?.(
+        <Text className="font-bold italic">ルールを変更しました: {JSON.stringify(rule)}</Text>,
+      )
+    },
   })
 
   const ws = usePartySocket({
@@ -262,8 +280,13 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
 
   const myPresence = presence.find((p) => p.id === ws?.id)
 
-  const handleGameStart = () => {
-    ClientMessenger.startGame({ ws })
+  const handleGameStart = (rule?: PrimeDaifugoSetupData) => {
+    ClientMessenger.startGame({ ws, rule })
+  }
+
+  const handleChangeRule = (newRule: Partial<PrimeDaifugoSetupData>) => {
+    setRule(newRule)
+    ClientMessenger.changeRule({ ws, rule: { ...rule, ...newRule } })
   }
 
   const isCommendable = gameServerState?.ctx?.currentPlayer === ws.id
@@ -297,6 +320,8 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
     <>
       {roomStatus === 'waiting' && (
         <WaitingRoom
+          rule={rule}
+          onChangeRule={handleChangeRule}
           presence={presence}
           myPresence={myPresence}
           onGameStart={handleGameStart}
@@ -316,7 +341,8 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
                     size={componentSize.button}
                     disabled={
                       gameServerState?.gameState?.players[ws.id]?.drawRight === false ||
-                      !isCommendable
+                      !isCommendable ||
+                      gameServerState?.gameState?.deck.length === 0
                     }
                     onClick={() => ClientMessenger.draw({ ws })}
                   >
@@ -382,17 +408,19 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
                 }
                 processing={concatCardNumbers(submitCardIds) === WORLD_CONFIG.GROTHENDIECK_PRIME}
               >
-                <Paper p={componentSize.p} bg={isCommendable ? 'white' : 'lightgray'}>
-                  <SimpleGrid cols={4} mt={'mt'} mih={componentSize.submitCard}>
-                    {submitCardIds.map((card) => (
-                      <GameCard
-                        key={card}
-                        card={card}
-                        fontSize={componentSize.submitCard}
-                        onClick={() => removeSubmitCardId(card)}
-                      />
-                    ))}
-                  </SimpleGrid>
+                <Paper
+                  p={componentSize.p}
+                  bg={isCommendable ? 'white' : 'lightgray'}
+                  mih={componentSize.submitCard}
+                  mt={'md'}
+                >
+                  <PlayingCardLine
+                    cardIds={submitCardIds}
+                    onClickCard={(card) => removeSubmitCardId(card)}
+                    gameCardProps={{
+                      fontSize: componentSize.submitCard,
+                    }}
+                  />
                 </Paper>
               </Indicator>
             </Grid.Col>
@@ -530,7 +558,9 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
       >
         <Stack>
           <Text>{winner}の勝利です🎉</Text>
-          <Button onClick={handleGameStart}>次のラウンドを開始</Button>
+          <Button onClick={() => handleGameStart(gameServerState?.gameState.rule)}>
+            次のラウンドを開始
+          </Button>
         </Stack>
       </Modal>
     </>

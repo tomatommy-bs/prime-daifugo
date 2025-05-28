@@ -73,7 +73,7 @@ export class ServerMessenger {
   static async broadcastServerGameState(args: {
     room: Party.Room
     without?: string[]
-    /** if only set, without only will be ignored */
+    /** if only set, without will be ignored */
     only?: string[]
   }) {
     const { room, without, only = [] } = args

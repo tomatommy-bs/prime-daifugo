@@ -51,6 +51,12 @@ const initialFixedState: PrimeDaifugoGameState = {
   ],
   deckTopPlayer: null,
   lastSubmitError: null,
+  rule: {
+    initNumCards: 11,
+    maxSubmitNumCards: 4,
+    halfEvenNumbers: false,
+    timeLimit: 60,
+  },
 }
 const initialFixedCtx: Ctx = {
   numPlayers: 2,
@@ -436,6 +442,41 @@ describe('GameParty', () => {
       expect(
         party.moves.submit(client1Id, {
           submit: ['7H'],
+          factor: [],
+        }),
+      ).toBe(INVALID_MOVE)
+      expect(state.players[client1Id].hand.length).toBe(initialHandLength.client1) // 手札が変わらない
+      expect(party.ctx.currentPlayer).toBe(client1Id) // active player が変わらない
+    })
+
+    it('rule.maxSubmitNumCards を超える枚数のカードを出そうとした場合, INVALID_MOVE になる', () => {
+      const MAX_SUBMIT_NUM_CARDS = 4
+      const party = new GameParty<typeof PrimeDaifugoGame>({
+        game: PrimeDaifugoGame,
+        state: _.cloneDeep({
+          ...initialFixedState,
+          rule: {
+            ...initialFixedState.rule,
+            maxSubmitNumCards: MAX_SUBMIT_NUM_CARDS,
+          },
+        }),
+        activePlayers: initialFixedCtx.activePlayers,
+        currentPlayer: initialFixedCtx.currentPlayer,
+        playOrder: initialFixedCtx.playOrder,
+      })
+      const [client1Id] = party.ctx.playOrder
+
+      const state = party.getState()
+      const initialHandLength = {
+        client1: state.players[client1Id].hand.length,
+      }
+      expect(party.ctx.currentPlayer).toBe(client1Id)
+      expect(state.field).toHaveLength(0)
+
+      // rule.maxSubmitNumCards を超える枚数のカードを出そうとする
+      expect(
+        party.moves.submit(client1Id, {
+          submit: ['2D', '6C', '8H', '9D', 'KD'],
           factor: [],
         }),
       ).toBe(INVALID_MOVE)

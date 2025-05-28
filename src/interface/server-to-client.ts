@@ -2,6 +2,7 @@ import { CtxSchema } from '@/partykit/room/logic/game-rule'
 import { PrimeDaifugoGameStateSchema } from '@/partykit/room/logic/game-rule/game-state'
 import { z } from 'zod'
 import { submitCardSetSchema } from './client-to-server'
+import { PrimeDaifugoSetupDataSchema } from './common'
 
 const chatEventSchema = z.object({
   event: z.literal('chat'),
@@ -49,6 +50,12 @@ export type SubmissionResult = z.infer<typeof submissionResultSchema>
 export const systemEventSchema = z.discriminatedUnion('action', [
   baseSystemEventSchema.extend({
     action: z.literal('game-start'),
+  }),
+  baseSystemEventSchema.extend({
+    action: z.literal('change-rule'),
+    ctx: z.undefined(),
+    gameState: z.undefined(),
+    rule: PrimeDaifugoSetupDataSchema.partial(),
   }),
   baseSystemEventSchema.extend({
     action: z.literal('draw'),

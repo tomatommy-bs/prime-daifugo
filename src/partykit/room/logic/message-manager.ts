@@ -1,4 +1,5 @@
 import { type SubmitCardSet, clientToServerSchema } from '@/interface/client-to-server'
+import type { PrimeDaifugoSetupData } from '@/interface/common'
 import type { ConnectionState } from '@/interface/connection'
 import type * as Party from 'partykit/server'
 
@@ -7,7 +8,16 @@ interface Event {
   onSetName?: (room: Party.Room, name: string, sender: Party.Connection<ConnectionState>) => void
   onSetReady?: (room: Party.Room, sender: Party.Connection<ConnectionState>) => void
   onUnsetReady?: (room: Party.Room, sender: Party.Connection<ConnectionState>) => void
-  onStartGame?: (room: Party.Room, sender: Party.Connection<ConnectionState>) => void
+  onStartGame?: (
+    room: Party.Room,
+    sender: Party.Connection<ConnectionState>,
+    rule?: PrimeDaifugoSetupData,
+  ) => void
+  onChangeRule?: (
+    room: Party.Room,
+    sender: Party.Connection<ConnectionState>,
+    rule: Partial<PrimeDaifugoSetupData>,
+  ) => void
   onDraw?: (room: Party.Room, sender: Party.Connection<ConnectionState>) => void
   onPass?: (room: Party.Room, sender: Party.Connection<ConnectionState>) => void
   onSubmit?: (
@@ -23,6 +33,7 @@ export class MessageManager {
   onSetReady?: Event['onSetReady']
   onUnsetReady?: Event['onUnsetReady']
   onStartGame?: Event['onStartGame']
+  onChangeRule?: Event['onChangeRule']
   onDraw?: Event['onDraw']
   onPass?: Event['onPass']
   onSubmit?: Event['onSubmit']
@@ -33,6 +44,7 @@ export class MessageManager {
     this.onSetReady = args.onSetReady
     this.onUnsetReady = args.onUnsetReady
     this.onStartGame = args.onStartGame
+    this.onChangeRule = args.onChangeRule
     this.onDraw = args.onDraw
     this.onPass = args.onPass
     this.onSubmit = args.onSubmit
@@ -54,7 +66,10 @@ export class MessageManager {
             this.onUnsetReady?.(room, sender)
             break
           case 'start-game':
-            this.onStartGame?.(room, sender)
+            this.onStartGame?.(room, sender, msg.rule)
+            break
+          case 'change-rule':
+            this.onChangeRule?.(room, sender, msg.rule)
             break
           default:
             throw new Error(msg satisfies never)

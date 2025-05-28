@@ -1,6 +1,6 @@
 import type { CardId } from '@/game-card/src'
 import { z } from 'zod'
-import type { FactCardId } from './common'
+import { type FactCardId, PrimeDaifugoSetupDataSchema } from './common'
 
 const chatEventSchema = z.object({
   event: z.literal('chat'),
@@ -14,10 +14,26 @@ const setNameEventSchema = z.object({
 })
 export type SetNameEvent = z.infer<typeof setNameEventSchema>
 
-const roomEventSchema = z.object({
-  event: z.literal('room'),
-  action: z.union([z.literal('set-ready'), z.literal('unset-ready'), z.literal('start-game')]),
-})
+const roomEventSchema = z.discriminatedUnion('action', [
+  z.object({
+    event: z.literal('room'),
+    action: z.literal('set-ready'),
+  }),
+  z.object({
+    event: z.literal('room'),
+    action: z.literal('unset-ready'),
+  }),
+  z.object({
+    event: z.literal('room'),
+    action: z.literal('start-game'),
+    rule: PrimeDaifugoSetupDataSchema.optional(),
+  }),
+  z.object({
+    event: z.literal('room'),
+    action: z.literal('change-rule'),
+    rule: PrimeDaifugoSetupDataSchema.partial(),
+  }),
+])
 export type RoomEvent = z.infer<typeof roomEventSchema>
 
 export const submitCardSetSchema = z.object({

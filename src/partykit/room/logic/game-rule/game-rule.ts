@@ -1,7 +1,8 @@
 import assert from 'assert'
-import { WORLD_CONFIG } from '@/constants/config'
-import { cardIds, isCardId } from '@/game-card/src'
+import { GAME_CONFIG, WORLD_CONFIG } from '@/constants/config'
+import { cardIds, getCardInteger, getCardSuit, isCardId } from '@/game-card/src'
 import type { SubmitCardSet } from '@/interface/client-to-server'
+import type { PrimeDaifugoSetupData } from '@/interface/common'
 import {
   concatCardNumbers,
   evalFactCardIds,
@@ -14,16 +15,27 @@ import pf from 'primes-and-factors'
 import { type Game, INVALID_MOVE, PLAYER_STATE } from './game-rule.pkg'
 import { LAST_SUBMIT_ERROR, type PrimeDaifugoGameState } from './game-state'
 
-const config = {
-  initialNumCards: 11,
-} as const
-
-export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
+export const PrimeDaifugoGame: Game<PrimeDaifugoGameState, Partial<PrimeDaifugoSetupData>> = {
   name: 'prime-daifugo',
   minPlayers: 2,
   maxPlayers: 4,
-  setup: function (ctx) {
-    const deck = _.shuffle([...cardIds])
+  setup: function (ctx, setupData) {
+    const deck = _.shuffle([...cardIds]).filter((cardId) => {
+      if (setupData?.halfEvenNumbers === true) {
+        if (getCardInteger(cardId) % 2 === 0 && ['H', 'D'].includes(getCardSuit(cardId))) {
+          // ハートとダイヤの偶数は除外
+          return false
+        }
+      }
+      return true
+    })
+
+    const rule: PrimeDaifugoSetupData = {
+      initNumCards: setupData?.initNumCards ?? GAME_CONFIG.initialNumCards,
+      maxSubmitNumCards: setupData?.maxSubmitNumCards ?? GAME_CONFIG.maxSubmitNumCards,
+      halfEvenNumbers: setupData?.halfEvenNumbers ?? GAME_CONFIG.halfEvenNumbers,
+      timeLimit: setupData?.timeLimit ?? GAME_CONFIG.timeLimit,
+    }
 
     if (
       ctx.numPlayers > (this.maxPlayers ?? Number.POSITIVE_INFINITY) ||
@@ -31,7 +43,7 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
     ) {
       throw new Error('Invalid number of players')
     }
-    if (deck.length < config.initialNumCards * ctx.numPlayers) {
+    if (deck.length < GAME_CONFIG.initialNumCards * ctx.numPlayers) {
       throw new Error('Not enough cards for all players')
     }
 
@@ -41,7 +53,7 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
     )
     for (const playerID of _.shuffle(activePlyerIds)) {
       players[playerID] = {
-        hand: deck.splice(0, config.initialNumCards),
+        hand: deck.splice(0, rule.initNumCards),
         drawRight: true,
       }
     }
@@ -53,6 +65,7 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       deckTopPlayer: null,
       lastSubmitError: null,
       leftTime: 60,
+      rule,
     }
   },
   endIf: (_ctx, state) => {
@@ -100,6 +113,11 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       if (submitCards.length === 0) {
         return INVALID_MOVE
       }
+      // ルールの上限を超える枚数を出そうとしている
+      if (submitCards.length > state.rule.maxSubmitNumCards) {
+        return INVALID_MOVE
+      }
+
       // 手札にないカードを出そうとしている
       if (submitCards.some((submitCardId) => !player.hand.includes(submitCardId))) {
         return INVALID_MOVE
@@ -221,7 +239,7 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState> = {
       return state
     },
   },
-}
+} as const
 
 /**
  * いわゆる「流れ」の処理
