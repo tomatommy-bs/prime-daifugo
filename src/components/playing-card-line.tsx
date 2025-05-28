@@ -7,7 +7,7 @@ interface Props extends SimpleGridProps {
   size?: 's' | 'm' | 'l'
   onClickCard?: (cardId: CardId, idx: number) => void
   focusable?: boolean
-  gameCardProps?: GameCardProps
+  gameCardProps?: Omit<GameCardProps, 'card'>
 }
 
 const PlayingCardLine: FC<Props> = ({ ...props }) => {

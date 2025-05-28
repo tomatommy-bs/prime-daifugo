@@ -321,7 +321,8 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
                     size={componentSize.button}
                     disabled={
                       gameServerState?.gameState?.players[ws.id]?.drawRight === false ||
-                      !isCommendable
+                      !isCommendable ||
+                      gameServerState?.gameState?.deck.length === 0
                     }
                     onClick={() => ClientMessenger.draw({ ws })}
                   >
@@ -387,12 +388,18 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
                 }
                 processing={concatCardNumbers(submitCardIds) === WORLD_CONFIG.GROTHENDIECK_PRIME}
               >
-                <Paper p={componentSize.p} bg={isCommendable ? 'white' : 'lightgray'}>
+                <Paper
+                  p={componentSize.p}
+                  bg={isCommendable ? 'white' : 'lightgray'}
+                  mih={componentSize.submitCard}
+                  mt={'md'}
+                >
                   <PlayingCardLine
-                    mih={componentSize.submitCard}
-                    mt={'md'}
                     cardIds={submitCardIds}
                     onClickCard={(card) => removeSubmitCardId(card)}
+                    gameCardProps={{
+                      fontSize: componentSize.submitCard,
+                    }}
                   />
                 </Paper>
               </Indicator>
