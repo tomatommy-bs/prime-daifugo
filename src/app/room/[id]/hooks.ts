@@ -1,3 +1,4 @@
+import { GAME_CONFIG } from '@/constants/config'
 import type { ROOM_STATUS } from '@/constants/status'
 import type { CardId } from '@/game-card/src'
 import type { FactCardId } from '@/interface/common'
@@ -95,7 +96,11 @@ export const useMessageHandler = (props: RoomEventHandlers) => {
   return { onMessage }
 }
 
-export const useMyField = (args: { all: CardId[]; field: CardId[][] }) => {
+export const useMyField = (args: {
+  all: CardId[]
+  field: CardId[][]
+  maxSubmitNumberCards?: number
+}) => {
   const { all } = args
 
   const [state, setState] = useSetState<{
@@ -111,8 +116,12 @@ export const useMyField = (args: { all: CardId[]; field: CardId[][] }) => {
   })
 
   const selectHandCardIdAsSubmit = (card: CardId) => {
-    if (state.submitCardIds.length >= 4) {
-      notifications.show({ message: '1度に出せるカードは4枚までです' })
+    if (
+      state.submitCardIds.length >= (args.maxSubmitNumberCards ?? GAME_CONFIG.maxSubmitNumCards)
+    ) {
+      notifications.show({
+        message: `1度に出せるカードは${args.maxSubmitNumberCards ?? GAME_CONFIG.maxSubmitNumCards}枚までです`,
+      })
       return
     }
 

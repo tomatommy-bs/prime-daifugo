@@ -73,7 +73,11 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
     removeFactCard,
     toggleMode,
     reset,
-  } = useMyField({ all: [], field: gameServerState?.gameState.field ?? [] })
+  } = useMyField({
+    all: [],
+    field: gameServerState?.gameState.field ?? [],
+    maxSubmitNumberCards: gameServerState?.gameState.rule.maxSubmitNumCards,
+  })
 
   const { onMessage } = useMessageHandler({
     onChat: ({ message, from }) => {
@@ -384,16 +388,12 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
                 processing={concatCardNumbers(submitCardIds) === WORLD_CONFIG.GROTHENDIECK_PRIME}
               >
                 <Paper p={componentSize.p} bg={isCommendable ? 'white' : 'lightgray'}>
-                  <SimpleGrid cols={4} mt={'mt'} mih={componentSize.submitCard}>
-                    {submitCardIds.map((card) => (
-                      <GameCard
-                        key={card}
-                        card={card}
-                        fontSize={componentSize.submitCard}
-                        onClick={() => removeSubmitCardId(card)}
-                      />
-                    ))}
-                  </SimpleGrid>
+                  <PlayingCardLine
+                    mih={componentSize.submitCard}
+                    mt={'md'}
+                    cardIds={submitCardIds}
+                    onClickCard={(card) => removeSubmitCardId(card)}
+                  />
                 </Paper>
               </Indicator>
             </Grid.Col>
