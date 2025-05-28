@@ -4,6 +4,7 @@ import { PARTYKIT_HOST } from '@/constants/env'
 import type { ROOM_STATUS } from '@/constants/status'
 import { type CardId, GameCard, isCardId } from '@/game-card/src'
 import type { SubmitCardSet } from '@/interface/client-to-server'
+import type { PrimeDaifugoSetupData } from '@/interface/common'
 import type * as serverToClient from '@/interface/server-to-client'
 import type { Ctx } from '@/partykit/room/logic/game-rule'
 import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
@@ -262,8 +263,8 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
 
   const myPresence = presence.find((p) => p.id === ws?.id)
 
-  const handleGameStart = () => {
-    ClientMessenger.startGame({ ws })
+  const handleGameStart = (rule?: PrimeDaifugoSetupData) => {
+    ClientMessenger.startGame({ ws, rule })
   }
 
   const isCommendable = gameServerState?.ctx?.currentPlayer === ws.id
@@ -530,7 +531,9 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
       >
         <Stack>
           <Text>{winner}の勝利です🎉</Text>
-          <Button onClick={handleGameStart}>次のラウンドを開始</Button>
+          <Button onClick={() => handleGameStart(gameServerState?.gameState.rule)}>
+            次のラウンドを開始
+          </Button>
         </Stack>
       </Modal>
     </>

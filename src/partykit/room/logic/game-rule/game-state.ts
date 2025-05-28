@@ -1,4 +1,5 @@
 import type { CardId } from '@/game-card/src'
+import { PrimeDaifugoSetupDataSchema } from '@/interface/common'
 import { z } from 'zod'
 
 export type PrimeDaifugoGameState = z.infer<typeof PrimeDaifugoGameStateSchema>
@@ -31,13 +32,5 @@ export const PrimeDaifugoGameStateSchema = z.object({
       LAST_SUBMIT_ERROR.INCORRECT_ANSWER,
     ])
     .nullable(),
-  rule: z.object({
-    initNumCards: z.number(),
-    maxSubmitNumCards: z.number(),
-  }),
+  rule: PrimeDaifugoSetupDataSchema,
 })
-
-export type PrimeDaifugoSetupData = Partial<{
-  initNumCards: number
-  maxSubmitNumCards: number
-}>

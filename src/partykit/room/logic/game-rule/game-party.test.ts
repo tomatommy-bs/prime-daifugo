@@ -54,6 +54,8 @@ const initialFixedState: PrimeDaifugoGameState = {
   rule: {
     initNumCards: 11,
     maxSubmitNumCards: 4,
+    halfEvenNumbers: false,
+    timeLimit: 60,
   },
 }
 const initialFixedCtx: Ctx = {

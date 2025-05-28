@@ -1,5 +1,5 @@
 import assert from 'assert'
-import { WORLD_CONFIG } from '@/constants/config'
+import { GAME_CONFIG, WORLD_CONFIG } from '@/constants/config'
 import { cardIds, isCardId } from '@/game-card/src'
 import type { SubmitCardSet } from '@/interface/client-to-server'
 import {
@@ -18,11 +18,6 @@ import {
   type PrimeDaifugoSetupData,
 } from './game-state'
 
-const config = {
-  initialNumCards: 11,
-  maxSubmitNumCards: 4,
-} as const
-
 export const PrimeDaifugoGame: Game<PrimeDaifugoGameState, PrimeDaifugoSetupData> = {
   name: 'prime-daifugo',
   minPlayers: 2,
@@ -31,8 +26,8 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState, PrimeDaifugoSetupData
     const deck = _.shuffle([...cardIds])
 
     const rule = {
-      initNumCards: setupData?.initNumCards ?? config.initialNumCards,
-      maxSubmitNumCards: setupData?.maxSubmitNumCards ?? config.maxSubmitNumCards,
+      initNumCards: setupData?.initNumCards ?? GAME_CONFIG.initialNumCards,
+      maxSubmitNumCards: setupData?.maxSubmitNumCards ?? GAME_CONFIG.maxSubmitNumCards,
     }
 
     if (
@@ -41,7 +36,7 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState, PrimeDaifugoSetupData
     ) {
       throw new Error('Invalid number of players')
     }
-    if (deck.length < config.initialNumCards * ctx.numPlayers) {
+    if (deck.length < GAME_CONFIG.initialNumCards * ctx.numPlayers) {
       throw new Error('Not enough cards for all players')
     }
 
