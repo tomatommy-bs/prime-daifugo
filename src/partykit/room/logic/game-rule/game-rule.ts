@@ -1,6 +1,6 @@
 import assert from 'assert'
 import { GAME_CONFIG, WORLD_CONFIG } from '@/constants/config'
-import { cardIds, isCardId } from '@/game-card/src'
+import { cardIds, getCardInteger, getCardSuit, isCardId } from '@/game-card/src'
 import type { SubmitCardSet } from '@/interface/client-to-server'
 import type { PrimeDaifugoSetupData } from '@/interface/common'
 import {
@@ -15,12 +15,20 @@ import pf from 'primes-and-factors'
 import { type Game, INVALID_MOVE, PLAYER_STATE } from './game-rule.pkg'
 import { LAST_SUBMIT_ERROR, type PrimeDaifugoGameState } from './game-state'
 
-export const PrimeDaifugoGame: Game<PrimeDaifugoGameState, PrimeDaifugoSetupData> = {
+export const PrimeDaifugoGame: Game<PrimeDaifugoGameState, Partial<PrimeDaifugoSetupData>> = {
   name: 'prime-daifugo',
   minPlayers: 2,
   maxPlayers: 4,
   setup: function (ctx, setupData) {
-    const deck = _.shuffle([...cardIds])
+    const deck = _.shuffle([...cardIds]).filter((cardId) => {
+      if (setupData?.halfEvenNumbers === true) {
+        if (getCardInteger(cardId) % 2 === 0 && ['H', 'D'].includes(getCardSuit(cardId))) {
+          // ハートとダイヤの偶数は除外
+          return false
+        }
+      }
+      return true
+    })
 
     const rule: PrimeDaifugoSetupData = {
       initNumCards: setupData?.initNumCards ?? GAME_CONFIG.initialNumCards,

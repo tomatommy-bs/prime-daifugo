@@ -1,3 +1,5 @@
+import _ from 'lodash'
+
 export const cardSuit = {
   S: 'S',
   H: 'H',
@@ -138,12 +140,27 @@ export type CardNum = (typeof cardNum)[keyof typeof cardNum]
 export type CardId = (typeof cardIds)[number]
 
 export function getCardSuit(cardId: CardId): CardSuit {
-  return cardId[1] as CardSuit
+  return _.nth(cardId, -1) as CardSuit
 }
 export function getCardNum(cardId: CardId): CardNum {
   if (cardId.startsWith('10')) {
     return '10'
   }
   return cardId[0] as CardNum
+}
+export function getCardInteger(cardId: CardId): number {
+  const num = getCardNum(cardId)
+  switch (num) {
+    case 'A':
+      return 1
+    case 'J':
+      return 11
+    case 'Q':
+      return 12
+    case 'K':
+      return 13
+    default:
+      return Number(num)
+  }
 }
 export const isCardId = (cardId: string): cardId is CardId => cardIdSet.has(cardId as CardId)

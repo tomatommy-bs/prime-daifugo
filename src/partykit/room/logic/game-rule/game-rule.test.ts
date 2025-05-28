@@ -1,3 +1,4 @@
+import type { CardId } from '@/game-card/src'
 import { PrimeDaifugoGame } from './game-rule'
 import { type Ctx, PLAYER_STATE } from './game-rule.pkg'
 
@@ -78,6 +79,44 @@ describe('PrimeDaifugoGame', () => {
       }
 
       expect(() => PrimeDaifugoGame.setup(ctx)).toThrow()
+    })
+
+    it('偶数半減ルールが有効な場合、ハートとダイヤの偶数カードが除外されること', () => {
+      const ctx: Ctx = {
+        numPlayers: 2,
+        activePlayers: {
+          '0': PLAYER_STATE.PLAY,
+          '1': PLAYER_STATE.PLAY,
+        },
+        currentPlayer: '0',
+        playOrder: ['0', '1'],
+      }
+
+      const initialState = PrimeDaifugoGame.setup(ctx, {
+        halfEvenNumbers: true,
+      })
+      const hand0 = initialState.players['0']?.hand || []
+      const hand1 = initialState.players['1']?.hand || []
+      const allCards = [...hand0, ...hand1, ...initialState.deck]
+      expect(
+        allCards.some((cardId) => {
+          const exceptCardIds: CardId[] = [
+            '2H',
+            '2D',
+            '4H',
+            '4D',
+            '6H',
+            '6D',
+            '8H',
+            '8D',
+            '10H',
+            '10D',
+            'QH',
+            'QD',
+          ]
+          return exceptCardIds.includes(cardId)
+        }),
+      ).toBe(false)
     })
   })
 })
