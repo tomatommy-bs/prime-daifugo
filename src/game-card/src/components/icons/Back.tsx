@@ -5,7 +5,7 @@ const SvgBack = (props: SVGProps<SVGSVGElement>) => (
     id="back_svg__Layer_1"
     data-name="Layer 1"
     viewBox="0 0 201.58 282.22"
-    width="1em"
+    width="0.69em"
     height="1em"
     {...props}
   >
