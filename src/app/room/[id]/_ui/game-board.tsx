@@ -36,17 +36,19 @@ import {
 import Cookies from 'js-cookie'
 import _ from 'lodash'
 import usePartySocket from 'partysocket/react'
-import { useMemo, useState } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 import { ClientMessenger } from '../client-messenger'
 import { useMessageHandler, useMyField } from '../hooks'
+import NotifyMessageContent from './notification-message'
 import { WaitingRoom } from './waiting-room'
 
 type Props = {
   id: string
   size?: 'S' | 'M' | 'L'
+  onLogNotification?: (message: ReactNode) => void
 }
 
-const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M' }) => {
+const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }) => {
   const [presence, setPresence] = useState<serverToClient.PresenceEvent['presence']>([])
   const [roomStatus, setRoomStatus] = useState<
     (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS] | null
@@ -76,73 +78,143 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M' }) => {
     onChat: ({ message, from }) => {
       const senderName = presence.find((p) => p.id === from)?.name
       notifications.show({
-        title: senderName ? `${senderName} より` : null,
-        message: message,
+        message: <NotifyMessageContent.Chat sender={senderName} message={message} />,
       })
     },
     onPresence: ({ presence }) => {
       setPresence(presence)
     },
     onPass: ({ commander }) => {
-      notifications.show({ message: `${commander.name}がパスしました` })
+      const NotificationContent = <NotifyMessageContent.OnPass sender={commander.name} />
+      notifications.show({ message: NotificationContent })
+      props.onLogNotification?.(NotificationContent)
     },
     onSubmit: ({ commander, submissionResult }) => {
       switch (submissionResult.result) {
         case null: {
           const submitCardNumber = concatCardNumbers(submissionResult.submitCardSet.submit)
           if (submissionResult.submitCardSet.factor.length > 0) {
+            const NotificationContent = (
+              <NotifyMessageContent.OnSubmitSuccessful
+                sender={commander.name}
+                submit={submissionResult.submitCardSet.submit}
+                factor={submissionResult.submitCardSet.factor}
+              />
+            )
             notifications.show({
-              message: `${commander.name}が${submitCardNumber} = ${concatFactCardIds(submissionResult.submitCardSet.factor)}を出しました`,
+              message: NotificationContent,
             })
+            props.onLogNotification?.(NotificationContent)
           } else {
+            const NotificationContent = (
+              <NotifyMessageContent.OnSubmitSuccessful
+                sender={commander.name}
+                submit={submissionResult.submitCardSet.submit}
+              />
+            )
             notifications.show({
-              message: `${commander.name}が${submitCardNumber}を出しました`,
+              message: NotificationContent,
             })
+            props.onLogNotification?.(NotificationContent)
           }
 
           if (submitCardNumber === WORLD_CONFIG.GROTHENDIECK_PRIME) {
+            const NotificationContent = (
+              <NotifyMessageContent.OnSubmitWithGrothendieck
+                sender={commander.name}
+                submit={submissionResult.submitCardSet.submit}
+              />
+            )
             notifications.show({
-              message: `${commander.name}のグロタンディーク素数切り！`,
+              message: NotificationContent,
               color: 'green',
             })
+            props.onLogNotification?.(NotificationContent)
           }
           break
         }
-        case 'BASE_IS_NOT_PRIME':
+        case 'BASE_IS_NOT_PRIME': {
+          const NotificationContent = (
+            <NotifyMessageContent.OnSubmitNotPrime
+              sender={commander.name}
+              submit={submissionResult.submitCardSet.submit}
+            />
+          )
           notifications.show({
-            message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)}を出しましたが素数ではありません`,
+            message: NotificationContent,
             color: 'red',
           })
+          props.onLogNotification?.(NotificationContent)
           break
-        case 'INVALID_FACT':
+        }
+        case 'INVALID_FACT': {
+          const NotificationContent = (
+            <NotifyMessageContent.OnSubmitWithInvalidFactor
+              sender={commander.name}
+              submit={submissionResult.submitCardSet.submit}
+              factor={submissionResult.submitCardSet.factor}
+            />
+          )
           notifications.show({
-            message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)} = ${concatFactCardIds(submissionResult.submitCardSet.factor)}を出しましたが素因数分解が成立しません`,
+            message: NotificationContent,
             color: 'red',
           })
+          props.onLogNotification?.(NotificationContent)
           break
-        case 'FACT_CONTAIN_NOT_PRIME':
+        }
+        case 'FACT_CONTAIN_NOT_PRIME': {
+          const NotificationContent = (
+            <NotifyMessageContent.OnSubmitWithPrimeFactor
+              sender={commander.name}
+              submit={submissionResult.submitCardSet.submit}
+              factor={submissionResult.submitCardSet.factor}
+            />
+          )
           notifications.show({
-            message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)} = ${concatFactCardIds(submissionResult.submitCardSet.factor)}を出しましたが因数に素数以外のカードが含まれています`,
+            message: NotificationContent,
             color: 'red',
           })
+          props.onLogNotification?.(NotificationContent)
           break
-        case 'INCORRECT_ANSWER':
+        }
+        case 'INCORRECT_ANSWER': {
+          const NotificationContent = (
+            <NotifyMessageContent.OnSubmitWithWrongEquation
+              sender={commander.name}
+              submit={submissionResult.submitCardSet.submit}
+              factor={submissionResult.submitCardSet.factor}
+            />
+          )
           notifications.show({
-            message: `${commander.name}が${concatCardNumbers(submissionResult.submitCardSet.submit)} = ${concatFactCardIds(submissionResult.submitCardSet.factor)}を出しましたが等式が間違っています`,
+            message: NotificationContent,
             color: 'red',
           })
+          props.onLogNotification?.(NotificationContent)
           break
+        }
         default:
           throw new Error(submissionResult.result satisfies never)
       }
     },
     onDraw: ({ commander }) => {
-      notifications.show({ message: `${commander.name}がドローしました` })
+      const NotificationContent = (
+        <>
+          <Badge size="xs">{commander.name}</Badge>がドローしました
+        </>
+      )
+      notifications.show({ message: NotificationContent })
+      props.onLogNotification?.(NotificationContent)
     },
     onEndGame: ({ winner }) => {
+      const NotificationContent = (
+        <>
+          <Badge size="xs">{winner}</Badge>の勝利です 🎉
+        </>
+      )
       notifications.show({
-        message: `${winner}の勝利です 🎉`,
+        message: NotificationContent,
       })
+      props.onLogNotification?.(NotificationContent)
       setWinner(winner)
     },
     onGameEvent: ({ gameState, ctx }) => {
@@ -156,6 +228,9 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M' }) => {
     },
     onRoomStatus: ({ status }) => {
       setRoomStatus(status)
+      if (status === 'playing') {
+        props.onLogNotification?.(<Text className="font-bold italic">ゲームを開始します</Text>)
+      }
     },
     onTimeCount: ({ leftTime: _leftTime }) => {
       if (_leftTime === 0) {
@@ -163,6 +238,7 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M' }) => {
           notifications.show({ message: '時間切れです', color: 'red' })
           ClientMessenger.pass({ ws })
         }
+        props.onLogNotification?.('時間切れです')
       } else {
         setLeftTime(_leftTime)
       }
@@ -229,7 +305,7 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M' }) => {
         />
       )}
       {roomStatus !== 'waiting' && (
-        <Stack pb={'md'} gap={componentSize.p}>
+        <Stack gap={componentSize.p}>
           <Grid justify="center">
             <Grid.Col span={{ xs: 4, sm: 3 }}>
               <Paper p={componentSize.p}>
