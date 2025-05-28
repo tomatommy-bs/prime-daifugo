@@ -36,6 +36,7 @@ export class ClientMessenger {
     const payload: clientToServer.RoomEvent = {
       event: 'room',
       action: 'start-game',
+      rule: args.rule,
     }
     ws.send(JSON.stringify(payload))
   }

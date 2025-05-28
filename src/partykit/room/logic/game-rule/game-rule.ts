@@ -2,6 +2,7 @@ import assert from 'assert'
 import { GAME_CONFIG, WORLD_CONFIG } from '@/constants/config'
 import { cardIds, isCardId } from '@/game-card/src'
 import type { SubmitCardSet } from '@/interface/client-to-server'
+import type { PrimeDaifugoSetupData } from '@/interface/common'
 import {
   concatCardNumbers,
   evalFactCardIds,
@@ -12,11 +13,7 @@ import {
 import _ from 'lodash'
 import pf from 'primes-and-factors'
 import { type Game, INVALID_MOVE, PLAYER_STATE } from './game-rule.pkg'
-import {
-  LAST_SUBMIT_ERROR,
-  type PrimeDaifugoGameState,
-  type PrimeDaifugoSetupData,
-} from './game-state'
+import { LAST_SUBMIT_ERROR, type PrimeDaifugoGameState } from './game-state'
 
 export const PrimeDaifugoGame: Game<PrimeDaifugoGameState, PrimeDaifugoSetupData> = {
   name: 'prime-daifugo',
@@ -25,9 +22,11 @@ export const PrimeDaifugoGame: Game<PrimeDaifugoGameState, PrimeDaifugoSetupData
   setup: function (ctx, setupData) {
     const deck = _.shuffle([...cardIds])
 
-    const rule = {
+    const rule: PrimeDaifugoSetupData = {
       initNumCards: setupData?.initNumCards ?? GAME_CONFIG.initialNumCards,
       maxSubmitNumCards: setupData?.maxSubmitNumCards ?? GAME_CONFIG.maxSubmitNumCards,
+      halfEvenNumbers: setupData?.halfEvenNumbers ?? GAME_CONFIG.halfEvenNumbers,
+      timeLimit: setupData?.timeLimit ?? GAME_CONFIG.timeLimit,
     }
 
     if (

@@ -28,9 +28,7 @@ interface Constructor<G extends Game = Game> extends Base<G> {
 // Tail ユーティリティ型: タプル型の最初の要素を除外
 type Tail<T extends any[]> = T extends [any, ...infer Rest] ? Rest : never
 type ExtractStateFromGame<G extends Game<unknown>> = G extends Game<infer S> ? S : never
-type ExtractSetupDataFromGame<G extends Game<unknown>> = G extends Game<unknown, infer D>
-  ? D
-  : never
+type ExtractSetupDataFromGame<G extends Game<unknown>> = G extends Game<any, infer D> ? D : never
 
 export class GameParty<G extends Game = Game<any, any>> {
   private readonly game: G

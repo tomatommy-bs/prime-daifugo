@@ -11,4 +11,5 @@ export const GAME_CONFIG = {
   maxSubmitNumCards: 4,
   /** seconds */
   timeLimit: 60,
+  halfEvenNumbers: false,
 } as const
