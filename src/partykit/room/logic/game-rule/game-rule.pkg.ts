@@ -17,7 +17,7 @@ export const CtxSchema = z.object({
 
 export type Ctx = z.infer<typeof CtxSchema>
 
-export interface Game<State = any> {
+export interface Game<State = any, SetupData = any> {
   name?: string
   minPlayers?: number
   maxPlayers?: number
@@ -25,7 +25,7 @@ export interface Game<State = any> {
   events?: {
     endTurn?: boolean
   }
-  setup: (ctx: Ctx) => State
+  setup: (ctx: Ctx, setupData?: SetupData) => State
   endIf: (ctx: Readonly<Ctx>, state: Readonly<State>) => boolean
 }
 

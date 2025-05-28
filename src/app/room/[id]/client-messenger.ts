@@ -1,4 +1,6 @@
 import type * as clientToServer from '@/interface/client-to-server'
+import type { PrimeDaifugoSetupData } from '@/interface/common'
+
 import type PartySocket from 'partysocket'
 
 export class ClientMessenger {
@@ -29,11 +31,22 @@ export class ClientMessenger {
     ws.send(JSON.stringify(payload))
   }
 
-  static startGame(args: { ws: PartySocket }) {
+  static changeRule(args: { ws: PartySocket; rule: Partial<PrimeDaifugoSetupData> }) {
+    const { ws, rule } = args
+    const payload: clientToServer.RoomEvent = {
+      event: 'room',
+      action: 'change-rule',
+      rule: rule,
+    }
+    ws.send(JSON.stringify(payload))
+  }
+
+  static startGame(args: { ws: PartySocket; rule?: PrimeDaifugoSetupData }) {
     const { ws } = args
     const payload: clientToServer.RoomEvent = {
       event: 'room',
       action: 'start-game',
+      rule: args.rule,
     }
     ws.send(JSON.stringify(payload))
   }

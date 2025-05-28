@@ -1,6 +1,8 @@
 // biome-ignore lint/style/useNodejsImportProtocol: <explanation>
 import assert from 'assert'
+import { GAME_CONFIG } from '@/constants/config'
 import { ROOM_STATUS } from '@/constants/status'
+import type { PrimeDaifugoSetupData } from '@/interface/common'
 import type { ConnectionState } from '@/interface/connection'
 import type * as Party from 'partykit/server'
 import { type Ctx, type Game, INVALID_MOVE, PLAYER_STATE, PrimeDaifugoGame } from './game-rule'
@@ -36,15 +38,16 @@ export const messageHandler = new MessageManager({
     ServerMessenger.broadcastPresence({ room })
   },
 
-  onStartGame: async (room, sender) => {
+  onStartGame: async (room, sender, rule) => {
     assert(sender.state)
     await room.storage.put('roomStatus', ROOM_STATUS.playing)
-    const party = new GameParty({
+    const party = new GameParty<Game<PrimeDaifugoGameState, PrimeDaifugoSetupData>>({
       game: PrimeDaifugoGame,
       players: Array.from(room.getConnections<ConnectionState>()).map((conn) => ({
         id: conn.id,
         state: conn.state?.status === 'ready' ? PLAYER_STATE.PLAY : PLAYER_STATE.OBSERVE,
       })),
+      setupData: rule,
     })
 
     await room.storage.put('gameState', party.getState())
@@ -63,11 +66,28 @@ export const messageHandler = new MessageManager({
       },
     })
     ServerMessenger.broadcastRoomStatus({ room, status: ROOM_STATUS.playing })
-    room.storage.put('leftTime', 60)
+    room.storage.put('leftTime', rule?.timeLimit ?? GAME_CONFIG.timeLimit)
     room.storage.setAlarm(Date.now() + 1 * 1000)
     ServerMessenger.broadcastLeftTime({
       room,
-      leftTime: 60,
+      leftTime: rule?.timeLimit ?? GAME_CONFIG.timeLimit,
+    })
+  },
+
+  onChangeRule: (room, sender, rule) => {
+    assert(sender.state)
+
+    ServerMessenger.broadcastSystemEvent({
+      room,
+      content: {
+        event: 'system',
+        action: 'change-rule',
+        commander: {
+          id: sender.id,
+          name: sender.state.name,
+        },
+        rule: rule,
+      },
     })
   },
 
@@ -93,7 +113,8 @@ export const messageHandler = new MessageManager({
   },
 
   onPass: async (room, sender) => {
-    partyStorageMiddleware(room, sender, (party) => {
+    // biome-ignore lint/suspicious/useAwait: <explanation>
+    partyStorageMiddleware(room, sender, async (party) => {
       assert(sender.state)
       party.moves.pass(sender.id)
       ServerMessenger.broadcastSystemEvent({
@@ -111,16 +132,20 @@ export const messageHandler = new MessageManager({
       })
 
       room.storage.setAlarm(Date.now() + 1 * 1000)
-      room.storage.put('leftTime', 60)
+      const rule = (await room.storage.get<PrimeDaifugoGameState>('gameState'))?.rule
+      const timeLimit = rule?.timeLimit ?? GAME_CONFIG.timeLimit
+
+      room.storage.put('leftTime', timeLimit)
       ServerMessenger.broadcastLeftTime({
         room,
-        leftTime: 60,
+        leftTime: timeLimit,
       })
     })
   },
 
   onSubmit: async (room, sender, submitCardSet) => {
-    partyStorageMiddleware(room, sender, (party) => {
+    // biome-ignore lint/suspicious/useAwait: <explanation>
+    partyStorageMiddleware(room, sender, async (party) => {
       assert(sender.state)
       if (party.moves.submit(sender.id, submitCardSet) === INVALID_MOVE) {
         return
@@ -144,12 +169,14 @@ export const messageHandler = new MessageManager({
         },
       })
 
-      room.storage.put('leftTime', 60)
+      const rule = (await room.storage.get<PrimeDaifugoGameState>('gameState'))?.rule
+      const timeLimit = rule?.timeLimit ?? GAME_CONFIG.timeLimit
+      room.storage.put('leftTime', timeLimit)
       if (party.getState().field.length > 0) {
         room.storage.setAlarm(Date.now() + 1 * 1000)
         ServerMessenger.broadcastLeftTime({
           room,
-          leftTime: 60,
+          leftTime: timeLimit,
         })
       } else {
         room.storage.deleteAlarm()

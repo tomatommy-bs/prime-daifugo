@@ -1,6 +1,7 @@
+import { GAME_CONFIG } from '@/constants/config'
 import type { ROOM_STATUS } from '@/constants/status'
 import type { CardId } from '@/game-card/src'
-import type { FactCardId } from '@/interface/common'
+import type { FactCardId, PrimeDaifugoSetupData } from '@/interface/common'
 import type { Ctx } from '@/partykit/room/logic/game-rule'
 import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
 import { compareCard, extractCardIdsFromFactCardIds } from '@/utils/play-card'
@@ -22,6 +23,7 @@ type RoomEventHandlers = {
   onChat?: (params: { message: string; from: string }) => void
   onPresence?: (params: { presence: serverToClient.PresenceEvent['presence'] }) => void
   onStartGame?: (params: { gameState: PrimeDaifugoGameState; ctx: Ctx }) => void
+  onChangeRule?: (params: { rule: Partial<PrimeDaifugoSetupData> }) => void
   onGameEvent?: (params: GameEventParams) => void
   onDraw?: (params: GameEventParams) => void
   onPass?: (params: GameEventParams) => void
@@ -55,6 +57,13 @@ export const useMessageHandler = (props: RoomEventHandlers) => {
         props.onPresence?.(data)
         break
       case 'system': {
+        if (data.action === 'change-rule') {
+          props.onChangeRule?.({
+            rule: data.rule,
+          })
+          return
+        }
+
         if (data.action !== 'sync') {
           props.onGameEvent?.(data)
         }
@@ -95,7 +104,11 @@ export const useMessageHandler = (props: RoomEventHandlers) => {
   return { onMessage }
 }
 
-export const useMyField = (args: { all: CardId[]; field: CardId[][] }) => {
+export const useMyField = (args: {
+  all: CardId[]
+  field: CardId[][]
+  maxSubmitNumberCards?: number
+}) => {
   const { all } = args
 
   const [state, setState] = useSetState<{
@@ -111,8 +124,12 @@ export const useMyField = (args: { all: CardId[]; field: CardId[][] }) => {
   })
 
   const selectHandCardIdAsSubmit = (card: CardId) => {
-    if (state.submitCardIds.length >= 4) {
-      notifications.show({ message: '1度に出せるカードは4枚までです' })
+    if (
+      state.submitCardIds.length >= (args.maxSubmitNumberCards ?? GAME_CONFIG.maxSubmitNumCards)
+    ) {
+      notifications.show({
+        message: `1度に出せるカードは${args.maxSubmitNumberCards ?? GAME_CONFIG.maxSubmitNumCards}枚までです`,
+      })
       return
     }
 
