@@ -4,7 +4,7 @@ const SvgAc = (props: SVGProps<SVGSVGElement>) => (
     xmlns="http://www.w3.org/2000/svg"
     xmlnsXlink="http://www.w3.org/1999/xlink"
     xmlSpace="preserve"
-    width="1em"
+    width="0.69em"
     height="1em"
     viewBox="0 0 167.087 242.667"
     {...props}

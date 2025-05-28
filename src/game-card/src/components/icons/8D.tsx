@@ -3,7 +3,7 @@ const Svg8D = (props: SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     xmlSpace="preserve"
-    width="1em"
+    width="0.69em"
     height="1em"
     viewBox="0 0 167.087 242.667"
     {...props}
