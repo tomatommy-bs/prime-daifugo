@@ -1,5 +1,5 @@
 import { PlayingCardLine } from '@/components/playing-card-line'
-import { WORLD_CONFIG } from '@/constants/config'
+import { GAME_CONFIG, WORLD_CONFIG } from '@/constants/config'
 import { PARTYKIT_HOST } from '@/constants/env'
 import type { ROOM_STATUS } from '@/constants/status'
 import { type CardId, GameCard, isCardId } from '@/game-card/src'
@@ -26,6 +26,7 @@ import {
   Stack,
   Text,
 } from '@mantine/core'
+import { useSetState } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import {
   IconAsterisk,
@@ -50,6 +51,12 @@ type Props = {
 }
 
 const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }) => {
+  const [rule, setRule] = useSetState<PrimeDaifugoSetupData>({
+    initNumCards: GAME_CONFIG.initialNumCards as number,
+    timeLimit: GAME_CONFIG.timeLimit as number,
+    maxSubmitNumCards: GAME_CONFIG.maxSubmitNumCards as number,
+    halfEvenNumbers: false,
+  })
   const [presence, setPresence] = useState<serverToClient.PresenceEvent['presence']>([])
   const [roomStatus, setRoomStatus] = useState<
     (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS] | null
@@ -248,6 +255,12 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
         setLeftTime(_leftTime)
       }
     },
+    onChangeRule: ({ rule }) => {
+      setRule(rule)
+      props.onLogNotification?.(
+        <Text className="font-bold italic">ルールを変更しました: {JSON.stringify(rule)}</Text>,
+      )
+    },
   })
 
   const ws = usePartySocket({
@@ -269,6 +282,11 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
 
   const handleGameStart = (rule?: PrimeDaifugoSetupData) => {
     ClientMessenger.startGame({ ws, rule })
+  }
+
+  const handleChangeRule = (newRule: Partial<PrimeDaifugoSetupData>) => {
+    setRule(newRule)
+    ClientMessenger.changeRule({ ws, rule: { ...rule, ...newRule } })
   }
 
   const isCommendable = gameServerState?.ctx?.currentPlayer === ws.id
@@ -302,6 +320,8 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
     <>
       {roomStatus === 'waiting' && (
         <WaitingRoom
+          rule={rule}
+          onChangeRule={handleChangeRule}
           presence={presence}
           myPresence={myPresence}
           onGameStart={handleGameStart}

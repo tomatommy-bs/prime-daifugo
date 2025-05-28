@@ -31,6 +31,16 @@ export class ClientMessenger {
     ws.send(JSON.stringify(payload))
   }
 
+  static changeRule(args: { ws: PartySocket; rule: Partial<PrimeDaifugoSetupData> }) {
+    const { ws, rule } = args
+    const payload: clientToServer.RoomEvent = {
+      event: 'room',
+      action: 'change-rule',
+      rule: rule,
+    }
+    ws.send(JSON.stringify(payload))
+  }
+
   static startGame(args: { ws: PartySocket; rule?: PrimeDaifugoSetupData }) {
     const { ws } = args
     const payload: clientToServer.RoomEvent = {

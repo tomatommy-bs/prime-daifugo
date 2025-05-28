@@ -1,4 +1,3 @@
-import { GAME_CONFIG } from '@/constants/config'
 import type { PrimeDaifugoSetupData } from '@/interface/common'
 import type * as serverToClient from '@/interface/server-to-client'
 import {
@@ -13,10 +12,11 @@ import {
   SegmentedControl,
   Stack,
 } from '@mantine/core'
-import { useSetState } from '@mantine/hooks'
 import ClientRoomManager from '../room-manager'
 
 interface Props {
+  rule: PrimeDaifugoSetupData
+  onChangeRule?: (rule: Partial<PrimeDaifugoSetupData>) => void
   presence: serverToClient.PresenceEvent['presence']
   myPresence?: serverToClient.PresenceEvent['presence'][number]
   onGameStart?: (args: PrimeDaifugoSetupData) => void
@@ -25,13 +25,7 @@ interface Props {
 }
 
 export const WaitingRoom: React.FC<Props> = (props) => {
-  const [rule, setRule] = useSetState<PrimeDaifugoSetupData>({
-    initNumCards: GAME_CONFIG.initialNumCards as number,
-    timeLimit: GAME_CONFIG.timeLimit as number,
-    maxSubmitNumCards: GAME_CONFIG.maxSubmitNumCards as number,
-    halfEvenNumbers: false,
-  })
-
+  const { rule, onChangeRule } = props
   const { presence, myPresence, onGameStart, onSetReady, onUnsetReady } = props
   const canStartGame = ClientRoomManager.canStartGame(presence)
 
@@ -65,7 +59,7 @@ export const WaitingRoom: React.FC<Props> = (props) => {
             className="col-span-9"
             size="xs"
             value={rule.timeLimit?.toString()}
-            onChange={(value) => setRule({ timeLimit: Number(value) })}
+            onChange={(value) => onChangeRule?.({ timeLimit: Number(value) })}
             data={[
               { label: '15 秒', value: '15' },
               { label: '60 秒', value: '60' },
@@ -79,7 +73,7 @@ export const WaitingRoom: React.FC<Props> = (props) => {
             className="col-span-9"
             size="xs"
             value={rule.initNumCards?.toString()}
-            onChange={(value) => setRule({ initNumCards: Number(value) })}
+            onChange={(value) => onChangeRule?.({ initNumCards: Number(value) })}
             data={[
               { label: '4 枚', value: '4' },
               { label: '8 枚', value: '8' },
@@ -93,7 +87,7 @@ export const WaitingRoom: React.FC<Props> = (props) => {
             className="col-span-9"
             size="xs"
             value={rule.maxSubmitNumCards?.toString()}
-            onChange={(value) => setRule({ maxSubmitNumCards: Number(value) })}
+            onChange={(value) => onChangeRule?.({ maxSubmitNumCards: Number(value) })}
             data={[
               { label: '4 枚', value: '4' },
               { label: '∞ 枚', value: '52' },
@@ -110,7 +104,7 @@ export const WaitingRoom: React.FC<Props> = (props) => {
             className="col-span-9"
             size="xs"
             value={rule.halfEvenNumbers ? 'on' : 'off'}
-            onChange={(value) => setRule({ halfEvenNumbers: value === 'on' })}
+            onChange={(value) => onChangeRule?.({ halfEvenNumbers: value === 'on' })}
             data={[
               { label: 'ON', value: 'on' },
               { label: 'OFF', value: 'off' },

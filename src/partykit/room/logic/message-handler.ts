@@ -74,6 +74,23 @@ export const messageHandler = new MessageManager({
     })
   },
 
+  onChangeRule: (room, sender, rule) => {
+    assert(sender.state)
+
+    ServerMessenger.broadcastSystemEvent({
+      room,
+      content: {
+        event: 'system',
+        action: 'change-rule',
+        commander: {
+          id: sender.id,
+          name: sender.state.name,
+        },
+        rule: rule,
+      },
+    })
+  },
+
   onDraw: async (room, sender) => {
     partyStorageMiddleware(room, sender, (party) => {
       assert(sender.state)

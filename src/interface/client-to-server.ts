@@ -28,6 +28,11 @@ const roomEventSchema = z.discriminatedUnion('action', [
     action: z.literal('start-game'),
     rule: PrimeDaifugoSetupDataSchema.optional(),
   }),
+  z.object({
+    event: z.literal('room'),
+    action: z.literal('change-rule'),
+    rule: PrimeDaifugoSetupDataSchema.partial(),
+  }),
 ])
 export type RoomEvent = z.infer<typeof roomEventSchema>
 
