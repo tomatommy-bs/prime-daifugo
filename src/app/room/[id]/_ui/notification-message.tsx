@@ -7,11 +7,16 @@ import type React from 'react'
 const Chat: React.FC<{
   sender?: string
   message?: string
-}> = (props) => (
-  <>
-    <Badge size="xs">{props.sender}</Badge>: {props.message}
-  </>
-)
+}> = (props) => {
+  if (props.sender === undefined) {
+    return <>{props.message}</>
+  }
+  return (
+    <>
+      <Badge size="xs">{props.sender}</Badge>: {props.message}
+    </>
+  )
+}
 
 const OnPass: React.FC<{
   sender?: string
