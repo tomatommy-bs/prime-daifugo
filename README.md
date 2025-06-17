@@ -58,6 +58,7 @@ https://primeqk.themedia.jp/pages/4500251/rules
 ## 技術スタック
 
 ### フロントエンド
+
 - **Next.js 14**: App Router を使用したモダンな React フレームワーク
 - **Mantine**: UI コンポーネントライブラリ
 - **Tailwind CSS + DaisyUI**: スタイリング
@@ -66,11 +67,12 @@ https://primeqk.themedia.jp/pages/4500251/rules
 - **Zod**: スキーマバリデーション
 
 ### バックエンド
+
 - **PartyKit**: リアルタイム WebSocket サーバー
-- **boardgame.io**: ゲーム状態管理（部分的に使用）
 - **primes-and-factors**: 素数計算ライブラリ
 
 ### 開発・テスト環境
+
 - **Biome**: リンティング・フォーマッティング
 - **Jest + React Testing Library**: ユニットテスト
 - **Vitest**: 追加のテスト環境
@@ -105,27 +107,32 @@ src/
 ## 開発上の利点
 
 ### 1. モジュラー設計
+
 - **分離された関心事**: フロントエンド（Next.js）とリアルタイム通信（PartyKit）の明確な分離
 - **再利用可能なコンポーネント**: `game-card/` パッケージによる独立したカードシステム
 - **型安全な通信**: `interface/` による厳密な型定義
 
 ### 2. スケーラブルな開発環境
+
 - **TypeScript**: 型安全性による早期バグ発見
 - **Biome**: 高速なリンティング・フォーマッティング
 - **Storybook**: 分離された環境でのコンポーネント開発
 - **テスト環境**: Jest + Vitest による包括的なテスト
 
 ### 3. リアルタイム機能
+
 - **PartyKit**: 簡単な WebSocket サーバー構築
 - **状態同期**: サーバー・クライアント間の自動的な状態同期
 - **ルーム管理**: 動的なゲームルーム作成・管理
 
 ### 4. ゲーム特化機能
+
 - **素数計算**: `primes-and-factors` による高速な素数判定
 - **カードシステム**: 全54枚のカードを網羅した型安全なシステム
 - **ゲームルール**: モジュール化されたゲームロジック（`src/partykit/room/logic/`）
 
 ### 5. 開発効率化
+
 ```bash
 # 開発サーバー起動（並行実行）
 npm run dev      # Next.js開発サーバー
@@ -140,6 +147,7 @@ npm run storybook # コンポーネント開発環境
 ```
 
 ### 6. デプロイメント
+
 - **Vercel**: フロントエンドの自動デプロイ
 - **PartyKit Cloud**: WebSocketサーバーの管理デプロイ
 - **一括デプロイ**: `npm run deploy` による統合デプロイ
