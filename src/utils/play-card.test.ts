@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import { evalFactCardIds, isValidFactCardIds, isValidFactCardIdsStrict } from './play-card'
 
 describe('isValidFactCardIds', () => {

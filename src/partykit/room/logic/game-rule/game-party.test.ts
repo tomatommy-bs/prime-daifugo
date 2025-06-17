@@ -1,5 +1,5 @@
 import type { SubmitCardSet } from '@/interface/client-to-server'
-import { describe, expect, it } from '@jest/globals'
+import { describe, expect, it } from 'vitest'
 import _ from 'lodash'
 import { GameParty } from './game-party'
 import { PrimeDaifugoGame } from './game-rule'

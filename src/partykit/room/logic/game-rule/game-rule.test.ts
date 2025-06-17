@@ -1,4 +1,5 @@
 import type { CardId } from '@/game-card/src'
+import { describe, expect, it } from 'vitest'
 import { PrimeDaifugoGame } from './game-rule'
 import { type Ctx, PLAYER_STATE } from './game-rule.pkg'
 
