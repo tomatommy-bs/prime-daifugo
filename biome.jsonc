@@ -1,10 +1,10 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "files": {
-    "include": ["src/**", "tests/**"]
+    "include": ["src/**", "tests/**"],
   },
   "organizeImports": {
-    "enabled": true
+    "enabled": true,
   },
   "linter": {
     "enabled": true,
@@ -13,25 +13,25 @@
       "all": true,
       "suspicious": {
         "noExplicitAny": "off",
-        "noReactSpecificProps": "off"
+        "noReactSpecificProps": "off",
       },
       "style": {
         "useNamingConvention": "off",
         "noDefaultExport": "off",
         "useFilenamingConvention": "off",
         "useNodejsImportProtocol": "off",
-        "noNegationElse": "off"
+        "noNegationElse": "off",
       },
       "complexity": {
         "useSimplifiedLogicExpression": "off",
         "noExcessiveCognitiveComplexity": "off",
-        "noStaticOnlyClass": "off"
+        "noStaticOnlyClass": "off",
       },
       "correctness": {
         "noNodejsModules": "off",
-        "useImportExtensions": "off"
-      }
-    }
+        "useImportExtensions": "off",
+      },
+    },
   },
   "formatter": {
     "enabled": true,
@@ -39,18 +39,18 @@
     "ignore": [],
     "indentStyle": "space",
     "indentWidth": 2,
-    "lineWidth": 100
+    "lineWidth": 100,
   },
   "json": {
     "parser": {
-      "allowComments": true
+      "allowComments": true,
     },
     "formatter": {
       "enabled": true,
       "indentStyle": "space",
       "indentWidth": 2,
-      "lineWidth": 100
-    }
+      "lineWidth": 100,
+    },
   },
   "javascript": {
     "formatter": {
@@ -63,7 +63,32 @@
       "indentStyle": "space",
       "indentWidth": 2,
       "lineWidth": 100,
-      "quoteProperties": "asNeeded"
-    }
-  }
+      "quoteProperties": "asNeeded",
+    },
+  },
+  // テストコードに含まれるJest関数が no undeclared variables と判定されるため、テストファイルのみ設定を上書き
+  "overrides": [
+    {
+      "include": [
+        "*.test.ts",
+        "*.test.tsx",
+        "*.spec.ts",
+        "*.spec.tsx",
+        "**/__tests__/**",
+      ],
+      "javascript": {
+        "globals": [
+          "afterAll",
+          "afterEach",
+          "beforeAll",
+          "beforeEach",
+          "describe",
+          "expect",
+          "it",
+          "jest",
+          "test",
+        ],
+      },
+    },
+  ],
 }
