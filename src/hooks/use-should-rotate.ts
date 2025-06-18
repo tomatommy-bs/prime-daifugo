@@ -20,6 +20,7 @@ export const useShouldRotate = ({
     // Skip rotation recommendation on desktop
     case 'windows':
     case 'macos':
+    case 'chromeos':
     case 'linux':
       // But, still show it in development
       if (process.env.NODE_ENV === 'development') {
