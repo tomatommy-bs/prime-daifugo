@@ -41,7 +41,7 @@ const Page = ({ params: { id } }: Props) => {
         size={compSizeOption}
         onLogNotification={(logMsg) => setLogs((prev) => [logMsg, ...prev])}
       />
-      <Stack className="bg-gray-500/20 p-2 rounded mt-2 gap-0 resize-y overflow-y-scroll">
+      <Stack className="bg-gray-500/20 p-2 rounded-sm mt-2 gap-0 resize-y overflow-y-scroll">
         {logs.map((log, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
           <Text key={`${log}-${index}`} size="xs" c="lightgray">

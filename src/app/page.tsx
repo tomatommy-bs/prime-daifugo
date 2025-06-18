@@ -44,7 +44,7 @@ export default function Home() {
         現在 {lobbyInfo?.lobby ?? '--'} 名がロビーにいます <br />
         {nRooms} つの部屋でゲームプレイ中 <br />
       </p>
-      <section className="p-4 bg-white rounded w-fit mx-auto mt-8 flex gap-4 flex-col md:flex-row items-center">
+      <section className="p-4 bg-white rounded-sm w-fit mx-auto mt-8 flex gap-4 flex-col md:flex-row items-center">
         <Link href={'https://primeqk.themedia.jp/pages/4500251/rules'}>
           <Button variant="outline" rightSection={<IconExternalLink />}>
             ゲームルール
@@ -79,7 +79,7 @@ export default function Home() {
         </Group>
       </section>
 
-      <section className="p-4 rounded w-fit mx-auto mt-8 flex gap-4 flex-row items-center flex-nowrap">
+      <section className="p-4 rounded-sm w-fit mx-auto mt-8 flex gap-4 flex-row items-center flex-nowrap">
         <Tooltip label="素数判定機">
           <Link href={'/labo/calc'} className="flex items-center gap-2">
             <ActionIcon size={'xl'} variant="white">

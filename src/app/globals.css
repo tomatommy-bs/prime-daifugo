@@ -1,44 +1,66 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "daisyui";
 
-body {
-  width: 100%;
-  height: 100%;
-  min-height: 100vh;
-  overflow-x: hidden;
-  background-color: #4158d0;
-  background-image: linear-gradient(43deg, #4158d0 0%, #c850c0 46%, #ffcc70 100%);
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
 
-  color: black;
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
 }
 
-@layer components {
-  .button-dark {
-    background-image: radial-gradient(
-      circle 975px at 2.6% 48.3%,
-      rgba(0, 8, 120, 1) 0%,
-      rgba(95, 184, 224, 1) 99.7%
-    );
-  }
+@utility button-dark {
+  background-image: radial-gradient(
+    circle 975px at 2.6% 48.3%,
+    rgba(0, 8, 120, 1) 0%,
+    rgba(95, 184, 224, 1) 99.7%
+  );
+}
 
-  .button-light {
+@utility button-light {
+  background-image: linear-gradient(
+    174.2deg,
+    rgba(255, 244, 228, 1) 7.1%,
+    rgba(240, 246, 238, 1) 67.4%
+  );
+}
+
+@utility vote-bg {
+  background-image: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+@utility vote-bg-own {
+  background-image: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+@utility vote-bg-winning {
+  background-image: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
+}
+
+@layer utilities {
+  body {
+    width: 100%;
+    height: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-color: #4158d0;
     background-image: linear-gradient(
-      174.2deg,
-      rgba(255, 244, 228, 1) 7.1%,
-      rgba(240, 246, 238, 1) 67.4%
+      43deg,
+      #4158d0 0%,
+      #c850c0 46%,
+      #ffcc70 100%
     );
-  }
 
-  .vote-bg {
-    background-image: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  }
-
-  .vote-bg-own {
-    background-image: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  }
-
-  .vote-bg-winning {
-    background-image: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
+    color: black;
   }
 }
