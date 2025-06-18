@@ -40,3 +40,4 @@ next-env.d.ts
 .env*.local
 
 *storybook.log
+storybook-static
