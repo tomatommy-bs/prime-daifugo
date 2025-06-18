@@ -55,7 +55,7 @@
     "daisyui": "^4.12.10",
     "jsdom": "^26.0.0",
     "parcel-bundler": "^1.12.5",
-    "partykit": "^0.0.110",
+    "partykit": "^0.0.115",
     "playwright": "^1.52.0",
     "postcss": "^8.4.49",
     "postcss-preset-mantine": "^1.17.0",
