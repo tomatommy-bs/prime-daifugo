@@ -20,7 +20,7 @@
     "@mantine/notifications": "^7.12.2",
     "@tabler/icons-react": "^3.26.0",
     "@vercel/analytics": "^1.4.1",
-    "framer-motion": "^11.3.0",
+    "framer-motion": "^12.0.0",
     "js-cookie": "^3.0.5",
     "lodash": "^4.17.21",
     "next": "^14.2.9",
