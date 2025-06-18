@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, develop]
 
+env:
+  NEXT_PUBLIC_PARTYKIT_HOST: ${{ secrets.NEXT_PUBLIC_PARTYKIT_HOST }}
+
 jobs:
   test:
     runs-on: ubuntu-latest
