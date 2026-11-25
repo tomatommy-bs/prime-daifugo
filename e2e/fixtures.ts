@@ -18,15 +18,10 @@ import {
   test as base,
   expect,
 } from '@playwright/test'
+import { AWAY_TURN_CAP_MS, E2E_ENABLED, GRACE_MS } from './env'
+import { RealtimeServer } from './realtime-server'
 
-export { expect }
-
-/** Spec §12.2 runs only with `E2E=1`; see playwright.config.ts. */
-export const E2E_ENABLED = process.env.E2E === '1'
-
-/** Mirrors the Worker vars set in playwright.config.ts. */
-export const GRACE_MS = 5000
-export const AWAY_TURN_CAP_MS = 3000
+export { expect, AWAY_TURN_CAP_MS, E2E_ENABLED, GRACE_MS }
 
 const ROOM_WS_PATH = /^\/rooms\/[A-Za-z0-9_-]{1,32}\/ws$/
 const PASS_BUTTON = /パス/
@@ -36,6 +31,8 @@ export type NetControl = {
   /** Offline, with every routed room socket closed; new room sockets are refused. */
   goOffline(): Promise<void>
   goOnline(): Promise<void>
+  /** Every JSON frame the server sent to this context's room sockets, in arrival order. */
+  frames(): { t: string; mode?: string; e?: { type: string } }[]
 }
 
 export type Player = {
@@ -48,6 +45,7 @@ export type Player = {
 async function installNetControl(context: BrowserContext): Promise<NetControl> {
   let offline = false
   let live: WebSocketRoute[] = []
+  const received: string[] = []
   await context.routeWebSocket(
     (url) => ROOM_WS_PATH.test(url.pathname),
     (ws) => {
@@ -56,7 +54,14 @@ async function installNetControl(context: BrowserContext): Promise<NetControl> {
         ws.close()
         return
       }
-      ws.connectToServer()
+      const server = ws.connectToServer()
+      // forward by hand so the frames can be recorded (page → server stays automatic)
+      server.onMessage((message) => {
+        if (typeof message === 'string') {
+          received.push(message)
+        }
+        ws.send(message)
+      })
       live.push(ws)
     },
   )
@@ -72,6 +77,15 @@ async function installNetControl(context: BrowserContext): Promise<NetControl> {
     async goOnline() {
       offline = false
       await context.setOffline(false)
+    },
+    frames() {
+      return received.flatMap((text) => {
+        try {
+          return [JSON.parse(text)]
+        } catch {
+          return [] // the bare `pong`
+        }
+      })
     },
   }
 }
@@ -109,7 +123,21 @@ type Fixtures = {
   spawnPlayer: (name: string) => Promise<Player>
 }
 
-export const test = base.extend<Fixtures>({
+type WorkerFixtures = {
+  /** auto: the local Worker for this Playwright worker (null without E2E=1) */
+  realtime: RealtimeServer | null
+}
+
+export const test = base.extend<Fixtures, WorkerFixtures>({
+  realtime: [
+    // biome-ignore lint/correctness/noEmptyPattern: Playwright fixtures must destructure their first argument
+    async ({}, use) => {
+      const server = E2E_ENABLED ? await RealtimeServer.fresh() : null
+      await use(server)
+      await server?.kill()
+    },
+    { scope: 'worker', auto: true, timeout: 180_000 },
+  ],
   e2eGate: [
     // biome-ignore lint/correctness/noEmptyPattern: Playwright fixtures must destructure their first argument
     async ({}, use, testInfo) => {
@@ -301,4 +329,320 @@ export async function leaveRoom(page: Page): Promise<void> {
   await page.getByRole('button', { name: '退出', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: '部屋から退出しますか？' })
   await dialog.getByRole('button', { name: '退出する' }).click()
+}
+
+/* ------------------------------------------------------------------ */
+/* playing cards                                                       */
+/* ------------------------------------------------------------------ */
+
+const RANK_VALUE: Record<string, number> = { A: 1, J: 11, Q: 12, K: 13 }
+const GROTHENDIECK = 57
+
+/** Card value (A=1, J=11, Q=12, K=13), from an id like `QS` or `10H`. */
+export function cardValue(id: string): number {
+  const rank = id.slice(0, -1)
+  return RANK_VALUE[rank] ?? Number(rank)
+}
+
+/** The number several cards form side by side (RQ-R3). */
+export function concatValue(ids: string[]): number {
+  return Number(ids.map(cardValue).join(''))
+}
+
+const MR_BASES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37].map(BigInt)
+
+function modPow(base: bigint, exp: bigint, mod: bigint): bigint {
+  let result = BigInt(1)
+  let b = base % mod
+  let e = exp
+  const zero = BigInt(0)
+  const one = BigInt(1)
+  const two = BigInt(2)
+  while (e > zero) {
+    if (e % two === one) {
+      result = (result * b) % mod
+    }
+    b = (b * b) % mod
+    e /= two
+  }
+  return result
+}
+
+/** Deterministic Miller-Rabin (exact far beyond the numbers a few cards can form). */
+export function isPrime(n: number): boolean {
+  if (n < 2) {
+    return false
+  }
+  for (const p of [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37]) {
+    if (n % p === 0) {
+      return n === p
+    }
+  }
+  const big = BigInt(n)
+  const one = BigInt(1)
+  let d = big - one
+  let r = 0
+  while (d % BigInt(2) === BigInt(0)) {
+    d /= BigInt(2)
+    r += 1
+  }
+  outer: for (const a of MR_BASES) {
+    let x = modPow(a, d, big)
+    if (x === one || x === big - one) {
+      continue
+    }
+    for (let i = 1; i < r; i += 1) {
+      x = (x * x) % big
+      if (x === big - one) {
+        continue outer
+      }
+    }
+    return false
+  }
+  return true
+}
+
+/** Ordered selections of `k` distinct cards from `hand`. */
+function* permutations(hand: string[], k: number, used: string[] = []): Generator<string[]> {
+  if (used.length === k) {
+    yield used
+    return
+  }
+  for (const card of hand) {
+    if (!used.includes(card)) {
+      yield* permutations(hand, k, [...used, card])
+    }
+  }
+}
+
+/**
+ * A legal plain play (prime or 57, beating the top set with the same card count). On an empty
+ * field `prefer` picks the largest set (a hand can go out in one play) or the smallest one (a
+ * longer game). Null when there is none.
+ */
+export function findPrimePlay(
+  hand: string[],
+  top: string[],
+  { maxCards = 4, prefer = 'largest' }: { maxCards?: number; prefer?: 'largest' | 'smallest' } = {},
+): string[] | null {
+  const sizes = top.length > 0 ? [top.length] : []
+  if (top.length === 0) {
+    for (let k = Math.min(hand.length, maxCards, 5); k >= 1; k -= 1) {
+      sizes.push(k)
+    }
+    if (prefer === 'smallest') {
+      sizes.reverse()
+    }
+  }
+  const floor = top.length > 0 ? concatValue(top) : 0
+  for (const k of sizes) {
+    for (const set of permutations(hand, k)) {
+      const n = concatValue(set)
+      if (n > floor && (isPrime(n) || n === GROTHENDIECK)) {
+        return set
+      }
+    }
+  }
+  return null
+}
+
+/** A card (or two adjacent cards) that reads as `p`, taken from `pool`. */
+function primeTokens(p: number, pool: string[]): string[][] {
+  const out: string[][] = []
+  for (const a of pool) {
+    if (cardValue(a) === p) {
+      out.push([a])
+    }
+  }
+  for (const set of permutations(pool, 2)) {
+    if (concatValue(set) === p) {
+      out.push(set)
+    }
+  }
+  return out
+}
+
+function primeFactors(n: number): [number, number][] {
+  const out: [number, number][] = []
+  let m = n
+  for (let p = 2; p * p <= m; p += 1) {
+    let e = 0
+    while (m % p === 0) {
+      m /= p
+      e += 1
+    }
+    if (e > 0) {
+      out.push([p, e])
+    }
+  }
+  if (m > 1) {
+    out.push([m, 1])
+  }
+  return out
+}
+
+const without = (pool: string[], used: string[]) => pool.filter((c) => !used.includes(c))
+
+/** Factor tokens for `p^e`: `p * p * …` or `p ^ e` (one level, RQ-R16), with what is left. */
+function* powerTerms(p: number, e: number, pool: string[]): Generator<[string[], string[]]> {
+  for (const base of primeTokens(p, pool)) {
+    const rest = without(pool, base)
+    if (e >= 2) {
+      for (const exp of rest) {
+        if (cardValue(exp) === e) {
+          yield [[...base, '^', exp], without(rest, [exp])]
+        }
+      }
+    }
+    if (e === 1) {
+      yield [base, rest]
+    } else {
+      for (const [more, left] of powerTerms(p, e - 1, rest)) {
+        yield [[...base, '*', ...more], left]
+      }
+    }
+  }
+}
+
+function* factorExpressions(factors: [number, number][], pool: string[]): Generator<string[]> {
+  if (factors.length === 0) {
+    yield []
+    return
+  }
+  const [[p, e], ...rest] = factors
+  for (const [term, left] of powerTerms(p, e, pool)) {
+    for (const tail of factorExpressions(rest, left)) {
+      yield tail.length > 0 ? [...term, '*', ...tail] : term
+    }
+  }
+}
+
+/**
+ * A correct factorization play from `hand` on an empty field: 1-2 cards forming a composite
+ * number, and its prime factorization written with other cards of the hand. Null when none.
+ */
+export function findFactorPlay(hand: string[]): { submit: string[]; factor: string[] } | null {
+  for (const k of [1, 2]) {
+    for (const submit of permutations(hand, k)) {
+      const n = concatValue(submit)
+      if (n < 4 || isPrime(n) || n === GROTHENDIECK) {
+        continue
+      }
+      const factors = primeFactors(n)
+      if (factors.length === 1 && factors[0][1] === 1) {
+        continue
+      }
+      for (const factor of factorExpressions(factors, without(hand, submit))) {
+        // at least one operator, and never a lone 1 (no A as an operand)
+        if (factor.some((t) => t === '*' || t === '^')) {
+          return { submit, factor }
+        }
+      }
+    }
+  }
+  return null
+}
+
+/** A single card or a pair that is neither prime nor 57 (a not-prime penalty, RQ-R15). */
+export function findNotPrimePlay(hand: string[]): string[] | null {
+  for (const k of [1, 2]) {
+    for (const set of permutations(hand, k)) {
+      const n = concatValue(set)
+      if (!isPrime(n) && n !== GROTHENDIECK) {
+        return set
+      }
+    }
+  }
+  return null
+}
+
+/* ------------------------------------------------------------------ */
+/* board reads and moves                                               */
+/* ------------------------------------------------------------------ */
+
+/** The proof log (証明ログ): every board event is written here. */
+export const proofLog = (page: Page): Locator => page.getByRole('region', { name: '証明ログ' })
+
+/** Card ids of the field's top set, or [] on an empty field. */
+export function fieldTopIds(page: Page): Promise<string[]> {
+  return page
+    .locator('[data-field-top] [data-card]')
+    .evaluateAll((els) => [...new Set(els.map((el) => el.getAttribute('data-card') ?? ''))])
+}
+
+const actions = (page: Page) => page.getByRole('group', { name: '操作' })
+
+/** Clicks one hand card (into the submit tray, or into the factor panel in factor mode). */
+export async function clickHandCard(page: Page, id: string): Promise<void> {
+  await page
+    .getByRole('listbox', { name: '手札' })
+    .locator(`[role="option"][data-card="${id}"], [role="option"]:has([data-card="${id}"])`)
+    .first()
+    .click()
+}
+
+const trayCards = (page: Page) => page.getByRole('listbox', { name: '提出' }).getByRole('option')
+const factorTokens = (page: Page) => page.getByRole('listbox', { name: /因数/ }).getByRole('option')
+
+async function fillTray(page: Page, submit: string[], factor: string[]): Promise<void> {
+  for (const id of submit) {
+    await clickHandCard(page, id)
+  }
+  await expect(trayCards(page)).toHaveCount(submit.length, { timeout: 2000 })
+  if (factor.length > 0) {
+    await actions(page)
+      .getByRole('button', { name: /^素因数分解/ })
+      .click()
+    for (const token of factor) {
+      if (token === '*') {
+        await page.getByRole('button', { name: '掛ける', exact: true }).click()
+      } else if (token === '^') {
+        await page.getByRole('button', { name: '累乗', exact: true }).click()
+      } else {
+        await clickHandCard(page, token)
+      }
+    }
+    await expect(factorTokens(page)).toHaveCount(factor.length, { timeout: 2000 })
+  }
+}
+
+/**
+ * Puts `submit` in the tray, writes `factor` in the factor panel (cards plus the 掛ける / 累乗
+ * buttons), then presses 出す. A server event that lands meanwhile empties the tray (by design:
+ * every event resets it), so the tray is filled again when that happens.
+ */
+export async function submitCards(
+  page: Page,
+  submit: string[],
+  factor: string[] = [],
+): Promise<void> {
+  const submitButton = actions(page).getByRole('button', { name: /^出す/ })
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await fillTray(page, submit, factor)
+      await expect(submitButton).toBeEnabled({ timeout: 2000 })
+      break
+    } catch (err) {
+      if (attempt >= 3) {
+        throw err
+      }
+      const reset = page.getByRole('button', { name: 'リセット' })
+      if (await reset.isEnabled()) {
+        await reset.click()
+      }
+    }
+  }
+  await submitButton.click()
+}
+
+/** Presses 引く and waits for the drawn card. */
+export async function drawCard(page: Page): Promise<void> {
+  const before = await handCards(page).count()
+  await page.getByRole('button', { name: /引く/ }).click()
+  await expect(handCards(page)).toHaveCount(before + 1)
+}
+
+/** Whether 引く is enabled (my turn, draw right left, deck not empty). */
+export function canDraw(page: Page): Promise<boolean> {
+  return page.getByRole('button', { name: /引く/ }).isEnabled()
 }

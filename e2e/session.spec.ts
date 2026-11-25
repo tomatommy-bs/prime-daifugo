@@ -9,6 +9,7 @@ import {
   type Player,
   activeSeatPid,
   currentTurnPlayer,
+  drawCard,
   expect,
   gameSetDialog,
   handCardIds,
@@ -17,6 +18,7 @@ import {
   leaveRoom,
   pass,
   passUntilTurnOf,
+  proofLog,
   readyAndStart,
   seatLayoutIds,
   selfPid,
@@ -30,6 +32,8 @@ const DRAW_BUTTON = /引く/
 const LEFT_NOTICE = /退出しました/
 /** slack for reconnect backoff, the alarm and the broadcast on top of a server-side timer */
 const SERVER_SLACK_MS = 10_000
+/** the capped pass must land well before the 60 s turn would have run out */
+const CAP_SLACK_MS = 5000
 
 async function startGame(alice: Player, bob: Player, timeLimit?: 15 | 60 | 300) {
   const roomPath = await joinRoom(alice)
@@ -91,11 +95,19 @@ test.describe('room session (spec §12.2)', () => {
     await expect(alice.page.getByText(LEFT_NOTICE)).toHaveCount(0)
   })
 
-  test('3. a 3 s offline blip resumes the board with no leave notice', async ({ alice, bob }) => {
+  test('3. a 3 s offline blip resumes the board by replay, with no leave notice', async ({
+    alice,
+    bob,
+  }) => {
     await startGame(alice, bob)
+    await passUntilTurnOf([alice, bob], alice)
     const handBefore = await handCardIds(bob.page)
+    const aliceCards = (await handCardIds(alice.page)).length
 
     await bob.net.goOffline()
+    const welcomesBefore = bob.net.frames().filter((f) => f.t === 'welcome').length
+    // alice draws while bob is away: bob misses that event
+    await drawCard(alice.page)
     // the blip itself is the scenario (shorter than the 5 s grace)
     await bob.page.waitForTimeout(BLIP_MS)
     await bob.net.goOnline()
@@ -104,6 +116,19 @@ test.describe('room session (spec §12.2)', () => {
       timeout: SERVER_SLACK_MS,
     })
     await expect.poll(() => handCardIds(bob.page)).toEqual(handBefore)
+    // the missed draw came back as a replay (not a snapshot), and bob's board shows it
+    await expect
+      .poll(() =>
+        bob.net
+          .frames()
+          .filter((f) => f.t === 'welcome')
+          .slice(welcomesBefore)
+          .map((f) => f.mode),
+      )
+      .toEqual(['replay'])
+    await expect(
+      bob.page.getByRole('group', { name: new RegExp(`^alice、手札 ${aliceCards + 1} 枚`) }),
+    ).toBeVisible()
     await expect(gameSetDialog(alice.page)).toHaveCount(0)
     await expect(alice.page.getByText(LEFT_NOTICE)).toHaveCount(0)
     await expect(bob.page.getByText(LEFT_NOTICE)).toHaveCount(0)
@@ -113,18 +138,22 @@ test.describe('room session (spec §12.2)', () => {
     alice,
     bob,
   }) => {
-    // 15 s turns: even if the close were missed, the plain deadline still moves the turn
-    await startGame(alice, bob, 15)
+    // 60 s turns: only the 3 s away cap can move the turn this fast (RQ-T3)
+    await startGame(alice, bob)
     const alicePid = await selfPid(alice.page)
     const bobPid = await selfPid(bob.page)
     await passUntilTurnOf([alice, bob], bob)
     expect(await activeSeatPid(alice.page)).toBe(bobPid)
 
     await bob.net.goOffline()
+    const offlineAt = Date.now()
 
     await expect
       .poll(() => activeSeatPid(alice.page), { timeout: AWAY_TURN_CAP_MS + SERVER_SLACK_MS })
       .toBe(alicePid)
+    expect(Date.now() - offlineAt).toBeLessThan(AWAY_TURN_CAP_MS + CAP_SLACK_MS)
+    // the server passed for him (RQ-T2), logged like any timeout
+    await expect(proofLog(alice.page)).toContainText('時間切れです')
     // still within grace: no forfeit yet
     await expect(gameSetDialog(alice.page)).toHaveCount(0)
     await bob.net.goOnline()

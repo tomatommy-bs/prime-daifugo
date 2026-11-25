@@ -1,6 +1,7 @@
 /**
- * Playwright E2E (spec §12 L4, scenarios §12.2): two browser contexts (`alice`, `bob`) play
- * against a local `wrangler dev` Worker and `next dev -p 3124`, with short grace values.
+ * Playwright E2E (spec §12 L4, scenarios §12.2): browser contexts (`alice`, `bob`, more through
+ * `spawnPlayer`) play against a local `wrangler dev` Worker and `next dev -p 3124`, with short
+ * grace values.
  *
  *   E2E=1 npm run test:e2e
  *   E2E=1 PW_CHROMIUM_PATH=/path/to/chrome-headless-shell npm run test:e2e
@@ -10,46 +11,19 @@
  * `npm run test:e2e` is a no-op that exits 0.
  *
  * Servers (never reused: a long-grace dev Worker would break the timing scenarios):
- * - Worker: the `dev:server` command (`wrangler dev --local`) on `E2E_RT_PORT` (default 8787)
- *   with `--var GRACE_PLAYING_MS:5000 …` (`--var KEY:VALUE`, wrangler splits on the first colon,
- *   so URL values are fine) and its own, freshly wiped `.wrangler/e2e-state`.
+ * - Worker: `wrangler dev --local` on `E2E_RT_PORT` (default 8787) with
+ *   `--var GRACE_PLAYING_MS:5000 …` and its own, freshly wiped `.wrangler/e2e-state`. It is
+ *   started by the worker-scoped `realtime` fixture (e2e/realtime-server.ts) rather than
+ *   `webServer`, so the restart scenario can kill it and start it again on the same store.
  * - Web: `next dev -p 3124` (`E2E_WEB_PORT`) with `NEXT_PUBLIC_REALTIME_URL` pointing at the
- *   Worker. The Worker's `ALLOWED_ORIGINS` is set to exactly that origin.
+ *   Worker and its own build dir (`.next-alt`, so a dev server already running in this checkout
+ *   keeps `.next`). The Worker's `ALLOWED_ORIGINS` is set to exactly that origin.
  */
 import path from 'node:path'
 import { defineConfig, devices } from '@playwright/test'
+import { E2E_ENABLED, ROOT, RT_URL, WEB_PORT, WEB_URL } from './env'
 
-const env = process.env
-const ENABLED = env.E2E === '1'
-const IS_CI = Boolean(env.CI)
-const ROOT = path.resolve(__dirname, '..')
-
-const DEFAULT_RT_PORT = 8787
-const WEB_PORT = Number(env.E2E_WEB_PORT ?? 3124)
-const RT_PORT = Number(env.E2E_RT_PORT ?? DEFAULT_RT_PORT)
-const WEB_URL = `http://localhost:${WEB_PORT}`
-const RT_URL = `http://127.0.0.1:${RT_PORT}`
-
-/** Short session timings (spec §12.2): 5 s grace, 3 s turn cap while away. */
-const WORKER_VARS = [
-  'GRACE_PLAYING_MS:5000',
-  'GRACE_IDLE_MS:5000',
-  'AWAY_TURN_CAP_MS:3000',
-  `ALLOWED_ORIGINS:${WEB_URL}`,
-]
-  .map((v) => `--var ${v}`)
-  .join(' ')
-
-/**
- * Every run starts from an empty Durable Object store (`.wrangler/e2e-state`, wiped first): rooms
- * and lobby rows left by an earlier run would otherwise leak into this one.
- */
-const workerCommand = [
-  'rm -rf .wrangler/e2e-state &&',
-  'WRANGLER_SEND_METRICS=false npx wrangler dev -c worker/wrangler.jsonc',
-  `--port ${RT_PORT} --local --persist-to .wrangler/e2e-state ${WORKER_VARS}`,
-].join(' ')
-
+const IS_CI = Boolean(process.env.CI)
 const SERVER_START_TIMEOUT_MS = 180_000
 
 export default defineConfig({
@@ -75,34 +49,24 @@ export default defineConfig({
     locale: 'ja-JP',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    launchOptions: env.PW_CHROMIUM_PATH ? { executablePath: env.PW_CHROMIUM_PATH } : {},
+    launchOptions: process.env.PW_CHROMIUM_PATH
+      ? { executablePath: process.env.PW_CHROMIUM_PATH }
+      : {},
   },
-  webServer: ENABLED
-    ? [
-        {
-          command: workerCommand,
-          url: `${RT_URL}/healthz`,
-          cwd: ROOT,
-          reuseExistingServer: false,
-          timeout: SERVER_START_TIMEOUT_MS,
-          stdout: 'ignore',
-          stderr: 'pipe',
+  webServer: E2E_ENABLED
+    ? {
+        command: `npx next dev -p ${WEB_PORT}`,
+        url: `${WEB_URL}/login`,
+        cwd: ROOT,
+        reuseExistingServer: false,
+        timeout: SERVER_START_TIMEOUT_MS,
+        env: {
+          NEXT_PUBLIC_REALTIME_URL: RT_URL,
+          NEXT_TELEMETRY_DISABLED: '1',
+          NEXT_DIST_DIR: '.next-alt',
         },
-        {
-          command: `npx next dev -p ${WEB_PORT}`,
-          url: `${WEB_URL}/login`,
-          cwd: ROOT,
-          reuseExistingServer: false,
-          timeout: SERVER_START_TIMEOUT_MS,
-          env: {
-            NEXT_PUBLIC_REALTIME_URL: RT_URL,
-            NEXT_TELEMETRY_DISABLED: '1',
-            // keep clear of a dev server already using `.next` in this checkout
-            NEXT_DIST_DIR: '.next-alt',
-          },
-          stdout: 'ignore',
-          stderr: 'pipe',
-        },
-      ]
+        stdout: 'ignore',
+        stderr: 'pipe',
+      }
     : undefined,
 })
