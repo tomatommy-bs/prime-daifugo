@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { renderToString } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import { GameCard } from './game-card'
 import { BACK_GEOMETRY } from './icons/Back'
@@ -67,9 +68,26 @@ describe('GameCard', () => {
     const placeholder = screen.getByRole('option', { name: 'クラブのK, 13' })
     expect(placeholder).toHaveAttribute('data-card', 'KC')
     await vi.waitFor(() => expect(container.querySelector('[data-placeholder]')).toBeNull())
-    const face = screen.getByTitle('King of Clubs').closest('svg')
+    const face = screen.getByTitle('クラブのK').closest('svg')
     expect(face).toHaveAttribute('data-card', 'KC')
     expect(face).toHaveAccessibleName('クラブのK, 13')
+  })
+
+  it('server-renders court cards as the light placeholder, never the face art', () => {
+    const html = renderToString(<GameCard card="KC" />)
+    expect(html).toContain('data-placeholder')
+    expect(html).toContain('data-card="KC"')
+    // the King of Clubs face alone is ~760 KB of source
+    expect(html.length).toBeLessThan(2000)
+  })
+
+  it('titles every face in Japanese with its own rank', () => {
+    for (const card of ['3C', 'AH', '10S', 'QD'] as const) {
+      const { container, unmount } = render(<GameCard card={card} />)
+      const suit = { C: 'クラブ', H: 'ハート', S: 'スペード', D: 'ダイヤ' }[card.at(-1) as string]
+      expect(container.querySelector('title')?.textContent).toBe(`${suit}の${card.slice(0, -1)}`)
+      unmount()
+    }
   })
 
   it('number cards are bundled and render at once', () => {

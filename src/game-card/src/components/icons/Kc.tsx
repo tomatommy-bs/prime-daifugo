@@ -8,7 +8,7 @@ const SvgKc = (props: SVGProps<SVGSVGElement>) => (
     viewBox="0 0 167.087 242.667"
     {...props}
   >
-    <title>King of Clubs</title>
+    <title>クラブのK</title>
     <g
       style={{
         fillRule: 'nonzero',

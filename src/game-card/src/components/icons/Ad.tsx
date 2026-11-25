@@ -9,7 +9,7 @@ const SvgAd = (props: SVGProps<SVGSVGElement>) => (
     viewBox="0 0 167.087 242.667"
     {...props}
   >
-    <title>Ace of Diamonds</title>
+    <title>ダイヤのA</title>
     <defs>
       <radialGradient
         xlinkHref="#AD_svg__f"
