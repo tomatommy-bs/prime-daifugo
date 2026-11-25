@@ -1,7 +1,8 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "files": {
-    "include": ["src/**", "tests/**"],
+    "include": ["src/**", "tests/**", "worker/**", "e2e/**"],
+    "ignore": [".wrangler/**", "dist-worker/**", "worker/.wrangler/**"],
   },
   "organizeImports": {
     "enabled": true,
@@ -69,6 +70,32 @@
   },
   // テストコードに含まれるJest関数が no undeclared variables と判定されるため、テストファイルのみ設定を上書き
   "overrides": [
+    {
+      // Workers globals (DurableObjectState, ExportedHandler, ...) are ambient types from
+      // @cloudflare/workers-types; `tsc -p worker` already rejects undeclared names.
+      "include": ["worker/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUndeclaredVariables": "off",
+          },
+        },
+      },
+    },
+    {
+      // Durable Objects must not keep timers: they block hibernation (spec §2.4). Use the alarm.
+      "include": ["worker/src/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": { "deniedGlobals": ["setTimeout", "setInterval"] },
+            },
+          },
+        },
+      },
+    },
     {
       "include": [
         "*.test.ts",

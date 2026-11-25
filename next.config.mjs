@@ -1,4 +1,14 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {};
+// RQ-O2: a production deploy must point at a public realtime backend.
+if (process.env.VERCEL_ENV === 'production') {
+  const realtimeUrl = process.env.NEXT_PUBLIC_REALTIME_URL?.trim() ?? ''
+  if (!realtimeUrl || /localhost|127\.0\.0\.1/.test(realtimeUrl)) {
+    throw new Error(
+      `NEXT_PUBLIC_REALTIME_URL must be set to the public realtime backend for production builds (got "${realtimeUrl}").`,
+    )
+  }
+}
 
-export default nextConfig;
+/** @type {import('next').NextConfig} */
+const nextConfig = {}
+
+export default nextConfig

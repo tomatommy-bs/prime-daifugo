@@ -44,3 +44,10 @@ storybook-static
 # design screenshots (scripts/screens.mjs)
 docs/design/screens/*
 !docs/design/screens/.gitkeep
+
+# realtime worker (wrangler) and E2E
+.wrangler/
+worker/.dev.vars
+dist-worker/
+test-results/
+playwright-report/
