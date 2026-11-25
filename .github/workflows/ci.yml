@@ -16,8 +16,11 @@ on:
 permissions:
   contents: read
 
+# A label other than `e2e` starts a run whose jobs are all skipped; it gets its own group so it
+# never cancels the real run for the same ref. An `e2e` label run (which also runs `test`) shares
+# the group with pushes and replaces the previous run.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'e2e' && format('-label-{0}', github.event.label.name) || '' }}
   cancel-in-progress: true
 
 env:
