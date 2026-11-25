@@ -5,6 +5,8 @@
  * - `connecting`: a spinning `ModRing n=12` with 接続中…
  * - `waiting-sync`: connected but no game state yet (server sync quirk) → 次のイベントを待っています…
  * - `closed` / `error`: a red `Alert role="alert"` 接続が切れました with [再接続].
+ * A scrim veils the board and the status cards are opaque, so the board's own captions and
+ * empty-field placeholder never show through or poke out beside the card.
  */
 import { ModRing } from '@/design/ModRing'
 import { useMotionPreset } from '@/design/motion'
@@ -47,16 +49,17 @@ export function ConnectionOverlay({ state, onReconnect, children }: ConnectionOv
             initial="hidden"
             animate="show"
             exit="hidden"
-            className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-fib-4"
+            data-connection-scrim=""
+            className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-bg/75 p-fib-4"
           >
             {state === 'connecting' ? (
-              <output className="pointer-events-auto flex flex-col items-center gap-fib-3 rounded-[var(--r-3)] bg-surface/90 px-fib-5 py-fib-4 text-ink shadow-[var(--shadow-2)] backdrop-blur-sm">
+              <output className="pointer-events-auto flex flex-col items-center gap-fib-3 rounded-[var(--r-3)] bg-surface px-fib-5 py-fib-4 text-ink shadow-[var(--shadow-2)]">
                 <ModRing n={12} size={52} spin={true} filled={3} />
                 <span className="text-[length:var(--fs-0)] font-semibold">接続中…</span>
               </output>
             ) : null}
             {state === 'waiting-sync' ? (
-              <output className="pointer-events-auto flex items-center gap-fib-3 rounded-[var(--r-3)] border border-line bg-surface/90 px-fib-4 py-fib-3 text-ink-muted shadow-[var(--shadow-1)] backdrop-blur-sm">
+              <output className="pointer-events-auto flex items-center gap-fib-3 rounded-[var(--r-3)] border border-line bg-surface px-fib-4 py-fib-3 text-ink-muted shadow-[var(--shadow-1)]">
                 <ModRing n={12} size={32} spin={true} filled={1} />
                 <span className="text-[length:var(--fs-0)]">次のイベントを待っています…</span>
               </output>

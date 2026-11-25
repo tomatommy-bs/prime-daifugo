@@ -263,7 +263,7 @@ export function GrothendieckCut({ active, onDone, skippable = true, cards }: Gro
         </m.span>
         <m.span
           data-caption=""
-          className="block whitespace-nowrap font-bold"
+          className="block max-w-full font-bold [text-wrap:balance] [word-break:keep-all]"
           style={{ fontSize: 'var(--fs-1)', color: 'var(--gold)' }}
           variants={popAt(CAPTION_AT + DUR.xs)}
           initial="hidden"
@@ -294,14 +294,16 @@ export function GrothendieckCut({ active, onDone, skippable = true, cards }: Gro
   const shared = {
     'data-grothendieck-cut': '',
     'data-motion': mode,
-    // centred on the field and at least caption-wide: after a cut the field is already
-    // empty (its box shrinks to the ∅ slot), yet the slash must cross the whole table
+    // Centred on the field and at least caption-wide: after a cut the field is already
+    // empty (its box shrinks to the ∅ slot), yet the slash must cross the whole table. On
+    // portrait phones the field cell sits right of the deck, so a wider box would run off
+    // the screen: there it keeps the field's width and the caption wraps. The surface is
+    // opaque so the previous field never ghosts through the ceremony.
     className:
-      'absolute top-1/2 left-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden rounded-[var(--r-3)] border-0 p-0 text-center',
+      'absolute top-1/2 left-1/2 z-20 flex w-[max(100%,min(30rem,92vw))] -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden rounded-[var(--r-3)] border-0 p-0 text-center portrait-phone:w-full',
     style: {
-      width: 'max(100%, min(30rem, 92vw))',
       height: 'max(100%, calc(var(--card-field) * 1.236))',
-      background: 'color-mix(in srgb, var(--bg) 78%, transparent)',
+      background: 'var(--bg)',
     },
     initial: { opacity: 0 },
     animate: { opacity: 1 },
@@ -324,9 +326,10 @@ export function GrothendieckCut({ active, onDone, skippable = true, cards }: Gro
             {content}
           </m.button>
         ) : (
-          <m.output key="cut" aria-live="polite" {...shared}>
+          // no live region here: the board's LiveRegion already announces the cut (§9.4)
+          <m.div key="cut" {...shared}>
             {content}
-          </m.output>
+          </m.div>
         )
       ) : null}
     </AnimatePresence>

@@ -80,7 +80,10 @@ describe('GrothendieckCut', () => {
     expect(screen.queryByRole('button')).toBeNull()
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(onDone).not.toHaveBeenCalled()
-    expect(screen.getByRole('status')).toHaveTextContent(CUT_CAPTION)
+    expect(screen.getByText(CUT_CAPTION)).toBeInTheDocument()
+    // the board LiveRegion announces the cut: this caption must not be a second live region
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(document.querySelector('[aria-live]')).toBeNull()
   })
 
   it('reduced motion: gold caption only, no slash or cleave', () => {
