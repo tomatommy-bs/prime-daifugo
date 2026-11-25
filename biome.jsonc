@@ -36,7 +36,8 @@
   "formatter": {
     "enabled": true,
     "formatWithErrors": false,
-    "ignore": [],
+    // globals.css keeps the spec §2.2 skeleton verbatim (tokens.test.ts parses its hex values)
+    "ignore": ["src/app/globals.css"],
     "indentStyle": "space",
     "indentWidth": 2,
     "lineWidth": 100,

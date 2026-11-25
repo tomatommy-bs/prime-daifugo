@@ -1,4 +1,4 @@
-import { type CardId, cardIds as ALL } from '@/game-card/src'
+import { cardIds as ALL, type CardId } from '@/game-card/src'
 import { compareCard } from '@/utils/play-card'
 import type { Meta, StoryObj } from '@storybook/react'
 import { expect, fn, userEvent, waitFor, within } from '@storybook/test'

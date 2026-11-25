@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { cardIds } from './suit-num'
 import { cardLabel, cardValue, rankBadge } from './card-label'
+import { cardIds } from './suit-num'
 
 describe('cardLabel', () => {
   it.each([

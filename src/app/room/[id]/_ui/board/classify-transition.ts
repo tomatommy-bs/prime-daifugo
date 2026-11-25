@@ -4,11 +4,11 @@
  * this only decides what to *show*.
  */
 import { WORLD_CONFIG } from '@/constants/config'
+import { typesetExpr } from '@/design/Expr'
 import type { CardId } from '@/game-card/src'
 import type * as serverToClient from '@/interface/server-to-client'
 import type { Ctx } from '@/partykit/room/logic/game-rule'
 import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
-import { typesetExpr } from '@/design/Expr'
 import { concatCardNumbers, evalFactCardIds, isValidFactCardIds } from '@/utils/play-card'
 import pf from 'primes-and-factors'
 import type { BoardEvent, SubmitResultView } from './types'

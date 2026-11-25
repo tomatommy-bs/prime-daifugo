@@ -7,8 +7,8 @@
 import { partySocketControl } from '@/test-mocks/partysocket'
 import { makeCtx, makeGameState, makePresence, renderWithProviders, serverMsg } from '@/test-utils'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { RoomChromeContext } from './RoomHeader'
 import { GameBoard, TRAY_WIPE_MESSAGE } from './game-board'
 

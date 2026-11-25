@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { BACK_GEOMETRY } from './icons/Back'
 import { GameCard } from './game-card'
+import { BACK_GEOMETRY } from './icons/Back'
 
 describe('GameCard', () => {
   it('defaults to role="option" with a Japanese label', () => {

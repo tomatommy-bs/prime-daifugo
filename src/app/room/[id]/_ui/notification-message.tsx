@@ -1,3 +1,4 @@
+import { WORLD_CONFIG } from '@/constants/config'
 /**
  * Toast and log copy for board events (§6.4). Same component names and props as before;
  * restyled with tokens, `NumberGlyph` and `Expr`. Everything renders phrasing content
@@ -10,7 +11,6 @@ import { Expr } from '@/design/Expr'
 import { NumberGlyph } from '@/design/NumberGlyph'
 import type { CardId } from '@/game-card/src'
 import type { FactCardId } from '@/interface/common'
-import { WORLD_CONFIG } from '@/constants/config'
 import { concatCardNumbers } from '@/utils/play-card'
 import type React from 'react'
 import { type ReactNode, isValidElement } from 'react'

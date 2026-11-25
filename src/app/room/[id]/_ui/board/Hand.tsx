@@ -1,7 +1,7 @@
 'use client'
 
-import { DUR, EASE, SPRING, useMotionMode } from '@/design/motion'
 import { type FanItem, fanLayout } from '@/design/math/geometry'
+import { DUR, EASE, SPRING, useMotionMode } from '@/design/motion'
 import { type CardId, MathCard, type MathCardMotionProps } from '@/game-card/src'
 import { useIsomorphicEffect } from '@mantine/hooks'
 import { m } from 'framer-motion'
