@@ -1,6 +1,7 @@
 /**
  * Seeded fuzz driver for the session simulator (spec §12.1). Random commands and faults against
- * the real reducer, with every invariant checked after every clock step, a caught-up view check
+ * the real reducer, with every invariant checked after every clock step (including turn liveness:
+ * no running turn outlives its deadline, see `SimWorld.checkTurnLiveness`), a caught-up view check
  * after every action, and a liveness drain at the end. The engine and the move policy are
  * injected so integration can run the same fuzz with the real engine.
  */
@@ -300,6 +301,9 @@ export function runFuzz<S = MinimalClientState>(opts: FuzzOptions<S>): FuzzStats
     }
   }
   stats.duplicateAlarms = w.clock.duplicateAlarms
+  if (w.maxDeadlineLagMs > Number.NEGATIVE_INFINITY) {
+    stats.turnLivenessChecked = 1
+  }
   stats.gc = w.host.destroyedCount
   return stats
 }

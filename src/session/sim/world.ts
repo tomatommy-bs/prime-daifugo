@@ -35,6 +35,9 @@ export type SimWorldOptions<S> = {
 
 export type TimelineEntry = { at: number; seq: number; type: string; by?: string; reason?: string }
 
+/** How far past a running turn's deadline a check may see `now` before liveness fails. */
+export const TURN_LIVENESS_SLACK_MS = 1_000
+
 export class SimWorld<S = MinimalClientState> {
   readonly clock: SimClock
   readonly rng: Rng
@@ -112,6 +115,8 @@ export class SimWorld<S = MinimalClientState> {
 
   run(ms: number): void {
     this.clock.advance(ms)
+    // the clock only checks after a callback; also check at the end of a quiet stretch
+    this.checkInvariants()
   }
 
   /** Let in-flight frames land (no faults). */
@@ -132,7 +137,37 @@ export class SimWorld<S = MinimalClientState> {
     if (wake !== null && (alarm === null || alarm > Math.max(wake, this.clock.now))) {
       throw new Error(`alarm ${alarm} is later than wakeAt ${wake}`)
     }
+    this.checkTurnLiveness(state)
   }
+
+  /**
+   * Liveness (spec §12.1) under every fault pattern, turn by turn: a running turn's deadline is
+   * never further away than its time limit (or the restart floor), and once it has passed the
+   * turn has moved on or the game has ended. With a bounded number of turns this bounds the time
+   * a game can spend in `playing`; a stuck turn whose alarm never fires is caught at once.
+   */
+  private checkTurnLiveness(state: RoomState): void {
+    const game = state.game
+    if (state.status !== 'playing' || game === null || game.deadline === null) {
+      return
+    }
+    const now = this.clock.now
+    if (now > game.deadline + TURN_LIVENESS_SLACK_MS) {
+      throw new Error(
+        `liveness: turn ${game.core.turn} is still running ${now - game.deadline} ms after its deadline`,
+      )
+    }
+    const longest = Math.max(state.rule.timeLimit * 1000, this.config.restartDeadlineFloorMs)
+    if (game.deadline - now > longest + TURN_LIVENESS_SLACK_MS) {
+      throw new Error(
+        `liveness: turn ${game.core.turn} deadline is ${game.deadline - now} ms away (limit ${longest} ms)`,
+      )
+    }
+    this.maxDeadlineLagMs = Math.max(this.maxDeadlineLagMs, now - game.deadline)
+  }
+
+  /** the furthest any check saw `now` past a running deadline (ms; ≤ the slack) */
+  maxDeadlineLagMs = Number.NEGATIVE_INFINITY
 
   /** §12.1: every client that is caught up shows exactly `viewFor(state, pid)`. */
   checkCaughtUp(): number {

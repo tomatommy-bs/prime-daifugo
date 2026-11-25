@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest'
 import type { GameEngine } from '../../game/types'
 import { fakeEngine } from '../testing/fake-engine'
 import { type FuzzStats, runFuzz } from './fuzz'
+import { SimWorld, TURN_LIVENESS_SLACK_MS } from './world'
 
 const env =
   (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {}
@@ -54,9 +55,43 @@ describe.each(KITS)('session fuzz ($name)', ({ engine }) => {
         'duplicateAlarms',
         'gc',
         'caughtUp',
+        'turnLivenessChecked',
       ]) {
         expect(totals[key] ?? 0, key).toBeGreaterThan(0)
       }
     }
   }, 600_000)
+})
+
+describe('turn liveness invariant', () => {
+  it('fails when a running turn outlives its deadline', () => {
+    const w = new SimWorld({ seed: 1, engine: fakeEngine, duplicateAlarmProb: 0 })
+    w.startGame(['alice', 'bob'])
+    const deadline = w.state.game?.deadline as number
+    expect(deadline).toBeGreaterThan(w.clock.now)
+    // time is past the deadline and nothing moved the turn on
+    w.clock.now = deadline + TURN_LIVENESS_SLACK_MS + 1
+    expect(() => w.checkInvariants()).toThrow(/liveness: turn \d+ is still running/)
+  })
+
+  it('fails when a turn deadline is further away than the time limit allows', () => {
+    const w = new SimWorld({ seed: 1, engine: fakeEngine, duplicateAlarmProb: 0 })
+    w.startGame(['alice', 'bob'])
+    const limitMs = w.state.rule.timeLimit * 1000
+    w.host.patchState((draft) => {
+      if (draft.game) {
+        draft.game.deadline = w.clock.now + limitMs + w.config.restartDeadlineFloorMs + 60_000
+      }
+    })
+    expect(() => w.checkInvariants()).toThrow(/liveness: turn \d+ deadline is \d+ ms away/)
+  })
+
+  it('holds while the alarm fires: the turn moves on at its deadline', () => {
+    const w = new SimWorld({ seed: 1, engine: fakeEngine, duplicateAlarmProb: 0 })
+    w.startGame(['alice', 'bob'])
+    const turn = w.state.game?.core.turn
+    w.run((w.state.game?.deadline as number) - w.clock.now + TURN_LIVENESS_SLACK_MS + 1)
+    expect(w.state.game?.core.turn).not.toBe(turn)
+    expect(w.maxDeadlineLagMs).toBeLessThanOrEqual(TURN_LIVENESS_SLACK_MS)
+  })
 })

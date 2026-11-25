@@ -19,7 +19,7 @@ Short names used below:
 - `session/*` = `src/app/room/[id]/session/*.test.ts(x)`, `game-board` = `src/app/room/[id]/_ui/game-board.test.tsx`
 - `E2E session` = `e2e/session.spec.ts`, `E2E game` = `e2e/game.spec.ts`, `E2E lobby` = `e2e/lobby.spec.ts`
 
-The fuzz invariants (`src/session/sim/invariants.ts`, checked after every simulated clock step) are cited as **fuzz invariants**: ghost-free members and sockets (§3.8), `version` strictly increasing, `deadline` exactly while `playing`, card conservation, caught-up view equals `viewFor`, no frame leaking another player's cards or the deck, and liveness. `real-fuzz` adds: each caught-up client's UI bundle equals `viewToBundle(viewFor(server, pid))`.
+The fuzz invariants (`src/session/sim/invariants.ts`, checked after every simulated clock step) are cited as **fuzz invariants**: ghost-free members and sockets (§3.8), `version` strictly increasing, `deadline` exactly while `playing`, card conservation, caught-up view equals `viewFor`, no frame leaking another player's cards or the deck, and liveness. Liveness is checked two ways: turn by turn after every clock step (`SimWorld.checkTurnLiveness`: a running turn's deadline is never more than its time limit, or the 10 s restart floor, away, and once it has passed by more than 1 s the turn has moved on or the game has ended; with a bounded number of turns this bounds the time in `playing` under any fault pattern), and by a final drain (every tab closed: the game ends and the room is collected). `real-fuzz` adds: each caught-up client's UI bundle equals `viewToBundle(viewFor(server, pid))`.
 
 ## Rules (RQ-R)
 
