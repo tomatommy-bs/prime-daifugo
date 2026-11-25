@@ -861,3 +861,10 @@ The exact file lists and acceptance criteria are in `implementation-plan.json`. 
   - the worker dry-run bundle.
 - Run the manual phone checklist (iOS Safari background 2 min, Android tab discard, airplane mode 10 s) against local dev on the LAN.
 - Accept when every RQ in §1 maps to at least one passing test (a traceability table in `docs/realtime/traceability.md`) and nothing is deployed.
+
+## Owner decisions (confirmed 2026-11-25)
+
+- Grace period: 120 s in game / 60 s in waiting room; disconnected player's turns capped at 20 s.
+- Exponents: single level only (prime base, exponent ≥ 2).
+- Seat order: shuffled at every deal.
+- Chat dropped; no host (4 players + 8 observers); Cloudflare free tier with usage alert; JS-readable session token accepted.
