@@ -115,3 +115,32 @@ describe('helpers', () => {
     expect(seatHueVar(-1)).toBe('var(--seat-3)')
   })
 })
+
+describe('card sizes follow the S / M / L option', () => {
+  /** Every rule (selector list + body) that declares `prop`, comments stripped. */
+  const rulesDeclaring = (prop: string) => {
+    const clean = css.replace(/\/\*[\s\S]*?\*\//g, '')
+    return [...clean.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .filter(([, , body]) => new RegExp(`${prop}\\s*:`).test(body))
+      .map(([, selector, body]) => ({ selector: selector.trim(), body }))
+  }
+
+  it.each(['--card-hand', '--card-field', '--card-tray'])(
+    '%s is (re)declared on [data-card-size], so var(--card-k) resolves there',
+    (prop) => {
+      const rules = rulesDeclaring(prop)
+      expect(rules.length).toBeGreaterThan(0)
+      for (const { selector, body } of rules) {
+        expect(body).toContain('var(--card-k)')
+        // a :root-only declaration would be computed with k = 1 and inherited unchanged
+        expect(selector.split(',').map((s) => s.trim())).toContain('[data-card-size]')
+      }
+    },
+  )
+
+  it('each size sets its own --card-k', () => {
+    expect(css).toMatch(/\[data-card-size='S'\]\s*\{\s*--card-k:\s*\.8;/)
+    expect(css).toMatch(/\[data-card-size='M'\]\s*\{\s*--card-k:\s*1;/)
+    expect(css).toMatch(/\[data-card-size='L'\]\s*\{\s*--card-k:\s*1\.25;/)
+  })
+})

@@ -35,9 +35,6 @@
     --ease-out: cubic-bezier(.22,1,.36,1); --ease-in-out: cubic-bezier(.65,0,.35,1); --ease-in: cubic-bezier(.55,0,1,.45);
     /* card sizes (GameCard fontSize = card height). --card-k set by size option */
     --card-k: 1;
-    --card-hand:  calc(clamp(64px, 26dvh, 132px) * var(--card-k));
-    --card-field: calc(clamp(56px, 22dvh, 120px) * var(--card-k));
-    --card-tray:  calc(clamp(44px, 14dvh, 80px) * var(--card-k));
     --card-seat:  28px;
     --mantine-color-body: var(--bg);
   }
@@ -50,24 +47,44 @@
     --shadow-1: 0 1px 0 rgb(0 0 0 / .4);
     --shadow-2: 0 1px 2px rgb(0 0 0 / .5), 0 5px 13px rgb(0 0 0 / .35);
   }
+  /* A custom property's var() resolves where it is declared and descendants inherit the
+     result, so the --card-* sizes are restated on every [data-card-size] element: there
+     they pick up that element's --card-k (S / M / L). Declaring them only on :root would
+     freeze them at k = 1. */
+  :root, [data-card-size] {
+    --card-hand:  calc(clamp(64px, 26dvh, 132px) * var(--card-k));
+    --card-field: calc(clamp(56px, 22dvh, 120px) * var(--card-k));
+    --card-tray:  calc(clamp(44px, 14dvh, 80px) * var(--card-k));
+  }
   /* phone portrait: width, not height, limits the cards (the dvh clamps assume landscape) */
   @media (orientation: portrait) and (max-width: 600px) {
-    :root {
+    :root, [data-card-size] {
       --card-hand:  calc(clamp(64px, 24vw, 112px) * var(--card-k));
       --card-field: calc(clamp(56px, 22vw, 96px) * var(--card-k));
       --card-tray:  calc(clamp(44px, 15vw, 72px) * var(--card-k));
     }
   }
   [data-card-size='S'] { --card-k: .8; }
+  [data-card-size='M'] { --card-k: 1; }
   [data-card-size='L'] { --card-k: 1.25; }
   html, body { background: var(--bg); color: var(--ink); }
   body { font-family: var(--font-sans), "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif; line-height: 1.5; }
   .num { font-family: var(--font-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums slashed-zero; }
-  :focus-visible { outline: 2px solid var(--mod); outline-offset: 2px; }
   /* a card whose flight ghost has not landed yet: transparent but still clickable (§9.2) */
   [data-flight-pending] { opacity: 0 !important; }
   @media (prefers-reduced-motion: reduce) {
     :root { --t-sm:.01ms; --t-md:.01ms; --t-lg:.01ms; --t-xl:.01ms; --t-xxl:.01ms; } /* --t-xs kept */
+  }
+}
+
+/* The focus ring sits in `components`, after `mantine`: the theme's `focusRing: 'never'`
+   puts `outline: none` on Mantine buttons in the mantine layer, and a base-layer ring lost
+   to it (出す / パス / 引く had no visible focus). Utilities can still override it. */
+@layer components {
+  :focus-visible { outline: 2px solid var(--mod); outline-offset: 2px; }
+  /* wide room header is 52px: centre the 44px menu affix in it instead of hanging 4px below */
+  @media (min-width: 1280px) and (min-height: 720px) {
+    body:has([data-room-header='full']) [data-placement='affix'] { top: 4px !important; }
   }
 }
 

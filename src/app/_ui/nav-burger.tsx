@@ -52,8 +52,9 @@ const NavBurger: FC<NavBurgerProps> = ({ placement = 'affix' }) => {
           opened={burgerOpened}
           aria-label={burgerOpened ? 'メニューを閉じる' : 'メニューを開く'}
           size="sm"
-          // In the phone layouts the board's top bar is 36px tall: the burger sits inside it.
-          className="flex h-[44px] w-[44px] items-center justify-center rounded-[var(--r-2)] compact:h-[36px] portrait-phone:h-[36px]"
+          // In the phone layouts the board's top bar is 36px tall: the burger sits inside it,
+          // and an invisible ::after keeps the hit area 44×44 (it hangs 8px below the bar).
+          className="relative flex h-[44px] w-[44px] items-center justify-center rounded-[var(--r-2)] after:absolute after:inset-x-0 after:top-0 after:h-[44px] after:content-[''] compact:h-[36px] portrait-phone:h-[36px]"
           style={{
             background: placement === 'affix' ? 'var(--surface)' : undefined,
             boxShadow: placement === 'affix' ? 'var(--shadow-1)' : undefined,
