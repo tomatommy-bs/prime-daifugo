@@ -4,12 +4,14 @@
  *
  * compact (844×390, 384px budget):
  *   columns 72px / 1fr / 168px, rows 36 / 132 / 76 / 128 (4px row gaps)
- *   "top top top" "deck field rail" "reset tray rail" "hand hand hand"
+ *   "top top top" "deck field rail" "reset tray rail" "hand hand hand" (the tray spans the
+ *   `reset` cell; the reset button lives in the SubmitTray)
  *   factor mode swaps the middle rows to 76 / 132 so the tray grows into the FactorPanel.
  * regular: the compact grid with larger clamps; the log is a Drawer (rendered by the caller).
  * portrait: "top" "deck field" "tray" "hand" "rail" with a 55px bottom action row.
- * wide: columns 1fr / 320px, rows 52px / 1fr / auto / auto,
- *   "top log" "table log" "tray log" "hand log" (the deck sits on the table, actions by the tray).
+ * wide: one column, rows 52px / 1fr / auto / auto, "top" "table" "tray" "hand" (the deck sits on
+ *   the table, actions by the tray). The 320px proof log is a sibling column owned by the page,
+ *   so it runs flush to the viewport edge under the room header.
  *
  * The factor-mode row morph is a CSS `grid-template-rows` transition on `--t-lg`, which the
  * global reduced-motion rule collapses to 0.01 ms.
@@ -27,10 +29,7 @@ export type BoardLayoutProps = {
   tray: ReactNode
   actions: ReactNode
   hand: ReactNode
-  log?: ReactNode
   factorOpen?: boolean
-  /** optional content for the compact `reset` cell; without it the tray spans it */
-  reset?: ReactNode
 }
 
 type Grid = {
@@ -79,21 +78,13 @@ export const GRID: Record<LayoutMode, Grid> = {
   },
 }
 
-const WIDE_LOG_COLUMN = '320px'
-
-export function gridStyle(mode: LayoutMode, factorOpen: boolean, withLog: boolean): CSSProperties {
+export function gridStyle(mode: LayoutMode, factorOpen: boolean): CSSProperties {
   const g = GRID[mode]
-  let columns = g.columns
-  let areas = g.areas
-  if (mode === 'wide' && withLog) {
-    columns = `${g.columns} ${WIDE_LOG_COLUMN}`
-    areas = areas.map((row) => `${row} log`)
-  }
   return {
     display: 'grid',
-    gridTemplateColumns: columns,
+    gridTemplateColumns: g.columns,
     gridTemplateRows: factorOpen && g.factorRows ? g.factorRows : g.rows,
-    gridTemplateAreas: areas.map((row) => `"${row}"`).join(' '),
+    gridTemplateAreas: g.areas.map((row) => `"${row}"`).join(' '),
     columnGap: g.columnGap,
     rowGap: g.rowGap,
     transition: 'grid-template-rows var(--t-lg) var(--ease-out)',
@@ -121,19 +112,16 @@ export function BoardLayout({
   tray,
   actions,
   hand,
-  log,
   factorOpen = false,
-  reset,
 }: BoardLayoutProps) {
   const motion = useMotionMode()
-  const withLog = mode === 'wide' && log !== undefined && log !== null
   const shell = {
     'data-board-layout': mode,
     'data-factor': factorOpen ? 'true' : 'false',
     'data-motion': motion,
     className:
       'relative mx-auto h-full w-full px-[max(var(--sp-3),env(safe-area-inset-left),env(safe-area-inset-right))]',
-    style: { ...gridStyle(mode, factorOpen, withLog), ...factorVars(mode, factorOpen) },
+    style: { ...gridStyle(mode, factorOpen), ...factorVars(mode, factorOpen) },
   }
 
   if (mode === 'wide') {
@@ -158,20 +146,10 @@ export function BoardLayout({
         <div style={area('hand')} data-area="hand" className="pb-fib-3">
           {hand}
         </div>
-        {withLog ? (
-          <aside
-            style={{ gridArea: 'log', minHeight: 0 }}
-            data-area="log"
-            className="border-l border-line"
-          >
-            {log}
-          </aside>
-        ) : null}
       </div>
     )
   }
 
-  const hasReset = reset !== undefined && reset !== null && mode !== 'portrait'
   return (
     <div {...shell}>
       <div style={area('top')} data-area="top" className="flex items-center">
@@ -187,14 +165,9 @@ export function BoardLayout({
       >
         {field}
       </div>
-      {hasReset ? (
-        <div style={area('reset')} data-area="reset" className="flex items-center justify-center">
-          {reset}
-        </div>
-      ) : null}
       <div
         style={
-          hasReset || mode === 'portrait'
+          mode === 'portrait'
             ? area('tray')
             : { gridColumn: '1 / 3', gridRow: '3', minWidth: 0, minHeight: 0 }
         }
@@ -209,7 +182,6 @@ export function BoardLayout({
       <div style={area('hand')} data-area="hand" className="relative">
         {hand}
       </div>
-      {log ?? null}
     </div>
   )
 }
@@ -261,7 +233,8 @@ export function BoardTopBar({ mode, seats, n, timer, isMyTurn, reserveRight }: B
       className="flex h-full w-full min-w-0 items-center gap-fib-2"
       style={reserveRight ? { paddingRight: 140 } : undefined}
     >
-      <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none]">
+      {/* SeatLine scrolls its own seat list and pins the clock; this box never scrolls */}
+      <div className="min-w-0 flex-1 overflow-hidden">
         <SeatLine seats={seats} n={n} />
       </div>
       {ownTimer ? <div className="shrink-0">{ownTimer}</div> : null}

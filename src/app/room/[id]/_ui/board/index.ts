@@ -1,6 +1,8 @@
 /**
- * Board barrel (Foundation). Every board component and the shared contracts.
- * Import board pieces only through this module (`@/app/room/[id]/_ui/board`).
+ * Board barrel. Every board component, the seat model and the shared contracts: import
+ * these through this module (`@/app/room/[id]/_ui/board`). The pure logic modules that only
+ * the container and the gallery use (`classify-transition`, `use-board-director`,
+ * `rule-diff`) are imported from their own files.
  */
 
 // T1 cards
@@ -13,6 +15,7 @@ export { FactorPanel, type FactorPanelProps } from './FactorPanel'
 export { Seat, type SeatProps } from './Seat'
 export { SeatLine, type SeatLineProps } from './SeatLine'
 export { SeatRing, type SeatRingProps } from './SeatRing'
+export { buildSeats, observerSeats, playerSeats } from './seat-model'
 export { TurnTimer, type TurnTimerProps } from './TurnTimer'
 export { FieldStack, type FieldStackProps } from './FieldStack'
 export { FieldSequence, type FieldSequenceProps } from './FieldSequence'
@@ -24,8 +27,8 @@ export { FlightLayer, type FlightLayerHandle, type FlightLayerProps } from './Fl
 export { type FlightSpec, planFlights } from './flight-plan'
 
 // T3 board
-export { BoardLayout, type BoardLayoutProps } from './BoardLayout'
-export { ActionBar, type ActionBarProps } from './ActionBar'
+export { BoardLayout, type BoardLayoutProps, BoardTopBar } from './BoardLayout'
+export { ActionBar, type ActionBarProps, useBoardShortcuts } from './ActionBar'
 export { ConnectionOverlay, type ConnectionOverlayProps } from './ConnectionOverlay'
 export { ProofLog, type ProofLogProps } from './ProofLog'
 export { LiveRegion, type LiveRegionProps } from './LiveRegion'

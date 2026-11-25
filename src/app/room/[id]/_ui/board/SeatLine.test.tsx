@@ -2,7 +2,7 @@ import type { CardId } from '@/game-card/src'
 import { makeCtx, makeGameState, makePresence, renderWithProviders } from '@/test-utils'
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { SeatLine } from './SeatLine'
+import { SeatLine, overflowMask, revealInScroller } from './SeatLine'
 import { buildSeats } from './seat-model'
 
 const hand = (n: number) => Array.from({ length: n }, () => 'AS' as CardId)
@@ -98,5 +98,55 @@ describe('SeatLine', () => {
     })
     expect(screen.getByRole('navigation')).toHaveAttribute('data-motion', 'reduced')
     expect(container.querySelector('[data-turn-pointer]')).not.toBeNull()
+  })
+
+  it('pins the ring label and the clock outside the scrolling seat list (portrait)', () => {
+    const { container } = renderWithProviders(<SeatLine seats={seatsFor()} n={3} />)
+    const scroller = container.querySelector('[data-seat-scroller]') as HTMLElement
+    expect(scroller).not.toBeNull()
+    expect(scroller.contains(screen.getByRole('timer'))).toBe(false)
+    expect(scroller.contains(screen.getByText('ℤ/3ℤ'))).toBe(false)
+    expect(scroller.contains(turnOrder())).toBe(true)
+  })
+})
+
+describe('overflowMask', () => {
+  it('fades only the sides that hide content', () => {
+    expect(overflowMask(false, false)).toBeUndefined()
+    expect(overflowMask(false, true)).toMatch(
+      /^linear-gradient\(to right, #000, #000, .*transparent\)$/,
+    )
+    expect(overflowMask(true, false)).toMatch(
+      /^linear-gradient\(to right, transparent, .*#000, #000\)$/,
+    )
+  })
+})
+
+describe('revealInScroller', () => {
+  const rect = (left: number, right: number) => ({ left, right }) as DOMRect
+  const scroller = (scrollLeft: number) => {
+    const el = document.createElement('div')
+    el.scrollLeft = scrollLeft
+    el.getBoundingClientRect = () => rect(100, 300)
+    return el
+  }
+  const item = (left: number, right: number) => {
+    const el = document.createElement('div')
+    el.getBoundingClientRect = () => rect(left, right)
+    return el
+  }
+
+  it('scrolls right just enough to show an item past the right edge', () => {
+    const s = scroller(0)
+    revealInScroller(s, item(280, 340))
+    expect(s.scrollLeft).toBe(40)
+  })
+
+  it('scrolls left for an item before the left edge and leaves visible items alone', () => {
+    const s = scroller(50)
+    revealInScroller(s, item(80, 120))
+    expect(s.scrollLeft).toBe(30)
+    revealInScroller(s, item(150, 200))
+    expect(s.scrollLeft).toBe(30)
   })
 })

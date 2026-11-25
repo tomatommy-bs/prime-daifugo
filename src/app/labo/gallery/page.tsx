@@ -10,6 +10,7 @@
 import {
   ActionBar,
   BoardLayout,
+  BoardTopBar,
   ConnectionOverlay,
   DeckPile,
   FactorPanel,
@@ -23,9 +24,10 @@ import {
   type LogEntry,
   ProofLog,
   ResultOverlay,
-  SeatLine,
   SeatRing,
   SubmitTray,
+  TurnTimer,
+  buildSeats,
 } from '@/app/room/[id]/_ui/board'
 import { WaitingRoom } from '@/app/room/[id]/_ui/waiting-room'
 import { Expr } from '@/design/Expr'
@@ -54,9 +56,9 @@ import {
   SCENE_TITLES,
   type SceneId,
   WAITING_SCENE,
-  buildSeatModels,
   isBoardSceneId,
   isSceneId,
+  penaltiesOf,
 } from './fixtures'
 import { FlightScene } from './flight-scene'
 import { FLIGHT_STEP_IDS, isFlightStepId } from './flight-script'
@@ -402,14 +404,14 @@ function BoardSceneView({ scene }: { scene: BoardScene }) {
 
   const seats =
     gameState && ctx
-      ? buildSeatModels({
+      ? buildSeats({
           gameState,
           ctx,
           presence: scene.presence,
           selfId,
           passedIds: scene.passedIds,
           leftTime: scene.leftTime,
-          penalty: scene.penalty,
+          penalties: penaltiesOf(scene.penalty),
         })
       : []
   const players = seats.filter((s) => !s.observer)
@@ -444,18 +446,23 @@ function BoardSceneView({ scene }: { scene: BoardScene }) {
     </div>
   )
 
-  // The active seat carries its own TurnTimer (SeatModel.leftTime), so the bar holds
-  // only the residue line (compact / portrait) or the room chrome (wide).
-  const top =
-    layoutMode === 'wide' ? (
-      <GalleryTopBar n={n} />
-    ) : (
-      <div className="flex h-full min-w-0 items-center pr-[calc(var(--sp-6)+var(--sp-2))]">
-        <div className="min-w-0 flex-1 overflow-hidden">
-          <SeatLine seats={seats} n={n} />
-        </div>
-      </div>
-    )
+  // Same top bar as GameBoard: the residue line with a pinned clock on phones (leaving the
+  // 140px the collapsed room menu takes), a one-line turn status in wide.
+  const top = (
+    <BoardTopBar
+      mode={layoutMode}
+      seats={seats}
+      n={n}
+      timer={
+        <TurnTimer
+          leftTime={players.some((s) => s.isActive) ? scene.leftTime : null}
+          timeLimit={gameState?.rule.timeLimit ?? 60}
+        />
+      }
+      isMyTurn={isMyTurn}
+      reserveRight={layoutMode === 'compact' || layoutMode === 'portrait'}
+    />
+  )
 
   const table =
     layoutMode === 'wide' ? (
@@ -545,22 +552,41 @@ function BoardSceneView({ scene }: { scene: BoardScene }) {
           observerNotice
         ) : null
       }
-      log={
-        layoutMode === 'wide' ? (
-          <ProofLog entries={toLogEntries(scene)} variant="sidebar" />
-        ) : undefined
-      }
       factorOpen={factorOpen}
     />
+  )
+  const boardWithOverlay = (
+    <LayoutGroup id="board">
+      <ConnectionOverlay state={scene.connection} onReconnect={noop}>
+        {board}
+      </ConnectionOverlay>
+    </LayoutGroup>
   )
 
   return (
     <div className="h-dvh overflow-auto" data-card-size="M" data-self={selfId}>
-      <LayoutGroup id="board">
-        <ConnectionOverlay state={scene.connection} onReconnect={noop}>
-          {board}
-        </ConnectionOverlay>
-      </LayoutGroup>
+      {layoutMode === 'wide' ? (
+        // the room page in wide: a 52px header row, then the board beside a flush 320px log
+        <div className="flex h-dvh min-h-0 flex-col overflow-hidden">
+          <header
+            data-room-header="full"
+            className="h-[52px] shrink-0 border-b border-line px-[max(var(--sp-3),env(safe-area-inset-left),env(safe-area-inset-right))]"
+          >
+            <GalleryTopBar n={n} />
+          </header>
+          <div
+            className="grid min-h-0 flex-1"
+            style={{ gridTemplateColumns: 'minmax(0, 1fr) 320px' }}
+          >
+            <main className="min-h-0 overflow-auto py-fib-1">{boardWithOverlay}</main>
+            <aside className="min-h-0 border-l border-line">
+              <ProofLog entries={toLogEntries(scene)} variant="sidebar" />
+            </aside>
+          </div>
+        </div>
+      ) : (
+        boardWithOverlay
+      )}
       <GameSetDialog
         opened={scene.gameSet !== null}
         winner={scene.gameSet?.winner ?? null}

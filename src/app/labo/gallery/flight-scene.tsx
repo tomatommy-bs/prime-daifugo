@@ -21,6 +21,7 @@ import {
   SeatLine,
   SeatRing,
   SubmitTray,
+  buildSeats,
   planFlights,
 } from '@/app/room/[id]/_ui/board'
 import {
@@ -41,7 +42,6 @@ import { compareCard } from '@/utils/play-card'
 import { LayoutGroup } from 'framer-motion'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import { buildSeatModels } from './fixtures'
 import {
   FLIGHT_PRESENCE,
   FLIGHT_STEPS,
@@ -115,15 +115,14 @@ function StepBoard({ stepId, run }: { stepId: FlightStepId; run: number }) {
   const { gameState, ctx } = gs
   const selfId = step.selfId
   const current = director.current
-  const seats = buildSeatModels({
+  const seats = buildSeats({
     gameState,
     ctx,
     presence: FLIGHT_PRESENCE,
     selfId,
     passedIds: memo.passedIds,
     leftTime: 42,
-    penalty:
-      current?.type === 'submit-fail' ? { id: current.playerId, n: current.penalty } : undefined,
+    penalties: current?.type === 'submit-fail' ? { [current.playerId]: current.penalty } : {},
   })
   const players = seats.filter((s) => !s.observer)
   const n = Math.max(1, players.length)

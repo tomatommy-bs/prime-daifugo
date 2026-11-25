@@ -39,7 +39,7 @@ describe('BoardLayout', () => {
     // the field shrinks to mini cards and the tray condenses so the panel fits
     expect(root().style.getPropertyValue('--card-field')).toContain('44px')
     expect(root().style.getPropertyValue('--card-tray')).toContain('38px')
-    expect(gridStyle('compact', true, false).transition).toContain('grid-template-rows')
+    expect(gridStyle('compact', true).transition).toContain('grid-template-rows')
   })
 
   it.each<LayoutMode>(['compact', 'regular', 'portrait', 'wide'])(
@@ -53,12 +53,11 @@ describe('BoardLayout', () => {
     },
   )
 
-  it('wide uses the 320px log column when a log is given', () => {
-    renderWithProviders(<BoardLayout mode="wide" {...slots} log={<span>LOG</span>} />)
-    expect(root().style.gridTemplateColumns).toBe('minmax(0, 1fr) 320px')
+  it('wide is a single column: the proof log is a page-level sibling, flush to the edge', () => {
+    renderWithProviders(<BoardLayout mode="wide" {...slots} />)
+    expect(root().style.gridTemplateColumns).toBe('minmax(0, 1fr)')
     expect(root().style.gridTemplateRows).toBe('52px minmax(0, 1fr) auto auto')
-    expect(root().style.gridTemplateAreas).toBe('"top log" "table log" "tray log" "hand log"')
-    expect(screen.getByText('LOG').closest('[data-area="log"]')).not.toBeNull()
+    expect(root().style.gridTemplateAreas).toBe('"top" "table" "tray" "hand"')
   })
 
   it('portrait puts the actions in a 55px bottom row', () => {
@@ -67,13 +66,10 @@ describe('BoardLayout', () => {
     expect(root().style.gridTemplateAreas).toContain('"rail rail"')
   })
 
-  it('an optional reset cell takes the reset area; otherwise the tray spans it', () => {
-    const { unmount } = renderWithProviders(<BoardLayout mode="compact" {...slots} />)
+  it('the compact tray spans the reset cell (the reset button lives in the SubmitTray)', () => {
+    renderWithProviders(<BoardLayout mode="compact" {...slots} />)
     const tray = document.querySelector<HTMLElement>('[data-area="tray"]') as HTMLElement
     expect(tray.style.gridColumn).toBe('1 / 3')
-    unmount()
-    renderWithProviders(<BoardLayout mode="compact" {...slots} reset={<span>RESET</span>} />)
-    expect(screen.getByText('RESET').closest('[data-area="reset"]')).not.toBeNull()
   })
 
   it('marks motion mode', () => {

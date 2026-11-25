@@ -9,12 +9,7 @@
  *
  * Pure data: no React, no socket. `fixtures.test.ts` validates every scene.
  */
-import type {
-  ConnectionState,
-  LogEntry,
-  SeatModel,
-  SubmitResultView,
-} from '@/app/room/[id]/_ui/board'
+import type { ConnectionState, LogEntry, SubmitResultView } from '@/app/room/[id]/_ui/board'
 import { cardIds as ALL_CARD_IDS, type CardId } from '@/game-card/src'
 import type { FactCardId, PrimeDaifugoSetupData } from '@/interface/common'
 import type * as serverToClient from '@/interface/server-to-client'
@@ -185,49 +180,9 @@ export function systemMessage(
   }
 }
 
-/** Self-relative seat models (self = k0, clockwise in play order, observers flagged). */
-export function buildSeatModels({
-  gameState,
-  ctx,
-  presence,
-  selfId,
-  passedIds = [],
-  leftTime,
-  penalty,
-}: {
-  gameState: PrimeDaifugoGameState
-  ctx: Ctx
-  presence: PresenceEntry[]
-  selfId: string
-  passedIds?: string[]
-  leftTime: number | null
-  penalty?: { id: string; n: number }
-}): SeatModel[] {
-  const order = ctx.playOrder
-  const selfIndex = Math.max(0, order.indexOf(selfId))
-  const rotated = [...order.slice(selfIndex), ...order.slice(0, selfIndex)]
-  return rotated.map((id, k) => {
-    const player = gameState.players[id]
-    const observer = player === undefined
-    const isActive = !observer && ctx.currentPlayer === id
-    return {
-      id,
-      name: presence.find((p) => p.id === id)?.name ?? id,
-      // views receive counts only, never the opponents' cards
-      handCount: observer ? null : player.hand.length,
-      hueIndex: order.indexOf(id),
-      k,
-      isSelf: id === selfId,
-      isActive,
-      isLead: gameState.deckTopPlayer === id,
-      passed: passedIds.includes(id),
-      observer,
-      leftTime: isActive && leftTime !== null ? leftTime : undefined,
-      timeLimit: gameState.rule.timeLimit,
-      penalty: penalty?.id === id ? penalty.n : undefined,
-    }
-  })
-}
+/** `penalty` in the shape the production `buildSeats` takes. */
+export const penaltiesOf = (penalty?: { id: string; n: number }): Record<string, number> =>
+  penalty ? { [penalty.id]: penalty.n } : {}
 
 /* ------------------------------------------------------------------ */
 /* Board scenes                                                        */

@@ -1,3 +1,4 @@
+import { buildSeats } from '@/app/room/[id]/_ui/board'
 import { cardIds as ALL_CARD_IDS, type CardId } from '@/game-card/src'
 import { serverToClientSchema } from '@/interface/server-to-client'
 import { CtxSchema } from '@/partykit/room/logic/game-rule'
@@ -12,8 +13,8 @@ import {
   SCENE_IDS,
   SCENE_TITLES,
   WAITING_SCENE,
-  buildSeatModels,
   isSceneId,
+  penaltiesOf,
   visibleCardIds,
 } from './fixtures'
 
@@ -108,7 +109,7 @@ describe('gallery fixtures', () => {
       if (!gs || !ctx) {
         continue
       }
-      const seats = buildSeatModels({
+      const seats = buildSeats({
         gameState: gs,
         ctx,
         presence: scene.presence,
@@ -131,41 +132,42 @@ describe('gallery fixtures', () => {
     }
   })
 
-  it('seat models rotate self to k0, flag observers and the lead', () => {
+  it('the gallery uses the production seat model: players first, observers after', () => {
     const observer = BOARD_SCENES.observer
     const gs = observer.gameState
     const ctx = observer.ctx
     if (!gs || !ctx) {
       throw new Error('observer scene needs state')
     }
-    const seats = buildSeatModels({
+    const seats = buildSeats({
       gameState: gs,
       ctx,
       presence: observer.presence,
       selfId: observer.selfId,
       leftTime: observer.leftTime,
     })
-    expect(seats[0]).toMatchObject({
+    // the observer (self) is not in the ring: players keep play order, the observer trails
+    expect(seats[3]).toMatchObject({
       id: 'p4',
-      k: 0,
+      k: 3,
       isSelf: true,
       observer: true,
       handCount: null,
     })
-    expect(seats.map((s) => s.id)).toEqual(['p4', 'p1', 'p2', 'p3'])
+    expect(seats.map((s) => s.id)).toEqual(['p1', 'p2', 'p3', 'p4'])
     expect(seats.find((s) => s.isLead)?.id).toBe('p2')
     expect(seats.find((s) => s.isActive)?.id).toBe('p3')
     // hue follows playOrder, not the rotated index
-    expect(seats.map((s) => s.hueIndex)).toEqual([3, 0, 1, 2])
+    expect(seats.map((s) => s.hueIndex)).toEqual([0, 1, 2, 3])
 
     const notPrime = BOARD_SCENES['not-prime']
-    const nps = buildSeatModels({
+    const nps = buildSeats({
       gameState: notPrime.gameState as NonNullable<BoardScene['gameState']>,
       ctx: notPrime.ctx as NonNullable<BoardScene['ctx']>,
       presence: notPrime.presence,
       selfId: 'p1',
       leftTime: 60,
-      penalty: notPrime.penalty,
+      penalties: penaltiesOf(notPrime.penalty),
     })
     expect(nps.find((s) => s.id === 'p2')?.penalty).toBe(3)
     expect(nps.find((s) => s.isActive)?.leftTime).toBe(60)
