@@ -13,7 +13,7 @@ import { useLayoutMode } from '@/design/use-layout-mode'
 import { type CardId, preloadCourtFaces } from '@/game-card/src'
 import type { PrimeDaifugoSetupData } from '@/interface/common'
 import type { ClientGameStateBundle } from '@/shared/client-state'
-import type { RejectReason } from '@/shared/protocol'
+import type { RejectReason, RoomStatus } from '@/shared/protocol'
 import { concatCardNumbers } from '@/utils/play-card'
 import { useLocalStorage } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
@@ -63,6 +63,41 @@ export function submitRejectMessage(result: Exclude<AckResult, { ok: true }>): s
   return SUBMIT_REJECT_MESSAGES[result.reason as RejectReason] ?? SUBMIT_REJECT_FALLBACK
 }
 
+/**
+ * Why the server refused a start (RQ-R7, RQ-S12). `stale` (someone else started first) and
+ * `disconnected` (the overlay already says so) stay silent.
+ */
+export const START_REJECT_MESSAGES: Partial<Record<AckFailure, string>> = {
+  'bad-rule': '山札が足りません：配る枚数か人数を減らしてください',
+  'not-enough-ready': '準備OKのプレイヤーが2人以上必要です',
+  'bad-status': 'ゲームはすでに進行中です',
+  'rate-limited': SUBMIT_REJECT_FALLBACK,
+  timeout: SUBMIT_REJECT_FALLBACK,
+}
+
+type AckFailure = Exclude<AckResult, { ok: true }>['reason']
+
+/** The notice for a refused start, or null when it needs none. */
+export function startRejectMessage(result: Exclude<AckResult, { ok: true }>): string | null {
+  return START_REJECT_MESSAGES[result.reason] ?? null
+}
+
+export const FORFEIT_MESSAGE = (name: string) => `${name} が棄権しました`
+
+/**
+ * A snapshot that lands in another round than the one on screen (a long sleep, a Worker
+ * restart): the previous round's end, pass markers and play count no longer apply.
+ */
+function snapshotStartsNewRound(
+  prev: ClientGameStateBundle | null,
+  next: ClientGameStateBundle,
+): boolean {
+  if (next.gameState.winner !== null) {
+    return false
+  }
+  return prev === null || prev.gameState.winner !== null || next.ctx.turn < prev.ctx.turn
+}
+
 const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }) => {
   const session = useRoomSession(id)
   const { presence, roomStatus, rule, actions } = session
@@ -70,6 +105,10 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
   const self = session.selfId ?? ''
   const [winner, setWinner] = useState('')
   const [memo, setMemo] = useState<T.BoardMemo>(T.EMPTY_MEMO)
+  /** `memo.plays` counted this round from its deal (false after joining mid-round by snapshot) */
+  const [playsCounted, setPlaysCounted] = useState(false)
+  /** how the last round ended, from its `game-ended` event (a snapshot carries no reason) */
+  const [endReason, setEndReason] = useState<'empty-hand' | 'last-standing' | null>(null)
   const [freshIds, setFreshIds] = useState<CardId[]>([])
   const [tray, setTray] = useState({ error: null as string | null, shakeKey: 0 })
   const [live, setLive] = useState<string | null>(null)
@@ -130,6 +169,19 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
     const { msg, event } = t
     if (msg.action === 'snapshot') {
       // welcome / seq gap / forfeit: state only, no flights or penalty animation (RQ-C3)
+      if (event?.type === 'forfeited') {
+        log(
+          <Notice.SystemNotice>{FORFEIT_MESSAGE(nameOf(event.pid) || '???')}</Notice.SystemNotice>,
+        )
+      }
+      if (snapshotStartsNewRound(t.prev, t.next)) {
+        director.clearEnd()
+        setMemo(T.EMPTY_MEMO)
+        setEndReason(null)
+      }
+      if (t.prev === null || snapshotStartsNewRound(t.prev, t.next)) {
+        setPlaysCounted(false)
+      }
       my.setHandCardIds(handOf(t.next))
       return
     }
@@ -142,6 +194,8 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
     switch (msg.action) {
       case 'game-start':
         log(<Notice.SystemNotice>{GAME_START_MESSAGE}</Notice.SystemNotice>)
+        setPlaysCounted(true)
+        setEndReason(null)
         break
       case 'draw':
         notify(<Notice.DrawNotice sender={msg.commander.name} />)
@@ -171,6 +225,7 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
         const name = event?.type === 'game-ended' ? event.winnerName : msg.winner
         notify(<Notice.EndNotice winner={name} />)
         setWinner(name)
+        setEndReason(event?.type === 'game-ended' ? event.reason : null)
         break
       }
       default:
@@ -210,10 +265,24 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
       my.setHandCardIds(hand)
     }
   }, [self])
-  // keeps the rule-diff baseline in step with snapshots (late join, reconnect)
+  // Keeps the rule-diff baseline in step with snapshots (late join, reconnect). Before the first
+  // deal there is no game, so the session makes no `change-rule` transition (its `next` is a
+  // game): a rule change in the first waiting room is logged from the rule itself. The first
+  // welcome (status still unknown before it) is not a change.
+  const statusSeenRef = useRef<RoomStatus | null>(roomStatus)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the rule or status changes
   useEffect(() => {
+    const before = ruleRef.current
     ruleRef.current = rule
-  }, [rule])
+    const known = statusSeenRef.current !== null
+    statusSeenRef.current = roomStatus
+    if (known && roomStatus === 'waiting' && game === null) {
+      const diff = ruleDiff(before, rule)
+      if (diff.length > 0) {
+        log(<Notice.SystemNotice>ルールを変更しました: {diff.join(' · ')}</Notice.SystemNotice>)
+      }
+    }
+  }, [rule, roomStatus])
 
   // the header 「退出」 needs the session's leave (spec §3.6)
   useEffect(() => {
@@ -222,7 +291,13 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
   }, [chrome])
 
   const myPresence = presence.find((p) => p.id === self)
-  const handleGameStart = () => actions.startGame()
+  const handleGameStart = async () => {
+    const result = await actions.startGame()
+    const message = result.ok ? null : startRejectMessage(result)
+    if (message !== null) {
+      notify(message, 'red')
+    }
+  }
   const handleChangeRule = (patch: Partial<PrimeDaifugoSetupData>) => actions.changeRule(patch)
 
   const gs = game?.gameState
@@ -275,6 +350,10 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
     }
   }, [roomStatus, snapWinner, director.holdEnd])
   const endedWinner = director.ended ? (director.ended.winner ?? winner) : null
+  // a snapshot straight into GAME SET has no event: a winner still holding cards won by forfeit
+  const winnerState = winnerId ? gs?.players[winnerId] : undefined
+  const winnerLeft = winnerState ? (winnerState.handCount ?? winnerState.hand.length) : 0
+  const endedReason = endReason ?? (winnerLeft > 0 ? 'last-standing' : 'empty-hand')
   // 「残り5秒」 from the deadline-driven clock (RQ-T5)
   const urgentRef = useRef(false)
   urgentRef.current = isMyTurn && playing
@@ -490,7 +569,8 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
           opened={roomStatus === 'waitingNextRound' && director.ended !== null}
           winner={endedWinner || null}
           standings={players.map((s) => ({ name: s.name, handCount: s.handCount ?? 0 }))}
-          plays={memo.plays}
+          plays={playsCounted ? memo.plays : undefined}
+          reason={endedReason}
           onNextRound={handleGameStart}
           canStart={canStart}
           selfReady={selfReady}

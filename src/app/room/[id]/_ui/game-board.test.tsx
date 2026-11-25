@@ -17,8 +17,10 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { RoomChromeContext } from './RoomHeader'
 import {
+  FORFEIT_MESSAGE,
   GAME_START_MESSAGE,
   GameBoard,
+  START_REJECT_MESSAGES,
   SUBMIT_REJECT_FALLBACK,
   SUBMIT_REJECT_MESSAGES,
   TIMEOUT_MESSAGE,
@@ -219,6 +221,26 @@ describe('GameBoard (session wiring)', () => {
     expect(roomSession.actions.startGame).toHaveBeenCalledWith()
   })
 
+  it('a start the server refuses for a too-small deck says why (RQ-R7)', async () => {
+    roomSession.setAck('startGame', { ok: false, reason: 'bad-rule' })
+    const logs: ReactNode[] = []
+    renderWithProviders(<GameBoard id="room-1" onLogNotification={(m) => logs.push(m)} />)
+    set({ presence: makeSessionPresence(['alice', 'bob']), roomStatus: 'waiting' })
+    fireEvent.click(screen.getByRole('button', { name: /ゲーム開始/ }))
+    await waitFor(() => expect(toastMessages()).toContain(START_REJECT_MESSAGES['bad-rule']))
+    expect(String(START_REJECT_MESSAGES['bad-rule'])).toContain('山札が足りません')
+    expect(logs.map(textOf)).toContain(START_REJECT_MESSAGES['bad-rule'])
+  })
+
+  it('a stale start (someone else started first) stays silent', async () => {
+    roomSession.setAck('startGame', { ok: false, reason: 'stale' })
+    renderWithProviders(<GameBoard id="room-1" />)
+    set({ presence: makeSessionPresence(['alice', 'bob']), roomStatus: 'waiting' })
+    fireEvent.click(screen.getByRole('button', { name: /ゲーム開始/ }))
+    await act(async () => undefined)
+    expect(toastMessages()).toEqual([])
+  })
+
   it('ready and unready in the waiting room go to setReady / unsetReady', () => {
     renderWithProviders(<GameBoard id="room-1" />)
     set({
@@ -290,6 +312,60 @@ describe('GameBoard (session wiring)', () => {
     expect(cta).toBeInTheDocument()
     expect(screen.getAllByText(/bob/).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/GAME SET|Q\.E\.D|勝/).length).toBeGreaterThan(0)
+  })
+
+  it('a last-standing win proves it by forfeit, not by |H| = 0, and logs the forfeit', async () => {
+    const logs: ReactNode[] = []
+    renderWithProviders(<GameBoard id="room-1" onLogNotification={(m) => logs.push(m)} />)
+    startPlaying()
+    const done = bundle({ hands: { p1: ['AS', '3H', 'JD'], p2: ['2S', '5C', 'KH'] }, winner: 'p1' })
+    emit({ action: 'snapshot' }, done, { event: { type: 'forfeited', pid: 'p2', reason: 'grace' } })
+    expect(logs.map(textOf)).toContain(FORFEIT_MESSAGE('bob'))
+    emit({ action: 'game-end', winner: 'alice', winnerId: 'p1' }, done, {
+      event: { type: 'game-ended', winnerId: 'p1', winnerName: 'alice', reason: 'last-standing' },
+      patch: { roomStatus: 'waitingNextRound' },
+    })
+    await screen.findByRole('button', { name: /次のラウンドを開始/ }, { timeout: 2500 })
+    const proof = document.querySelector('[data-proof]')
+    expect(proof).toHaveTextContent('他のプレイヤーが全員棄権')
+    expect(proof).not.toHaveTextContent('= 0')
+  })
+
+  it('a snapshot into a last-standing GAME SET also skips |H| = 0 and the unknown play count', async () => {
+    renderWithProviders(<GameBoard id="room-1" />)
+    set({ presence: makeSessionPresence(['alice', 'bob']), roomStatus: 'waitingNextRound' })
+    emit({ action: 'snapshot' }, bundle({ hands: { p1: ['AS'], p2: ['2S', '3S'] }, winner: 'p2' }))
+    await screen.findByRole('button', { name: /次のラウンドを開始/ }, { timeout: 2500 })
+    expect(document.querySelector('[data-proof]')).toHaveTextContent('他のプレイヤーが全員棄権')
+    expect(screen.queryByText(/証明の長さ/)).toBeNull()
+  })
+
+  it('a snapshot into the next round drops the previous GAME SET', async () => {
+    renderWithProviders(<GameBoard id="room-1" />)
+    startPlaying()
+    emit(msgs.gameEnd(bob), bundle({ hands: { p1: ['AS'], p2: [] }, winner: 'p2' }), {
+      event: { type: 'game-ended', winnerId: 'p2', winnerName: 'bob', reason: 'empty-hand' },
+      patch: { roomStatus: 'waitingNextRound' },
+    })
+    await screen.findByRole('button', { name: /次のラウンドを開始/ }, { timeout: 2500 })
+    // asleep through the next deal: the resync is a snapshot of a running round
+    emit({ action: 'snapshot' }, bundle({ hands: { p1: ['4S', '6H'], p2: ['8C'] } }), {
+      patch: { roomStatus: 'playing' },
+    })
+    await waitFor(() => expect(gameSetCta()).toBeNull())
+    // that round ends with alice winning: the dialog must wait for its own end, and name alice
+    emit(
+      { action: 'game-end', winner: 'alice', winnerId: 'p1' },
+      bundle({ hands: { p1: [], p2: ['8C'] }, winner: 'p1' }),
+      {
+        event: { type: 'game-ended', winnerId: 'p1', winnerName: 'alice', reason: 'empty-hand' },
+        patch: { roomStatus: 'waitingNextRound' },
+      },
+    )
+    expect(gameSetCta()).toBeNull()
+    await screen.findByRole('button', { name: /次のラウンドを開始/ }, { timeout: 2500 })
+    expect(document.querySelector('[data-theorem]')).toHaveTextContent('alice')
+    expect(screen.queryByText(/証明の長さ/)).toBeNull()
   })
 
   it('a snapshot straight into GAME SET opens the dialog with the stored winner', async () => {
@@ -787,6 +863,21 @@ describe('GameBoard (redesign)', () => {
     const text = textOf(logs.at(-1))
     expect(text).toContain('t: 60 → 15 s')
     expect(text).not.toContain('{')
+  })
+
+  it('logs a rule change in the first waiting room, where there is no game yet', () => {
+    const logs: ReactNode[] = []
+    renderWithProviders(<GameBoard id="room-1" onLogNotification={(m) => logs.push(m)} />)
+    // the first welcome brings the room's rule: not a change
+    set({
+      presence: makeSessionPresence(['alice', 'bob']),
+      roomStatus: 'waiting',
+      rule: { ...roomSession.current.rule, initNumCards: 7 },
+    })
+    expect(logs).toEqual([])
+    // rule-changed in the waiting room: the session has no game, so no transition
+    set({ rule: { ...roomSession.current.rule, timeLimit: 15 } })
+    expect(logs.map(textOf)).toEqual(['ルールを変更しました: t: 60 → 15 s'])
   })
 
   it('a snapshot sets the state without animation or announcements (RQ-C3)', () => {

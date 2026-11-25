@@ -3,7 +3,7 @@
  * GAME SET (spec §6.3, §7.7; catalogue §9.2 #26, #27).
  *
  *   Theorem.  bob の勝ち。
- *   Proof.    |H_bob| = 0.
+ *   Proof.    |H_bob| = 0.        (reason `last-standing`: 他のプレイヤーが全員棄権。)
  *   ─────────────
  *   standings                       Q.E.D. ∎
  *   [ 準備OK ]                      (only with `onToggleReady`)
@@ -25,8 +25,13 @@ export type GameSetDialogProps = {
   opened: boolean
   winner: string | null
   standings: { name: string; handCount: number }[]
-  /** number of plays this round */
+  /** number of plays this round; omitted when it is unknown (joined mid-round) */
   plays?: number
+  /**
+   * How the round ended (`game-ended.reason`, RQ-S6): `last-standing` (everyone else forfeited)
+   * replaces the `|H| = 0` proof, since the winner may still hold cards.
+   */
+  reason?: 'empty-hand' | 'last-standing' | null
   onNextRound: () => void
   canStart?: boolean
   /** self is ready for the next round (drives the toggle label) */
@@ -50,6 +55,7 @@ export function readyToggleLabel(selfReady: boolean, isObserver: boolean): strin
   return isObserver ? JOIN_NEXT_ROUND_LABEL : READY_LABEL
 }
 export const QED = 'Q.E.D. ∎'
+export const LAST_STANDING_PROOF = '他のプレイヤーが全員棄権。'
 
 /**
  * Modal exit (§9.2 #27, 233 ms ease-in), mirroring the entrance. The entrance itself is
@@ -74,6 +80,7 @@ export function GameSetDialog({
   winner,
   standings,
   plays,
+  reason = null,
   onNextRound,
   canStart = true,
   selfReady = false,
@@ -174,9 +181,15 @@ export function GameSetDialog({
             の勝ち。
           </dd>
           <dt className="font-bold italic">Proof.</dt>
-          <dd className="num m-0" data-proof="">
-            |H<sub style={{ fontSize: 'var(--fs--2)' }}>{who}</sub>| = 0.
-          </dd>
+          {reason === 'last-standing' ? (
+            <dd className="m-0" data-proof="last-standing">
+              {LAST_STANDING_PROOF}
+            </dd>
+          ) : (
+            <dd className="num m-0" data-proof="">
+              |H<sub style={{ fontSize: 'var(--fs--2)' }}>{who}</sub>| = 0.
+            </dd>
+          )}
         </dl>
 
         <m.hr

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   GameSetDialog,
   type GameSetDialogProps,
+  LAST_STANDING_PROOF,
   QED,
   readyToggleLabel,
   sortStandings,
@@ -51,6 +52,24 @@ describe('GameSetDialog', () => {
     const proof = dialog.querySelector('[data-proof]') as HTMLElement
     expect(proof).toHaveTextContent('|Hbob| = 0.')
     expect(proof.querySelector('sub')).toHaveTextContent('bob')
+  })
+
+  it('a last-standing win replaces |H| = 0 with the forfeit proof', async () => {
+    renderWithProviders(
+      <GameSetDialog
+        {...props({
+          reason: 'last-standing',
+          standings: [
+            { name: 'alice', handCount: 3 },
+            { name: 'bob', handCount: 4 },
+          ],
+        })}
+      />,
+    )
+    const dialog = await screen.findByRole('dialog')
+    const proof = dialog.querySelector('[data-proof]') as HTMLElement
+    expect(proof).toHaveTextContent(LAST_STANDING_PROOF)
+    expect(proof.querySelector('sub')).toBeNull()
   })
 
   it('lists the standings, winner first', async () => {
