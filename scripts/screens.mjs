@@ -66,8 +66,16 @@ const STATIC_PAGES = [
   { name: 'calc', path: '/labo/calc' },
 ]
 
-/** WebSocket noise towards PartyKit (:1999) is expected without `partykit dev`. */
-const IGNORED = [/:1999\b/, /WebSocket connection to .* failed/i, /\bws:\/\/.*1999/]
+/**
+ * WebSocket noise towards PartyKit (:1999) is expected without `partykit dev`, and the
+ * Vercel Analytics script only exists on Vercel (404 under `next start`).
+ */
+const IGNORED = [
+  /:1999\b/,
+  /WebSocket connection to .* failed/i,
+  /\bws:\/\/.*1999/,
+  /\/_vercel\/insights\//,
+]
 const ignored = (text) => IGNORED.some((re) => re.test(text))
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))

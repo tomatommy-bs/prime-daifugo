@@ -157,7 +157,7 @@ export function GrothendieckCut({ active, onDone, skippable = true, cards }: Gro
         </m.span>
         <m.span
           data-caption=""
-          className="block font-bold"
+          className="block whitespace-nowrap font-bold"
           style={{ fontSize: 'var(--fs-1)', color: 'var(--gold)' }}
           variants={preset.pop}
           initial="hidden"

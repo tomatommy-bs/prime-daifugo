@@ -9,13 +9,14 @@ import { GAME_CONFIG } from '@/constants/config'
 import { PARTYKIT_HOST } from '@/constants/env'
 import type { ROOM_STATUS } from '@/constants/status'
 import { useReducedMotionSafe } from '@/design/motion'
+import { useBoxSize } from '@/design/use-box-size'
 import { useLayoutMode } from '@/design/use-layout-mode'
 import type { CardId } from '@/game-card/src'
 import type { SubmitCardSet } from '@/interface/client-to-server'
 import type { PrimeDaifugoSetupData } from '@/interface/common'
 import type * as serverToClient from '@/interface/server-to-client'
 import { concatCardNumbers, isValidFactCardIds } from '@/utils/play-card'
-import { useElementSize, useLocalStorage, useSetState } from '@mantine/hooks'
+import { useLocalStorage, useSetState } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { LayoutGroup } from 'framer-motion'
 import Cookies from 'js-cookie'
@@ -74,7 +75,7 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
   const [, rerender] = useState(0) // socket open / close
   const wipedAt = useRef(0)
   const mode = useLayoutMode()
-  const table = useElementSize()
+  const table = useBoxSize()
   const director = useBoardDirector({ reduced: useReducedMotionSafe() })
   const chrome = useContext(RoomChromeContext)
   const [showValues] = useLocalStorage({ key: SHOW_VALUES_KEY, defaultValue: false })
@@ -351,7 +352,7 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
               }
               field={
                 mode === 'wide' ? (
-                  <div ref={table.ref} className="h-full min-h-[320px] w-full">
+                  <div ref={table.ref} className="h-full min-h-0 w-full">
                     <B.SeatRing
                       seats={seats}
                       width={table.width || 960}

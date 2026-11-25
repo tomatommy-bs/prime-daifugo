@@ -34,7 +34,7 @@ const RAD2DEG = 180 / Math.PI
 /** turn radius and direction arc stop short of the seat nodes */
 const RADIUS_INSET = 0.82
 /** the radius starts outside the table centre so it never crosses the field cards */
-const RADIUS_START = 0.5
+const RADIUS_START = 0.62
 const ARC_SCALE = 0.86
 const SIEVE_CELL = 14
 

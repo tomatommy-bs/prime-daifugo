@@ -64,10 +64,28 @@ export const ink: MantineColorsTuple = [
 
 const SANS = 'var(--font-sans), "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif'
 
+/**
+ * Mantine's dark-scheme neutrals, re-tuned to the dark tokens so inputs (6), papers and
+ * popovers (7), borders (4) and dimmed text (2) match --surface/--line/--ink-muted instead
+ * of Mantine's default greys.
+ */
+export const dark: MantineColorsTuple = [
+  '#ECE9E2', // 0 text (--ink)
+  '#C9C6BF',
+  '#A2A7B2', // 2 dimmed (--ink-muted)
+  '#6E7483', // 3 (--border-strong)
+  '#3A404D', // 4 borders (--composite)
+  '#2A2F3A', // 5 hover (--line)
+  '#1F232C', // 6 inputs, default buttons (--surface-raised)
+  '#161920', // 7 paper, popover (--surface)
+  '#0D0F13', // 8 (--bg)
+  '#08090C',
+]
+
 export const theme = createTheme({
   primaryColor: 'prime',
   primaryShade: { light: 7, dark: 4 },
-  colors: { prime, mod, factor, gold, ink },
+  colors: { prime, mod, factor, gold, ink, dark },
   black: '#15171C',
   white: '#FFFFFF',
   fontFamily: SANS,

@@ -144,11 +144,8 @@ export function BoardLayout({
         </div>
         <div style={area('table')} data-area="table" className="relative flex items-stretch">
           <div className="relative min-w-0 flex-1">{field}</div>
-          <div
-            data-area="deck"
-            className="absolute top-1/2 right-0 -translate-y-1/2 pr-fib-3"
-            style={{ zIndex: 1 }}
-          >
+          {/* a real column (not an overlay), so the measured SeatRing never runs under the pile */}
+          <div data-area="deck" className="flex shrink-0 items-center pr-fib-3">
             {deck}
           </div>
         </div>

@@ -35,12 +35,12 @@ import { NumberGlyph } from '@/design/NumberGlyph'
 import { SieveGrid } from '@/design/SieveGrid'
 import { UlamField } from '@/design/UlamField'
 import { IconModRing, IconTherefore } from '@/design/icons'
+import { useBoxSize } from '@/design/use-box-size'
 import { useLayoutMode } from '@/design/use-layout-mode'
 import type { CardId } from '@/game-card/src'
 import type { FactCardId } from '@/interface/common'
 import { concatCardNumbers } from '@/utils/play-card'
 import { useMantineColorScheme } from '@mantine/core'
-import { useElementSize } from '@mantine/hooks'
 import { LayoutGroup } from 'framer-motion'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -363,7 +363,7 @@ function useGalleryField(scene: BoardScene) {
 
 function BoardSceneView({ scene }: { scene: BoardScene }) {
   const layoutMode = useLayoutMode()
-  const { ref: tableRef, width: tableW, height: tableH } = useElementSize()
+  const { ref: tableRef, width: tableW, height: tableH } = useBoxSize()
   const field = useGalleryField(scene)
   const { gameState, ctx, selfId } = scene
 
@@ -426,7 +426,7 @@ function BoardSceneView({ scene }: { scene: BoardScene }) {
 
   const table =
     layoutMode === 'wide' ? (
-      <div ref={tableRef} className="h-full min-h-[320px] w-full">
+      <div ref={tableRef} className="h-full min-h-0 w-full">
         <SeatRing seats={seats} width={tableW || 960} height={tableH || 520}>
           {fieldNode}
         </SeatRing>

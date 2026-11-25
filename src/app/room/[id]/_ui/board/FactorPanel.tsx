@@ -189,7 +189,7 @@ export function FactorPanel({
               aria-label="因数"
               aria-orientation="horizontal"
               tabIndex={factCards.length === 0 ? 0 : -1}
-              className="flex min-h-[var(--card-tray)] min-w-0 flex-1 flex-wrap items-center gap-[var(--sp-1)] outline-none"
+              className="flex min-h-[var(--card-tray)] min-w-0 grow basis-[12rem] flex-wrap items-center gap-[var(--sp-1)] outline-none"
             >
               {factCards.length === 0 ? (
                 <span className="text-ink-muted" style={{ fontSize: 'var(--fs--1)' }}>
