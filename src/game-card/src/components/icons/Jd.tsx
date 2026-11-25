@@ -8,7 +8,7 @@ const SvgJd = (props: SVGProps<SVGSVGElement>) => (
     viewBox="0 0 167.087 242.667"
     {...props}
   >
-    <title>Jack of Diamonds</title>
+    <title>ダイヤのJ</title>
     <g
       style={{
         fillRule: 'nonzero',

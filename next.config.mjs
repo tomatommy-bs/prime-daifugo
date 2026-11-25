@@ -12,6 +12,12 @@ if (process.env.VERCEL_ENV === 'production') {
 const nextConfig = {
   // A second `next dev` (E2E, screens) next to the owner's dev server must not share `.next`.
   distDir: process.env.NEXT_DIST_DIR || '.next',
+  async redirects() {
+    return [
+      // the manifest moved to the file convention (`app/manifest.ts`); older installs ask here
+      { source: '/manifest.json', destination: '/manifest.webmanifest', permanent: true },
+    ]
+  },
 }
 
 export default nextConfig

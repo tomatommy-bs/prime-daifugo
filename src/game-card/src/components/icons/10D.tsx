@@ -8,7 +8,7 @@ const Svg10D = (props: SVGProps<SVGSVGElement>) => (
     viewBox="0 0 167.087 242.667"
     {...props}
   >
-    <title>10 of Diamonds</title>
+    <title>ダイヤの10</title>
     <g
       style={{
         fillRule: 'nonzero',

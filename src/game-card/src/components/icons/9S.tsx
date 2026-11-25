@@ -8,7 +8,7 @@ const Svg9S = (props: SVGProps<SVGSVGElement>) => (
     viewBox="0 0 167.087 242.667"
     {...props}
   >
-    <title>9 of Spades</title>
+    <title>スペードの9</title>
     <g
       style={{
         fillRule: 'nonzero',

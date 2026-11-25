@@ -1,7 +1,7 @@
-import { type SVGAttributes, type SVGProps, Suspense } from 'react'
+import type { SVGAttributes, SVGProps } from 'react'
 import { cardLabel } from '../tools/card-label'
 import type { CardId } from '../tools/suit-num'
-import { COURT_FACES, type CourtCardId, CourtPlaceholder, isCourtCard } from './court-faces'
+import { CourtCard, type CourtCardId, isCourtCard } from './court-faces'
 import * as svgCards from './number-faces'
 
 type NumberCardId = Exclude<CardId, CourtCardId>
@@ -78,13 +78,8 @@ export const GameCard: React.FC<GameCardProps> = ({ card, ...props }) => {
     className,
   } as SVGProps<SVGSVGElement>
   if (isCourtCard(card)) {
-    const Face = COURT_FACES[card]
     // the placeholder carries the same role, label and data-card, so semantics never change
-    return (
-      <Suspense fallback={<CourtPlaceholder card={card} {...svgProps} />}>
-        <Face {...svgProps} />
-      </Suspense>
-    )
+    return <CourtCard card={card} {...svgProps} />
   }
   return svgCards[cardIdToModuleName[card]](svgProps)
 }
