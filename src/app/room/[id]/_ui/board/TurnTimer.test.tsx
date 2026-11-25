@@ -1,8 +1,16 @@
 import { timerDash } from '@/design/math/geometry'
 import { renderWithProviders } from '@/test-utils'
-import { screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-import { TurnTimer, displaySeconds, timerGeometry, timerUrgency } from './TurnTimer'
+import { act, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import {
+  SeatClock,
+  TurnClockContext,
+  TurnTimer,
+  createTurnClock,
+  displaySeconds,
+  timerGeometry,
+  timerUrgency,
+} from './TurnTimer'
 
 const progress = (c: HTMLElement) => c.querySelector('[data-ring="progress"]') as SVGCircleElement
 const dashOffset = (el: Element) =>
@@ -141,5 +149,53 @@ describe('TurnTimer', () => {
     expect(container.querySelector('[data-flash]')).toBeNull()
     rerender(<TurnTimer leftTime={0} timeLimit={60} />)
     expect(container.querySelector('[data-flash="timeout"]')).not.toBeNull()
+  })
+})
+
+describe('live clock', () => {
+  it('SeatClock ticks from the store; only subscribers re-render', () => {
+    const clock = createTurnClock()
+    const renders = vi.fn()
+    const Sibling = () => {
+      renders()
+      return null
+    }
+    renderWithProviders(
+      <TurnClockContext.Provider value={clock}>
+        <Sibling />
+        <SeatClock active={true} timeLimit={60} />
+      </TurnClockContext.Provider>,
+    )
+    expect(screen.getByRole('timer')).toHaveTextContent('—')
+    act(() => clock.set(42))
+    expect(screen.getByRole('timer')).toHaveAttribute('aria-valuenow', '42')
+    act(() => clock.set(41))
+    expect(screen.getByRole('timer')).toHaveAttribute('aria-valuenow', '41')
+    expect(renders).toHaveBeenCalledTimes(1)
+  })
+
+  it('off turn shows —, and without a provider it falls back to the leftTime prop', () => {
+    const clock = createTurnClock(30)
+    const { unmount } = renderWithProviders(
+      <TurnClockContext.Provider value={clock}>
+        <SeatClock active={false} timeLimit={60} />
+      </TurnClockContext.Provider>,
+    )
+    expect(screen.getByRole('timer')).toHaveTextContent('—')
+    unmount()
+    renderWithProviders(<SeatClock active={true} leftTime={8} timeLimit={60} />)
+    expect(screen.getByRole('timer')).toHaveAttribute('aria-valuenow', '8')
+  })
+
+  it('hideWhenIdle renders nothing before the first tick', () => {
+    const clock = createTurnClock()
+    renderWithProviders(
+      <TurnClockContext.Provider value={clock}>
+        <SeatClock active={true} timeLimit={60} hideWhenIdle={true} />
+      </TurnClockContext.Provider>,
+    )
+    expect(screen.queryByRole('timer')).toBeNull()
+    act(() => clock.set(12))
+    expect(screen.getByRole('timer')).toBeInTheDocument()
   })
 })

@@ -9,8 +9,8 @@
 import { DUR, EASE, SPRING, motionPreset, useMotionMode } from '@/design/motion'
 import { GameCard } from '@/game-card/src'
 import { AnimatePresence, m } from 'framer-motion'
-import { type CSSProperties, useEffect, useRef } from 'react'
-import { TurnTimer } from './TurnTimer'
+import { type CSSProperties, useContext, useEffect, useRef } from 'react'
+import { SeatClock, TurnClockContext } from './TurnTimer'
 import { seatHueVar } from './seat-model'
 
 export type SeatProps = {
@@ -278,7 +278,8 @@ export function Seat({
             animate={full ? { opacity: [0, 1, 1, 0], y: [4, 0, -4, -12] } : { opacity: 1 }}
             transition={
               full
-                ? { duration: DUR.xl * 2, times: [0, 0.15, 0.5, 1], ease: EASE.out }
+                ? // #23: floats up 12px and fades over 610 ms
+                  { duration: DUR.xl, times: [0, 0.15, 0.5, 1], ease: EASE.out }
                 : { duration: 0 }
             }
           >
@@ -289,7 +290,10 @@ export function Seat({
     </span>
   )
 
-  const showTimer = node && isActive && leftTime !== undefined && timeLimit !== undefined
+  // with a live clock (GameBoard) the dial ticks on its own; else the model's leftTime
+  const liveClock = useContext(TurnClockContext) !== null
+  const showTimer =
+    node && isActive && timeLimit !== undefined && (liveClock || leftTime !== undefined)
 
   return (
     <m.fieldset
@@ -336,7 +340,15 @@ export function Seat({
           </span>
           <span className="inline-flex items-center gap-fib-3">
             {handEl}
-            {showTimer ? <TurnTimer leftTime={leftTime} timeLimit={timeLimit} size={28} /> : null}
+            {showTimer ? (
+              <SeatClock
+                active={true}
+                leftTime={leftTime}
+                timeLimit={timeLimit}
+                size={28}
+                hideWhenIdle={true}
+              />
+            ) : null}
           </span>
         </>
       ) : (

@@ -26,3 +26,9 @@ describe('ThemeProvider', () => {
     expect(css).toContain('--mantine-color-body: var(--bg)')
   })
 })
+
+describe('theme', () => {
+  it('lets Mantine transitions follow prefers-reduced-motion (§9.4)', () => {
+    expect(theme.respectReducedMotion).toBe(true)
+  })
+})

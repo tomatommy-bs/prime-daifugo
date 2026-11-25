@@ -32,14 +32,15 @@ describe('BoardLayout', () => {
     expect(GRID.compact.rowGap).toBe('var(--sp-1)')
   })
 
-  it('factor mode swaps the field and tray rows with a transition (384px budget kept)', () => {
+  it('factor mode swaps the field and tray rows at once (384px budget kept)', () => {
     renderWithProviders(<BoardLayout mode="compact" factorOpen={true} {...slots} />)
     expect(root().style.gridTemplateRows).toBe('36px 64px 144px 128px')
     expect(root()).toHaveAttribute('data-factor', 'true')
     // the field shrinks to mini cards and the tray condenses so the panel fits
     expect(root().style.getPropertyValue('--card-field')).toContain('44px')
     expect(root().style.getPropertyValue('--card-tray')).toContain('38px')
-    expect(gridStyle('compact', true).transition).toContain('grid-template-rows')
+    // no layout-property transition: the panel's fade carries the change (§9.1)
+    expect(gridStyle('compact', true).transition).toBeUndefined()
   })
 
   it.each<LayoutMode>(['compact', 'regular', 'portrait', 'wide'])(

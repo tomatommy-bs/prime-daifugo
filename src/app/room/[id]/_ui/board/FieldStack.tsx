@@ -8,7 +8,7 @@
  * sequence is struck through like a sieve pass before it clears.
  */
 import { NumberGlyph } from '@/design/NumberGlyph'
-import { DUR, EASE, stagger, useMotionMode } from '@/design/motion'
+import { DUR, EASE, SPRING, stagger, useMotionMode } from '@/design/motion'
 import { type CardId, GameCard, getCardInteger } from '@/game-card/src'
 import { concatCardNumbers } from '@/utils/play-card'
 import { AnimatePresence, m } from 'framer-motion'
@@ -148,7 +148,8 @@ export function FieldStack({
                       layoutId={full && !flightHandoff ? `card-${card}` : undefined}
                       data-card={card}
                       className="flex"
-                      transition={full ? { delay: i * 0.034 } : undefined}
+                      // props.transition replaces the inherited one: restate the card spring
+                      transition={full ? { ...SPRING.card, delay: i * 0.034 } : undefined}
                     >
                       <GameCard
                         card={card}

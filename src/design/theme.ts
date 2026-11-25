@@ -96,7 +96,10 @@ export const theme = createTheme({
   radius: { xs: '0.25rem', sm: '0.25rem', md: '0.5rem', lg: '0.75rem', xl: '0.75rem' }, // r-1 r-1 r-2 r-3 r-3
   defaultRadius: 'md',
   breakpoints: { xs: '36em', sm: '48em', md: '62em', lg: '75em', xl: '88em' }, // unchanged (postcss-simple-vars)
-  focusRing: 'never', // global :focus-visible in globals.css handles it
+  focusRing: 'never', // the :focus-visible ring in globals.css (components layer) handles it
+  // spec §9.4: Mantine's own transitions (Drawer, Tooltip, Menu, notifications) collapse to
+  // 0 ms under prefers-reduced-motion, like the --t-* tokens
+  respectReducedMotion: true,
   cursorType: 'pointer',
   other: { motion: 'see src/design/motion.ts' },
   components: {

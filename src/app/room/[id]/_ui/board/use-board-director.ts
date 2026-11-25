@@ -10,7 +10,10 @@
  *   `ended` set, which opens the GameSetDialog.
  * - Backlog: with more than 3 events waiting, the next steps play at 0.5×; with more than 6
  *   the intermediate events are dropped and the director jumps to the latest one.
- * - Reduced motion: every duration is at most `REDUCED_MAX_MS`.
+ * - Reduced motion: motion-only events (deal, draw, pass, flow, turn) last at most
+ *   `REDUCED_MAX_MS`. The result events keep a readable hold (`REDUCED_HOLD_MS`, the same
+ *   holds ResultOverlay and GrothendieckCut use), because their static text is the reduced
+ *   fallback and must not vanish after 144 ms (§9.4: information is never lost).
  */
 import { useEffect, useReducer, useRef } from 'react'
 import type { BoardEvent, BoardEventType } from './types'
@@ -32,6 +35,16 @@ export const EVENT_DURATION_MS: Record<BoardEventType, number> = {
 
 export const HOLD_MS = 800
 export const REDUCED_MAX_MS = 144
+/**
+ * Reduced-motion holds of the information-bearing events: `221 = 13 · 17` (#20), the gold
+ * 57 caption (#25), the success underline. Equal to ResultOverlay's `RESULT_HOLD_MS.reduced`
+ * and GrothendieckCut's `CUT_TOTAL_MS`, which usually call `done()` at that moment.
+ */
+export const REDUCED_HOLD_MS: Partial<Record<BoardEventType, number>> = {
+  'submit-ok': 987,
+  'submit-fail': 1597,
+  cut57: 1597,
+}
 /** queue length above which steps play at half duration */
 export const BACKLOG_FAST = 3
 /** queue length above which intermediate events are dropped */
@@ -70,8 +83,13 @@ export class DirectorCore {
   }
 
   durationOf(e: BoardEvent, rate = 1): number {
-    const ms = EVENT_DURATION_MS[e.type] * rate
-    return this.reduced ? Math.min(ms, REDUCED_MAX_MS) : ms
+    if (!this.reduced) {
+      return EVENT_DURATION_MS[e.type] * rate
+    }
+    const hold = REDUCED_HOLD_MS[e.type]
+    return hold !== undefined
+      ? hold * rate
+      : Math.min(EVENT_DURATION_MS[e.type] * rate, REDUCED_MAX_MS)
   }
 
   push = (e: BoardEvent): void => {

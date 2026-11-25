@@ -9,7 +9,7 @@
 import { timerDash } from '@/design/math/geometry'
 import { DUR, EASE, useMotionMode } from '@/design/motion'
 import { m } from 'framer-motion'
-import { useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 export type TurnTimerProps = {
   /** seconds left; negative values display 0 */
@@ -161,4 +161,74 @@ export function TurnTimer({ leftTime, timeLimit, size = 28 }: TurnTimerProps) {
       ) : null}
     </span>
   )
+}
+
+/* ------------------------------------------------------------------ */
+/* Live clock                                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The server ticks once a second. Holding `leftTime` as GameBoard state re-rendered the whole
+ * board (and every hand card) on each tick; instead the container writes ticks into this
+ * store and only the clock faces subscribe.
+ */
+export type TurnClock = {
+  get: () => number | null
+  set: (leftTime: number | null) => void
+  subscribe: (listener: () => void) => () => void
+}
+
+export function createTurnClock(initial: number | null = null): TurnClock {
+  let value = initial
+  const listeners = new Set<() => void>()
+  return {
+    get: () => value,
+    set: (next) => {
+      if (next === value) {
+        return
+      }
+      value = next
+      for (const l of listeners) {
+        l()
+      }
+    },
+    subscribe: (listener) => {
+      listeners.add(listener)
+      return () => listeners.delete(listener)
+    },
+  }
+}
+
+export const TurnClockContext = createContext<TurnClock | null>(null)
+
+const NO_CLOCK = {
+  get: () => null,
+  subscribe: () => () => undefined,
+}
+
+/** The live clock value, or `undefined` outside a `TurnClockContext`. */
+export function useTurnClock(): number | null | undefined {
+  const clock = useContext(TurnClockContext)
+  const source = clock ?? NO_CLOCK
+  const value = useSyncExternalStore(source.subscribe, source.get, source.get)
+  return clock ? value : undefined
+}
+
+export type SeatClockProps = Omit<TurnTimerProps, 'leftTime'> & {
+  /** whether a seat is on turn; off turn the dial shows — */
+  active: boolean
+  /** seconds from the seat model, used when no live clock is provided (gallery, stories) */
+  leftTime?: number | null
+  /** render nothing until a first tick has arrived (the table seat node) */
+  hideWhenIdle?: boolean
+}
+
+/** A TurnTimer fed by the live clock when one is provided, else by `leftTime`. */
+export function SeatClock({ active, leftTime, hideWhenIdle = false, ...rest }: SeatClockProps) {
+  const live = useTurnClock()
+  const value = active ? (live === undefined ? (leftTime ?? null) : live) : null
+  if (hideWhenIdle && value === null) {
+    return null
+  }
+  return <TurnTimer leftTime={value} {...rest} />
 }

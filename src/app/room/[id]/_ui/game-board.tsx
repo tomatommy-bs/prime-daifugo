@@ -67,7 +67,9 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
   const serverRef = useRef<T.GameState | null>(null) // latest state, readable between renders
   const serverRuleRef = useRef<Partial<PrimeDaifugoSetupData>>(rule)
   const [winner, setWinner] = useState('')
-  const [leftTime, setLeftTime] = useState<number | null>(null)
+  // ticks go to a store read only by the clock faces, not to state (no board re-render)
+  const clock = useRef<B.TurnClock | null>(null)
+  clock.current ??= B.createTurnClock()
   const [memo, setMemo] = useState<T.BoardMemo>(T.EMPTY_MEMO)
   const [freshIds, setFreshIds] = useState<CardId[]>([])
   const [tray, setTray] = useState({ error: null as string | null, shakeKey: 0 })
@@ -183,7 +185,7 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
         }
         props.onLogNotification?.('時間切れです')
       } else {
-        setLeftTime(_leftTime)
+        clock.current?.set(_leftTime)
         if (_leftTime === 5 && mine) {
           announce('残り5秒')
         }
@@ -244,7 +246,6 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
     presence,
     selfId: ws.id,
     passedIds: memo.passedIds,
-    leftTime,
     penalties: current?.type === 'submit-fail' ? memo.penalties : {},
   })
   const players = B.playerSeats(seats)
@@ -321,140 +322,146 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
     />
   )
   const timer = (
-    <B.TurnTimer
-      leftTime={players.some((s) => s.isActive) ? leftTime : null}
+    <B.SeatClock
+      active={players.some((s) => s.isActive)}
       timeLimit={gs?.rule.timeLimit ?? rule.timeLimit}
     />
   )
 
   return (
-    <div
-      data-card-size={compSizeOption}
-      data-room-status={roomStatus ?? 'unknown'}
-      className="h-full"
-    >
-      <B.ConnectionOverlay state={conn} onReconnect={() => ws.reconnect()}>
-        {roomStatus === 'waiting' ? (
-          <WaitingRoom
-            rule={rule}
-            onChangeRule={handleChangeRule}
-            presence={presence}
-            myPresence={myPresence}
-            onGameStart={handleGameStart}
-            onSetReady={() => ClientMessenger.setReady({ ws })}
-            onUnsetReady={() => ClientMessenger.unsetReady({ ws })}
-          />
-        ) : (
+    <B.TurnClockContext.Provider value={clock.current}>
+      <div
+        data-card-size={compSizeOption}
+        data-room-status={roomStatus ?? 'unknown'}
+        className="h-full"
+      >
+        <B.ConnectionOverlay state={conn} onReconnect={() => ws.reconnect()}>
+          {/* one LayoutGroup around both screens, so the waiting ring's seat-<id> layoutIds
+            match the table's and the seats morph into place when the game starts (#6) */}
           <LayoutGroup id="board">
-            <B.BoardLayout
-              mode={mode}
-              factorOpen={factorMode}
-              top={
-                <B.BoardTopBar
-                  mode={mode}
-                  seats={seats}
-                  n={n}
-                  timer={timer}
-                  isMyTurn={isMyTurn}
-                  reserveRight={mode === 'compact' || mode === 'portrait'}
-                />
-              }
-              deck={
-                <B.DeckPile
-                  count={deckCount}
-                  canDraw={canDraw}
-                  disabledReason={drawReason}
-                  onDraw={mode === 'wide' ? () => ClientMessenger.draw({ ws }) : undefined}
-                  compact={mode !== 'wide'}
-                />
-              }
-              field={
-                mode === 'wide' ? (
-                  <div ref={table.ref} className="h-full min-h-0 w-full">
-                    <B.SeatRing
-                      seats={seats}
-                      width={table.width || 960}
-                      height={table.height || 420}
-                      shimmerKey={current?.type === 'submit-ok' ? memo.plays : null}
-                      rippleFromId={director.ended ? winnerId : null}
-                    >
-                      {fieldStack}
-                    </B.SeatRing>
-                  </div>
-                ) : (
-                  fieldStack
-                )
-              }
-              tray={
-                <div className="flex h-full min-h-0 flex-col gap-fib-1">
-                  <B.SubmitTray
-                    cardIds={submitCardIds}
-                    fieldTop={fieldTop ?? null}
-                    onRemove={my.removeSubmitCardId}
-                    onReset={my.reset}
-                    hasFactor={factorMode || factCardIds.length > 0}
-                    shakeKey={tray.shakeKey}
-                    errorMessage={tray.error}
-                  />
-                  <B.FactorPanel
-                    open={factorMode}
-                    target={concatCardNumbers(submitCardIds)}
-                    factCards={factCardIds}
-                    onAddOperator={my.selectHandCardIdAsFact}
-                    onRemove={my.removeFactCard}
-                    onClose={my.toggleMode}
-                  />
-                </div>
-              }
-              actions={
-                <B.ActionBar
-                  orientation={ACTION_ORIENTATION[mode]}
-                  canDraw={canDraw}
-                  drawReason={drawReason}
-                  canPass={canMove}
-                  canSubmit={submitCardIds.length > 0 && canMove}
-                  shortcuts={playing}
-                  factorMode={factorMode}
-                  // leaving factor mode stays possible even after the tray was emptied
-                  factorDisabled={submitCardIds.length === 0 && !factorMode}
-                  isMyTurn={isMyTurn}
-                  onDraw={() => ClientMessenger.draw({ ws })}
-                  onPass={() => ClientMessenger.pass({ ws })}
-                  onSubmit={handleSubmit}
-                  onToggleFactor={my.toggleMode}
-                />
-              }
-              hand={
-                <div
-                  className="relative h-full"
-                  data-observer={observer && gs ? 'true' : undefined}
-                >
-                  <B.Hand
-                    cardIds={my.handCardIds}
+            {roomStatus === 'waiting' ? (
+              <WaitingRoom
+                rule={rule}
+                onChangeRule={handleChangeRule}
+                presence={presence}
+                myPresence={myPresence}
+                onGameStart={handleGameStart}
+                onSetReady={() => ClientMessenger.setReady({ ws })}
+                onUnsetReady={() => ClientMessenger.unsetReady({ ws })}
+              />
+            ) : (
+              <B.BoardLayout
+                mode={mode}
+                factorOpen={factorMode}
+                top={
+                  <B.BoardTopBar
+                    mode={mode}
+                    seats={seats}
+                    n={n}
+                    timer={timer}
                     isMyTurn={isMyTurn}
-                    mode={factorMode ? 'factor' : 'basic'}
-                    freshIds={freshIds}
-                    showValues={showValues}
-                    layout={mode === 'portrait' ? 'wrap' : 'auto'}
-                    onSelect={factorMode ? my.selectHandCardIdAsFact : my.selectHandCardIdAsSubmit}
+                    reserveRight={mode === 'compact' || mode === 'portrait'}
                   />
-                  {observer && gs ? <ObserverNote /> : null}
-                </div>
-              }
-            />
+                }
+                deck={
+                  <B.DeckPile
+                    count={deckCount}
+                    canDraw={canDraw}
+                    disabledReason={drawReason}
+                    onDraw={mode === 'wide' ? () => ClientMessenger.draw({ ws }) : undefined}
+                    compact={mode !== 'wide'}
+                  />
+                }
+                field={
+                  mode === 'wide' ? (
+                    <div ref={table.ref} className="h-full min-h-0 w-full">
+                      <B.SeatRing
+                        seats={seats}
+                        width={table.width || 960}
+                        height={table.height || 420}
+                        shimmerKey={current?.type === 'submit-ok' ? memo.plays : null}
+                        rippleFromId={director.ended ? winnerId : null}
+                      >
+                        {fieldStack}
+                      </B.SeatRing>
+                    </div>
+                  ) : (
+                    fieldStack
+                  )
+                }
+                tray={
+                  <div className="flex h-full min-h-0 flex-col gap-fib-1">
+                    <B.SubmitTray
+                      cardIds={submitCardIds}
+                      fieldTop={fieldTop ?? null}
+                      onRemove={my.removeSubmitCardId}
+                      onReset={my.reset}
+                      hasFactor={factorMode || factCardIds.length > 0}
+                      shakeKey={tray.shakeKey}
+                      errorMessage={tray.error}
+                    />
+                    <B.FactorPanel
+                      open={factorMode}
+                      target={concatCardNumbers(submitCardIds)}
+                      factCards={factCardIds}
+                      onAddOperator={my.selectHandCardIdAsFact}
+                      onRemove={my.removeFactCard}
+                      onClose={my.toggleMode}
+                    />
+                  </div>
+                }
+                actions={
+                  <B.ActionBar
+                    orientation={ACTION_ORIENTATION[mode]}
+                    canDraw={canDraw}
+                    drawReason={drawReason}
+                    canPass={canMove}
+                    canSubmit={submitCardIds.length > 0 && canMove}
+                    shortcuts={playing}
+                    factorMode={factorMode}
+                    // leaving factor mode stays possible even after the tray was emptied
+                    factorDisabled={submitCardIds.length === 0 && !factorMode}
+                    isMyTurn={isMyTurn}
+                    onDraw={() => ClientMessenger.draw({ ws })}
+                    onPass={() => ClientMessenger.pass({ ws })}
+                    onSubmit={handleSubmit}
+                    onToggleFactor={my.toggleMode}
+                  />
+                }
+                hand={
+                  <div
+                    className="relative h-full"
+                    data-observer={observer && gs ? 'true' : undefined}
+                  >
+                    <B.Hand
+                      cardIds={my.handCardIds}
+                      isMyTurn={isMyTurn}
+                      mode={factorMode ? 'factor' : 'basic'}
+                      freshIds={freshIds}
+                      showValues={showValues}
+                      layout={mode === 'portrait' ? 'wrap' : 'auto'}
+                      onSelect={
+                        factorMode ? my.selectHandCardIdAsFact : my.selectHandCardIdAsSubmit
+                      }
+                    />
+                    {observer && gs ? <ObserverNote /> : null}
+                  </div>
+                }
+              />
+            )}
           </LayoutGroup>
-        )}
-      </B.ConnectionOverlay>
-      <B.GameSetDialog
-        opened={roomStatus === 'waitingNextRound' && director.ended !== null}
-        winner={endedWinner || null}
-        standings={players.map((s) => ({ name: s.name, handCount: s.handCount ?? 0 }))}
-        plays={memo.plays}
-        onNextRound={() => handleGameStart(gs?.rule)}
-      />
-      <B.LiveRegion message={live} />
-      <B.FlightLayer ref={flights} />
-    </div>
+        </B.ConnectionOverlay>
+        <B.GameSetDialog
+          opened={roomStatus === 'waitingNextRound' && director.ended !== null}
+          winner={endedWinner || null}
+          standings={players.map((s) => ({ name: s.name, handCount: s.handCount ?? 0 }))}
+          plays={memo.plays}
+          onNextRound={() => handleGameStart(gs?.rule)}
+        />
+        <B.LiveRegion message={live} />
+        <B.FlightLayer ref={flights} />
+      </div>
+    </B.TurnClockContext.Provider>
   )
 }
 

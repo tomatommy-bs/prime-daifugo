@@ -119,6 +119,14 @@ describe('GameBoard (characterization)', () => {
     expect(passCount()).toBe(1)
   })
 
+  it('left-time ticks reach the turn clock', () => {
+    renderWithProviders(<GameBoard id="room-1" />)
+    startPlaying({ currentPlayer: 'p2' })
+    emit(serverMsg.leftTime(42))
+    const timers = screen.getAllByRole('timer')
+    expect(timers.some((t) => t.getAttribute('aria-valuenow') === '42')).toBe(true)
+  })
+
   it('left-time 0 does not send pass when someone else is the current player', () => {
     renderWithProviders(<GameBoard id="room-1" />)
     startPlaying({ currentPlayer: 'p2' })

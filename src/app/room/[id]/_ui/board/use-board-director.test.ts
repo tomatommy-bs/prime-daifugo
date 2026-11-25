@@ -1,10 +1,13 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { CUT_TOTAL_MS } from './GrothendieckCut'
+import { RESULT_HOLD_MS } from './ResultOverlay'
 import type { BoardEvent } from './types'
 import {
   DirectorCore,
   EVENT_DURATION_MS,
   HOLD_MS,
+  REDUCED_HOLD_MS,
   REDUCED_MAX_MS,
   useBoardDirector,
 } from './use-board-director'
@@ -81,15 +84,31 @@ describe('useBoardDirector', () => {
     act(() => {
       result.current.holdEnd(end())
       result.current.push(ok)
-    })
-    act(() => {
-      vi.advanceTimersByTime(REDUCED_MAX_MS - 1)
-    })
-    expect(result.current.ended).toBeNull()
-    act(() => {
-      vi.advanceTimersByTime(1)
+      result.current.done() // ResultOverlay finished its reduced hold
     })
     expect(result.current.ended).toEqual(end('bob'))
+  })
+
+  it('reduced motion caps motion-only events at 144 ms but keeps result text readable', () => {
+    const { result } = renderHook(() => useBoardDirector({ reduced: true }))
+    act(() => {
+      result.current.push(pass('p1'))
+    })
+    expect(result.current.currentMs).toBe(REDUCED_MAX_MS)
+    act(() => {
+      vi.advanceTimersByTime(REDUCED_MAX_MS)
+    })
+    act(() => {
+      result.current.push(ok)
+    })
+    expect(result.current.currentMs).toBe(RESULT_HOLD_MS.reduced.ok)
+    act(() => {
+      vi.advanceTimersByTime(REDUCED_MAX_MS)
+    })
+    // still showing: the overlay text is the reduced fallback (§9.4)
+    expect(result.current.current?.type).toBe('submit-ok')
+    expect(REDUCED_HOLD_MS['submit-fail']).toBe(RESULT_HOLD_MS.reduced.fail)
+    expect(REDUCED_HOLD_MS.cut57).toBe(CUT_TOTAL_MS)
   })
 
   it('releases the end after 800 ms without a submit', () => {
@@ -204,12 +223,10 @@ describe('useBoardDirector', () => {
     core.dispose()
   })
 
-  it('caps every duration at 144 ms under reduced motion', () => {
+  it('caps every motion-only duration at 144 ms under reduced motion', () => {
     const { result } = renderHook(() => useBoardDirector({ reduced: true }))
     const events: BoardEvent[] = [
       { type: 'deal' },
-      { type: 'cut57', playerId: 'p1', cards: ['5S', '7H'] },
-      ok,
       { type: 'flow' },
       { type: 'draw', who: 'me', playerId: 'p1' },
     ]

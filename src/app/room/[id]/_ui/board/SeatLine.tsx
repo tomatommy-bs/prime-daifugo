@@ -9,7 +9,7 @@ import { DUR, EASE, useMotionMode } from '@/design/motion'
 import { m } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import { Seat } from './Seat'
-import { TurnTimer } from './TurnTimer'
+import { SeatClock } from './TurnTimer'
 import { observerSeats, playerSeats, residueLabel } from './seat-model'
 import type { SeatModel } from './types'
 
@@ -145,8 +145,10 @@ export function SeatLine({ seats, n }: SeatLineProps) {
           {players.map((s, i) => {
             const last = i === players.length - 1
             return (
-              <li
+              <m.li
                 key={s.id}
+                // same id as the waiting ring and the SeatRing: seats morph in at game start
+                layoutId={mode === 'full' ? `seat-${s.id}` : undefined}
                 data-k={s.k}
                 data-seat-id={s.id}
                 className="relative flex items-center gap-[3px] pb-[3px]"
@@ -175,7 +177,7 @@ export function SeatLine({ seats, n }: SeatLineProps) {
                 >
                   {last ? '↺' : '→'}
                 </span>
-              </li>
+              </m.li>
             )
           })}
         </ol>
@@ -200,7 +202,12 @@ export function SeatLine({ seats, n }: SeatLineProps) {
           className="flex shrink-0 items-center border-l pl-fib-2"
           style={{ borderColor: 'var(--line)' }}
         >
-          <TurnTimer leftTime={active?.leftTime ?? null} timeLimit={timeLimit} size={28} />
+          <SeatClock
+            active={active !== null}
+            leftTime={active?.leftTime}
+            timeLimit={timeLimit}
+            size={28}
+          />
         </span>
       ) : null}
     </nav>

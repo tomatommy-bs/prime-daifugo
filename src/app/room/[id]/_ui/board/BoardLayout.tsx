@@ -13,8 +13,9 @@
  *   the table, actions by the tray). The 320px proof log is a sibling column owned by the page,
  *   so it runs flush to the viewport edge under the room header.
  *
- * The factor-mode row morph is a CSS `grid-template-rows` transition on `--t-lg`, which the
- * global reduced-motion rule collapses to 0.01 ms.
+ * Factor mode swaps the row template at once (no `grid-template-rows` transition, which
+ * re-laid out the board and re-rastered every card on each frame, §9.1); the FactorPanel's
+ * own fade-up carries the change, so it reads as a crossfade.
  */
 import { useMotionMode } from '@/design/motion'
 import type { CSSProperties, ReactNode } from 'react'
@@ -87,7 +88,6 @@ export function gridStyle(mode: LayoutMode, factorOpen: boolean): CSSProperties 
     gridTemplateAreas: g.areas.map((row) => `"${row}"`).join(' '),
     columnGap: g.columnGap,
     rowGap: g.rowGap,
-    transition: 'grid-template-rows var(--t-lg) var(--ease-out)',
   }
 }
 

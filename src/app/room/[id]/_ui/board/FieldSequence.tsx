@@ -124,10 +124,11 @@ export function FieldSequence({
           {newestFirst.map((v, age) => {
             const p = phyllotaxis(age, c)
             return (
+              // Anchored at the centre; the spiral offset is a transform (x / y), never an
+              // animated left / top, so moving a value does not re-lay out the field (§9.1).
               <m.span
                 key={v}
                 aria-hidden="true"
-                layout={full ? 'position' : false}
                 data-value={v}
                 data-age={age}
                 className="num absolute top-1/2 left-1/2 whitespace-nowrap font-bold leading-none tabular-nums"
@@ -135,20 +136,20 @@ export function FieldSequence({
                   // shrink by φ^−age through the type size, never below --fs--1
                   fontSize: `max(var(--fs--1), calc(var(--fs-1) * ${p.scale.toFixed(4)}))`,
                   color: age === 0 ? 'var(--ink)' : 'var(--ink-muted)',
-                  x: '-50%',
-                  y: '-50%',
                 }}
-                initial={full ? { opacity: 0, left: '50%', top: '50%' } : false}
+                initial={full ? { opacity: 0, x: 0, y: 0 } : false}
                 animate={{
                   opacity: p.opacity,
-                  left: `calc(50% + ${p.x.toFixed(1)}px)`,
-                  top: `calc(50% + ${p.y.toFixed(1)}px)`,
+                  x: Number(p.x.toFixed(1)),
+                  y: Number(p.y.toFixed(1)),
                 }}
                 exit={{ opacity: 0 }}
                 transition={full ? { duration: DUR.lg, ease: EASE.out } : { duration: 0 }}
               >
-                {v}
-                {struck ? <Strike index={age} full={full} /> : null}
+                <span className="relative block -translate-x-1/2 -translate-y-1/2">
+                  {v}
+                  {struck ? <Strike index={age} full={full} /> : null}
+                </span>
               </m.span>
             )
           })}

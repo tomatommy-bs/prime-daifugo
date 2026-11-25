@@ -16,7 +16,14 @@ export { Seat, type SeatProps } from './Seat'
 export { SeatLine, type SeatLineProps } from './SeatLine'
 export { SeatRing, type SeatRingProps } from './SeatRing'
 export { buildSeats, observerSeats, playerSeats } from './seat-model'
-export { TurnTimer, type TurnTimerProps } from './TurnTimer'
+export {
+  SeatClock,
+  TurnClockContext,
+  TurnTimer,
+  type TurnClock,
+  type TurnTimerProps,
+  createTurnClock,
+} from './TurnTimer'
 export { FieldStack, type FieldStackProps } from './FieldStack'
 export { FieldSequence, type FieldSequenceProps } from './FieldSequence'
 export { DeckPile, type DeckPileProps } from './DeckPile'
