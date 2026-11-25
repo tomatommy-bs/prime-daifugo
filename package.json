@@ -40,7 +40,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.9.4",
+    "@biomejs/biome": "2.6.9",
     "@chromatic-com/storybook": "^3.2.6",
     "@cloudflare/workers-types": "5.20261110.1",
     "@playwright/test": "1.53.0",
