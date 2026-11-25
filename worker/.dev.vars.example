@@ -1,0 +1,8 @@
+# Copy to worker/.dev.vars (gitignored) to override the dev vars in wrangler.jsonc for
+# `npm run dev:server`. Short values make grace expiry and timeouts easy to try by hand.
+# GRACE_PLAYING_MS=5000
+# GRACE_IDLE_MS=5000
+# AWAY_TURN_CAP_MS=3000
+# ROOM_TTL_IDLE_MS=600000
+# ROOM_TTL_ACTIVE_MS=1800000
+# ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
