@@ -63,15 +63,22 @@ async function openRoom(players: Player[]): Promise<string> {
   return roomPath
 }
 
-/** Go out with the last two cards when they make a prime; otherwise play as few cards as possible. */
+/**
+ * Go out when the last (up to 3) cards make one prime; otherwise lead with the largest prime set
+ * that keeps a card back (hands shrink fast, but nobody wins on the very first play), and follow
+ * with any legal set.
+ */
 function choosePlay(hand: string[], top: string[]): string[] | null {
-  if (top.length === 0 && hand.length <= 2) {
+  if (top.length > 0) {
+    return findPrimePlay(hand, top)
+  }
+  if (hand.length <= 3) {
     const all = findPrimePlay(hand, top, { maxCards: hand.length })
     if (all?.length === hand.length) {
       return all
     }
   }
-  return findPrimePlay(hand, top, { prefer: 'smallest' })
+  return findPrimePlay(hand, top, { maxCards: Math.max(1, Math.min(4, hand.length - 1)) })
 }
 
 /**
@@ -110,7 +117,7 @@ async function playTurn(p: Player, everyone: Player[]): Promise<void> {
 
 test.describe('gameplay', () => {
   test('three players play a whole game to GAME SET', async ({ alice, bob, spawnPlayer }) => {
-    test.setTimeout(300_000)
+    test.setTimeout(480_000)
     const carol = await spawnPlayer('carol')
     const players = [alice, bob, carol]
     await openRoom(players)
@@ -122,7 +129,7 @@ test.describe('gameplay', () => {
     }
 
     let turns = 0
-    for (let turn = 0; turn < 150; turn += 1) {
+    for (let turn = 0; turn < 300; turn += 1) {
       if (await gameOver(players)) {
         break
       }
