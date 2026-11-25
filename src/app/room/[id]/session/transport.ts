@@ -17,6 +17,11 @@ export interface RoomTransport {
   connect(url: string): void
   /** Send a text frame. Returns false (and drops the frame) when the socket is not open. */
   send(text: string): boolean
+  /**
+   * Drop the current socket as dead and open a new one now, skipping backoff. The dropped socket
+   * reports `onClose(1006, true)`. No-op after `close()` or a terminal close.
+   */
+  reconnectNow(): void
   /** Stop for good: close the socket, cancel reconnects and fire no further callbacks. */
   close(code?: number): void
   /** A socket opened. */

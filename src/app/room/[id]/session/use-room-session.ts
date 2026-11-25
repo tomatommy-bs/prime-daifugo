@@ -50,6 +50,11 @@ import type {
 import { createWsTransport } from './ws-transport'
 
 export const ACK_TIMEOUT_MS = 10_000
+/**
+ * An open socket with no `welcome` after this long is dropped and replaced (the server's own
+ * hello timeout is the same 10 s). Liveness alone cannot catch it: `pong`s keep arriving.
+ */
+export const WELCOME_TIMEOUT_MS = 10_000
 /** Socket closes before the first welcome after which the overlay shows `error`. */
 export const MAX_FAILURES_BEFORE_WELCOME = 3
 /** sessionStorage key prefix for `{ epoch, lastSeq }` per room. */
@@ -181,6 +186,7 @@ export type RoomSessionControllerOptions = {
   storage?: KeyValueStorage | null
   location?: LocationLike | null
   ackTimeoutMs?: number
+  welcomeTimeoutMs?: number
   /** local clock for the server clock (defaults to Date.now) */
   now?: () => number
 }
@@ -206,6 +212,9 @@ export class RoomSessionController {
   private failuresBeforeWelcome = 0
   private terminalHandled = false
   private leaving: (() => void) | null = null
+  private welcomeTimer: ReturnType<typeof setTimeout> | null = null
+  /** the reload resume (`lastSeq - 1`) was already asked for once */
+  private resumeStepped = false
 
   private readonly transitionListeners = new Set<(t: SessionTransition) => void>()
   private readonly storeListeners = new Set<() => void>()
@@ -284,6 +293,7 @@ export class RoomSessionController {
     transport?.close(1000)
     this.failPending('disconnected')
     this.serverClock.dispose()
+    this.clearWelcomeTimer()
     this.finishLeave()
   }
 
@@ -307,15 +317,36 @@ export class RoomSessionController {
     this.cs = onDisconnected(this.cs)
     this.connection = 'waiting-sync'
     this.transport?.send(JSON.stringify(this.hello()))
+    this.armWelcomeTimer()
     this.emit()
+  }
+
+  private armWelcomeTimer(): void {
+    this.clearWelcomeTimer()
+    this.welcomeTimer = setTimeout(() => {
+      this.welcomeTimer = null
+      // The transport reports the dropped socket through `handleClose`, which counts it
+      // toward `failuresBeforeWelcome`.
+      this.transport?.reconnectNow()
+    }, this.opts.welcomeTimeoutMs ?? WELCOME_TIMEOUT_MS)
+  }
+
+  private clearWelcomeTimer(): void {
+    if (this.welcomeTimer !== null) {
+      clearTimeout(this.welcomeTimer)
+      this.welcomeTimer = null
+    }
   }
 
   private hello(): Hello {
     const { view, lastSeq, epoch } = this.cs
     // With no board in memory (a reload), ask for one event more than we saw: the replay then
     // always carries at least one full view, where `current` would leave the page empty.
+    // Only once: if that replay is cut off before its events arrive, asking for the same seq
+    // again still yields at least one event, while stepping down again would walk to zero.
     let seq: number | null = lastSeq
-    if (view === null) {
+    if (view === null && !this.resumeStepped) {
+      this.resumeStepped = true
       seq = lastSeq !== null && lastSeq >= 1 ? lastSeq - 1 : null
       // keep the reducer in step, or it would drop that event as a duplicate
       this.cs = { ...this.cs, lastSeq: seq, epoch: seq === null ? null : epoch }
@@ -343,6 +374,7 @@ export class RoomSessionController {
     this.cs = result.state
 
     if (frame.t === 'welcome') {
+      this.clearWelcomeTimer()
       this.everWelcomed = true
       this.failuresBeforeWelcome = 0
       this.connection = 'open'
@@ -364,13 +396,20 @@ export class RoomSessionController {
     }
     this.emit()
 
-    if (frame.t === 'welcome' && this.cs.view === null && this.opts.url !== null) {
-      // `current` with nothing in memory: reconnect and ask for a snapshot
+    if (
+      frame.t === 'welcome' &&
+      this.cs.view === null &&
+      this.cs.catchUpTo === null &&
+      this.opts.url !== null
+    ) {
+      // `current` (or an untrusted epoch) with nothing in memory: reconnect and ask for a
+      // snapshot. A `replay` sets `catchUpTo` and its events, already on the way, bring the view.
       this.openTransport(this.opts.url)
     }
   }
 
   private handleClose(code: number, reconnecting: boolean): void {
+    this.clearWelcomeTimer()
     this.failPending('disconnected')
     this.cs = onDisconnected(this.cs)
     if (reconnecting) {

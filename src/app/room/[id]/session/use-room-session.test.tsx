@@ -13,6 +13,7 @@ import {
   RoomTransportContext,
   SEQ_STORAGE_PREFIX,
   UPGRADE_RELOAD_KEY,
+  WELCOME_TIMEOUT_MS,
   createDisconnectedSession,
   useRoomSession,
 } from './use-room-session'
@@ -193,6 +194,32 @@ describe('useRoomSession: connection lifecycle', () => {
     expect(result.current).toBe(before)
   })
 
+  it('drops an open socket that gets no welcome in time and ends in error', () => {
+    vi.useFakeTimers()
+    const { result } = mount()
+    for (let i = 0; i < 3; i += 1) {
+      act(() => t().__open())
+      expect(result.current.connection).toBe('waiting-sync')
+      // only pongs (swallowed by the transport) arrive; the hello went unanswered
+      act(() => {
+        vi.advanceTimersByTime(WELCOME_TIMEOUT_MS - 1)
+      })
+      expect(t().reconnectNowCalls).toBe(i)
+      act(() => {
+        vi.advanceTimersByTime(1)
+      })
+      expect(t().reconnectNowCalls).toBe(i + 1)
+    }
+    expect(result.current.connection).toBe('error')
+    // a welcome in time cancels the timer
+    connect()
+    act(() => {
+      vi.advanceTimersByTime(WELCOME_TIMEOUT_MS * 2)
+    })
+    expect(t().reconnectNowCalls).toBe(3)
+    expect(result.current.connection).toBe('open')
+  })
+
   it('a current welcome with nothing in memory reconnects for a snapshot', () => {
     sessionStorage.setItem(`${SEQ_STORAGE_PREFIX}1009`, JSON.stringify({ epoch: 'e', lastSeq: 0 }))
     const { result } = mount()
@@ -251,9 +278,29 @@ describe('useRoomSession: resume across reloads (sessionStorage)', () => {
     const seen: SessionTransition[] = []
     result.current.subscribe((tr) => seen.push(tr))
     act(() => t().__emit(frames.welcome({ mode: 'replay', seq: 8 })))
+    // the replayed events are already on the way: no resync, which would drop them
+    expect(t().urls).toHaveLength(1)
     act(() => t().__emit(frames.evt({ type: 'drew', by: 'p1' }, { seq: 8 })))
     expect(seen.map((x) => x.msg)).toEqual([{ action: 'snapshot' }])
     expect(result.current.game).not.toBeNull()
+    expect(t().urls).toHaveLength(1)
+  })
+
+  it('steps the reload resume back only once, even if that replay is cut off', () => {
+    sessionStorage.setItem(`${SEQ_STORAGE_PREFIX}1009`, JSON.stringify({ epoch: 'e', lastSeq: 24 }))
+    const { result } = mount()
+    act(() => t().__open())
+    expect(hellos().at(-1)).toMatchObject({ lastSeq: 23, epoch: 'e' })
+    act(() => t().__emit(frames.welcome({ mode: 'replay', seq: 24, epoch: 'e' })))
+    // the socket drops before the replayed events arrive
+    act(() => t().__close(1006))
+    act(() => t().__open())
+    expect(hellos().at(-1)).toMatchObject({ lastSeq: 23, epoch: 'e' })
+    act(() => t().__emit(frames.welcome({ mode: 'replay', seq: 24, epoch: 'e' })))
+    act(() => t().__emit(frames.evt({ type: 'presence' }, { seq: 24 })))
+    expect(result.current.connection).toBe('open')
+    expect(result.current.version).toBeGreaterThan(0)
+    expect(hellos()).toHaveLength(2)
   })
 
   it('ignores a corrupt entry', () => {

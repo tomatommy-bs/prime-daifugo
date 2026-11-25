@@ -6,6 +6,7 @@ import {
   BACKOFF_STEPS_MS,
   LIVENESS_TIMEOUT_MS,
   PING_INTERVAL_MS,
+  RESUME_CONNECTING_GRACE_MS,
   RESUME_QUIET_MS,
   type SocketLike,
   WsTransport,
@@ -267,6 +268,45 @@ describe('WsTransport', () => {
     expect(closes).toEqual([[ABNORMAL_CLOSE, true]])
   })
 
+  it('opens one socket for the burst of resume triggers a bfcache restore fires', () => {
+    const { t, win, doc, closes } = setup()
+    t.connect('ws://x')
+    last().open()
+    // quiet for 30 s: past the resume threshold, short of the 45 s liveness drop
+    vi.advanceTimersByTime(30_000)
+    // pageshow(persisted), visibilitychange→visible and online, back to back
+    win.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true }))
+    doc.dispatchEvent(new Event('visibilitychange'))
+    win.dispatchEvent(new Event('online'))
+    expect(FakeWS.instances).toHaveLength(2)
+    expect(last().readyState).toBe(READY_STATE.CONNECTING)
+    expect(closes).toEqual([[ABNORMAL_CLOSE, true]])
+  })
+
+  it('replaces a socket stuck CONNECTING for longer than the grace on resume', () => {
+    const { t, win } = setup()
+    t.connect('ws://x')
+    vi.advanceTimersByTime(RESUME_CONNECTING_GRACE_MS)
+    win.dispatchEvent(new Event('online'))
+    expect(FakeWS.instances).toHaveLength(1)
+    vi.advanceTimersByTime(1)
+    win.dispatchEvent(new Event('online'))
+    expect(FakeWS.instances).toHaveLength(2)
+  })
+
+  it('reconnectNow() drops the open socket and opens a new one at once', () => {
+    const { t, closes } = setup()
+    t.connect('ws://x')
+    last().open()
+    t.reconnectNow()
+    expect(FakeWS.instances).toHaveLength(2)
+    expect(FakeWS.instances[0].closeCodes).toHaveLength(1)
+    expect(closes).toEqual([[ABNORMAL_CLOSE, true]])
+    t.close()
+    t.reconnectNow()
+    expect(FakeWS.instances).toHaveLength(2)
+  })
+
   it('close() stops for good, fires nothing and removes the listeners', () => {
     const { t, win, events } = setup()
     t.connect('ws://x')
@@ -320,6 +360,8 @@ describe('WsTransport', () => {
     last().close = () => {
       throw new Error('boom')
     }
+    last().open()
+    vi.advanceTimersByTime(RESUME_QUIET_MS + 1)
     win.dispatchEvent(new Event('online'))
     expect(FakeWS.instances).toHaveLength(2)
   })

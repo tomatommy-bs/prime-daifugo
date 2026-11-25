@@ -27,6 +27,8 @@ export class FakeRoomTransport implements RoomTransport {
   readonly frames: string[] = []
   /** codes passed to `close()` (`undefined` when called without one) */
   readonly closeCalls: (number | undefined)[] = []
+  /** how many times `reconnectNow()` was called */
+  reconnectNowCalls = 0
   private byeSeen = false
 
   get url(): string | undefined {
@@ -49,6 +51,19 @@ export class FakeRoomTransport implements RoomTransport {
     }
     this.frames.push(text)
     return true
+  }
+
+  /** Like the real transport: the dropped socket reports a reconnecting abnormal close. */
+  reconnectNow(): void {
+    this.reconnectNowCalls += 1
+    if (this.readyState === READY_STATE.CLOSED && this.closeCalls.length > 0) {
+      return
+    }
+    const wasOpen = this.readyState === READY_STATE.OPEN
+    this.readyState = READY_STATE.CONNECTING
+    if (wasOpen) {
+      this.onClose?.(1006, true)
+    }
   }
 
   close(code?: number): void {

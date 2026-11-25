@@ -6,7 +6,9 @@
  * - Liveness: the text `ping` every 20 s (answered with `pong` by the server's auto-response);
  *   if no frame at all arrives for 45 s the socket is dropped and a new one opened at once.
  * - Mobile resume: on `visibilitychange→visible`, `online` and `pageshow(persisted)` it reconnects
- *   immediately (skipping backoff) when the socket is not OPEN or has been quiet for over 25 s.
+ *   immediately (skipping backoff) when there is no socket, it is closing/closed, it is OPEN but
+ *   quiet for over 25 s, or it has been CONNECTING for over 5 s. A younger CONNECTING socket is
+ *   left alone, so the burst of triggers a bfcache restore fires opens one socket, not three.
  *
  * Timers, the clock, randomness, the WebSocket constructor and the event targets are injectable.
  */
@@ -18,6 +20,8 @@ export const BACKOFF_JITTER = 0.3
 export const PING_INTERVAL_MS = 20_000
 export const LIVENESS_TIMEOUT_MS = 45_000
 export const RESUME_QUIET_MS = 25_000
+/** A resume trigger leaves a socket that started connecting less than this long ago alone. */
+export const RESUME_CONNECTING_GRACE_MS = 5_000
 
 /** The subset of `WebSocket` the transport uses. */
 export type SocketLike = {
@@ -95,6 +99,7 @@ export class WsTransport implements RoomTransport {
   private byeSeen = false
   private attempt = 0
   private lastFrameAt = 0
+  private socketCreatedAt = 0
   private reconnectTimer: TimerId | null = null
   private pingTimer: TimerId | null = null
   private livenessTimer: TimerId | null = null
@@ -145,6 +150,14 @@ export class WsTransport implements RoomTransport {
     return true
   }
 
+  /**
+   * Drop the current socket and open a new one now, skipping backoff (e.g. the session gave up
+   * waiting for a `welcome`). The dropped socket reports `onClose(1006, true)`.
+   */
+  reconnectNow(): void {
+    this.forceReconnect()
+  }
+
   close(code = 1000): void {
     this.active = false
     this.clearReconnect()
@@ -177,6 +190,7 @@ export class WsTransport implements RoomTransport {
     }
     this.socket = socket
     this.lastFrameAt = this.now()
+    this.socketCreatedAt = this.lastFrameAt
     socket.onopen = () => {
       if (this.socket !== socket) {
         return
@@ -298,8 +312,16 @@ export class WsTransport implements RoomTransport {
     if (!this.active) {
       return
     }
-    const open = this.socket !== null && this.socket.readyState === READY_STATE.OPEN
-    if (!open || this.now() - this.lastFrameAt > RESUME_QUIET_MS) {
+    const socket = this.socket
+    const now = this.now()
+    if (socket?.readyState === READY_STATE.CONNECTING) {
+      if (now - this.socketCreatedAt > RESUME_CONNECTING_GRACE_MS) {
+        this.forceReconnect()
+      }
+      return
+    }
+    const open = socket?.readyState === READY_STATE.OPEN
+    if (!open || now - this.lastFrameAt > RESUME_QUIET_MS) {
       this.forceReconnect()
     }
   }
