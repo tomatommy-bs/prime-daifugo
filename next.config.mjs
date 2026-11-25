@@ -9,6 +9,9 @@ if (process.env.VERCEL_ENV === 'production') {
 }
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {}
+const nextConfig = {
+  // A second `next dev` (E2E, screens) next to the owner's dev server must not share `.next`.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
+}
 
 export default nextConfig
