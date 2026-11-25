@@ -22,6 +22,15 @@ describe('beatsField', () => {
     expect(beatsField(c('6H'), c('5S'))).toBe(true)
     expect(beatsField(c('4H'), c('5S'))).toBe(false)
   })
+  it('compares exactly past the double precision limit (as the BigInt server does)', () => {
+    // 23 digits that differ only in the last one: equal as JS numbers
+    const field = c('KS', 'KH', 'KD', 'KC', 'QS', 'QH', 'QD', 'QC', 'JS', 'JH', 'JD', '2S')
+    const higher = c('KS', 'KH', 'KD', 'KC', 'QS', 'QH', 'QD', 'QC', 'JS', 'JH', 'JD', '3S')
+    expect(beatsField(higher, field)).toBe(true)
+    expect(beatsField(field, higher)).toBe(false)
+    expect(validateSubmitCardSet(field, { submit: higher, factor: [] })).toBeNull()
+    expect(trayChecks(higher, field).greaterOk).toBe(true)
+  })
   it('anything beats a free field', () => {
     expect(beatsField(c('AH'), null)).toBe(true)
     expect(beatsField(c('AH'), undefined)).toBe(true)

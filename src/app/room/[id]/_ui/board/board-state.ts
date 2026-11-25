@@ -3,9 +3,10 @@
  * the component so they can be unit-tested on their own. No React, no socket.
  */
 import type { CardId } from '@/game-card/src'
+import { concatValue } from '@/game/numbers'
 import type { ClientPlayer, SubmitCardSet } from '@/shared/client-state'
 import type { RoomStatus as ProtocolRoomStatus } from '@/shared/protocol'
-import { concatCardNumbers, isValidFactCardIds } from '@/utils/play-card'
+import { isValidFactCardIds } from '@/utils/play-card'
 import type { ActionBarProps } from './ActionBar'
 import type { ConnectionState, DrawDisabledReason, LayoutMode } from './types'
 
@@ -22,13 +23,14 @@ type RoomStatus = ProtocolRoomStatus | null
 /**
  * The one `> 場` rule, shared by the tray hint (`trayChecks`) and the submit gate: the value
  * must be strictly greater than the field top, as the server requires (a tie is an invalid
- * move there). Always true on a free field.
+ * move there). Always true on a free field. Compared as BigInt like the engine (RQ-R3): a JS
+ * number loses precision past 15-16 digits and would block legal multi-card plays.
  */
 export function beatsField(cards: CardId[], fieldTop: CardId[] | null | undefined): boolean {
   if (!fieldTop || fieldTop.length === 0) {
     return true
   }
-  return concatCardNumbers(cards) > concatCardNumbers(fieldTop)
+  return concatValue(cards) > concatValue(fieldTop)
 }
 
 export const SUBMIT_ERRORS = {
