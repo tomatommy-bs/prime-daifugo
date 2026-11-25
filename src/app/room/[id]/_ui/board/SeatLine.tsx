@@ -58,12 +58,15 @@ export function overflowMask(start: boolean, end: boolean): string | undefined {
 
 /**
  * Scroll `scroller` sideways (only it, never its ancestors or the page) so `item` is fully
- * visible. `scrollIntoView` would also scroll the top bar and push the brand off screen.
+ * visible, or starts at its left edge when it is wider than `scroller`. `scrollIntoView`
+ * would also scroll the top bar and push the brand off screen.
  */
 export function revealInScroller(scroller: HTMLElement, item: HTMLElement): void {
   const box = scroller.getBoundingClientRect()
   const r = item.getBoundingClientRect()
-  if (r.left < box.left) {
+  // An item wider than the bar (portrait phones) is aligned by its start, so the residue and
+  // the name stay readable and only the trailing arrow is clipped.
+  if (r.left < box.left || r.right - r.left > box.right - box.left) {
     scroller.scrollLeft -= box.left - r.left
   } else if (r.right > box.right) {
     scroller.scrollLeft += r.right - box.right
@@ -83,6 +86,9 @@ export function SeatLine({ seats, n }: SeatLineProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [overflow, setOverflow] = useState({ start: false, end: false })
   const activeId = active?.id ?? null
+  // The list scrolls sideways when it is wider than the bar: keep the active seat in view.
+  // Re-run on every size change of the bar or of the list, not only when the turn moves:
+  // the first pass runs before the web fonts load, when the chips are still narrower.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) {
@@ -93,25 +99,26 @@ export function SeatLine({ seats, n }: SeatLineProps) {
       const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
       setOverflow((o) => (o.start === start && o.end === end ? o : { start, end }))
     }
-    measure()
+    const reveal = () => {
+      if (activeId) {
+        const items = el.querySelectorAll<HTMLElement>('[data-seat-id]')
+        const li = [...items].find((item) => item.dataset.seatId === activeId)
+        if (li) {
+          revealInScroller(el, li)
+        }
+      }
+      measure()
+    }
+    reveal()
     el.addEventListener('scroll', measure, { passive: true })
-    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(reveal)
     ro?.observe(el)
+    for (const child of el.children) {
+      ro?.observe(child)
+    }
     return () => {
       el.removeEventListener('scroll', measure)
       ro?.disconnect()
-    }
-  }, [])
-  // The list scrolls sideways when it is wider than the bar: keep the active seat in view.
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!activeId || !el) {
-      return
-    }
-    const items = el.querySelectorAll<HTMLElement>('[data-seat-id]')
-    const li = [...items].find((item) => item.dataset.seatId === activeId)
-    if (li) {
-      revealInScroller(el, li)
     }
   }, [activeId])
   const mask = overflowMask(overflow.start, overflow.end)

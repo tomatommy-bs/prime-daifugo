@@ -5,6 +5,9 @@
    above globals.css, which made Tailwind base win over Mantine). */
 @import "@mantine/core/styles.layer.css";
 @import "@mantine/notifications/styles.layer.css";
+/* Keep docs/ out of class detection: it would also be watched, and every screenshot that
+   `npm run screens` writes there made `next dev` recompile mid-capture. */
+@source not "../../docs";
 
 @custom-variant dark (&:where([data-mantine-color-scheme=dark], [data-mantine-color-scheme=dark] *));
 @custom-variant compact (@media (orientation: landscape) and (max-height: 500px));

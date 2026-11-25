@@ -149,4 +149,12 @@ describe('revealInScroller', () => {
     revealInScroller(s, item(150, 200))
     expect(s.scrollLeft).toBe(30)
   })
+
+  it('aligns an item wider than the scroller by its start', () => {
+    const s = scroller(50)
+    revealInScroller(s, item(60, 320))
+    expect(s.scrollLeft).toBe(10)
+    revealInScroller(s, item(130, 390))
+    expect(s.scrollLeft).toBe(40)
+  })
 })

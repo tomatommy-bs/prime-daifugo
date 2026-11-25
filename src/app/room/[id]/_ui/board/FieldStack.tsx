@@ -238,7 +238,13 @@ export function FieldStack({
       </p>
 
       {resultOverlay ? (
-        <div data-field-overlay="" className="absolute inset-0 z-10">
+        // At least 24rem wide (within the viewport) and centred on the field: over an empty
+        // field (∅, a first play) the section is ~80px wide and the plate wrapped one
+        // character per line.
+        <div
+          data-field-overlay=""
+          className="absolute inset-y-0 left-1/2 z-10 w-[max(100%,min(24rem,92vw))] -translate-x-1/2"
+        >
           {resultOverlay}
         </div>
       ) : null}

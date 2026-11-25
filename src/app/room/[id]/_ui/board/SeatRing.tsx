@@ -396,30 +396,37 @@ export function SeatRing({
       {/* seats */}
       <ol aria-label={`ℤ/${players.length}ℤ 手番順`} className="m-0 list-none p-0">
         {placed.map(({ seat, x, y }) => (
-          <m.li
+          // Centred with a plain CSS translate on the li: on the m.div itself, framer's
+          // layout projection (layoutId, full motion) dropped the `-50%` and the node hung
+          // off its point by half its size. Same split as the waiting-room seats.
+          <li
             key={seat.id}
             data-k={seat.k}
-            layoutId={full ? `seat-${seat.id}` : undefined}
-            className="absolute"
-            style={{ left: x, top: y, x: '-50%', y: '-50%' }}
-            variants={preset.seat}
-            initial="hidden"
-            animate="show"
-            exit="exit"
+            className="absolute -translate-x-1/2 -translate-y-1/2"
+            style={{ left: x, top: y }}
           >
-            {winner?.seat.id === seat.id ? (
-              <m.span
-                aria-hidden="true"
-                data-winner-flash=""
-                className="pointer-events-none absolute -inset-[4px] rounded-[var(--r-3)]"
-                style={{ boxShadow: '0 0 0 3px var(--gold)' }}
-                initial={full ? { opacity: 0 } : false}
-                animate={full ? { opacity: [0, 1, 0.2, 1] } : { opacity: 1 }}
-                transition={full ? { duration: DUR.xxl, ease: 'linear' } : { duration: 0 }}
-              />
-            ) : null}
-            <Seat {...seat} layout="node" />
-          </m.li>
+            <m.div
+              layoutId={full ? `seat-${seat.id}` : undefined}
+              className="relative"
+              variants={preset.seat}
+              initial="hidden"
+              animate="show"
+              exit="exit"
+            >
+              {winner?.seat.id === seat.id ? (
+                <m.span
+                  aria-hidden="true"
+                  data-winner-flash=""
+                  className="pointer-events-none absolute -inset-[4px] rounded-[var(--r-3)]"
+                  style={{ boxShadow: '0 0 0 3px var(--gold)' }}
+                  initial={full ? { opacity: 0 } : false}
+                  animate={full ? { opacity: [0, 1, 0.2, 1] } : { opacity: 1 }}
+                  transition={full ? { duration: DUR.xxl, ease: 'linear' } : { duration: 0 }}
+                />
+              ) : null}
+              <Seat {...seat} layout="node" />
+            </m.div>
+          </li>
         ))}
       </ol>
 
