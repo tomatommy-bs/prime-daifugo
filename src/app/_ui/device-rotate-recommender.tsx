@@ -1,12 +1,15 @@
 'use client'
 
 import { useShouldRotate } from '@/hooks/use-should-rotate'
+import { Affix, Checkbox, CloseButton, Group, Paper, Stack, Text } from '@mantine/core'
 import { useSessionStorage } from '@mantine/hooks'
 import { IconDeviceMobileRotated } from '@tabler/icons-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useState } from 'react'
 
-const modal_ID = 'device_rotate_recommender'
-
+/**
+ * Dismissible top banner recommending landscape play on portrait phones (spec §7.6).
+ * Honours the per-tab sessionStorage key `shouldShowRotateRecommender`.
+ */
 const DeviceRotateRecommender: React.FC = () => {
   const { shouldRotate } = useShouldRotate({})
 
@@ -14,64 +17,70 @@ const DeviceRotateRecommender: React.FC = () => {
     key: 'shouldShowRotateRecommender',
     defaultValue: true,
   })
-  const checkboxRef = useRef<HTMLInputElement>(null)
+  const [dontShowAgain, setDontShowAgain] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
+
+  // Re-arm the banner whenever the device leaves the "should rotate" state.
+  useEffect(() => {
+    if (!shouldRotate) {
+      setDismissed(false)
+    }
+  }, [shouldRotate])
 
   const handleClose = () => {
-    if (checkboxRef.current?.checked) {
+    if (dontShowAgain) {
       setShouldShow(false)
     }
-    const dialog = document.getElementById(modal_ID) as HTMLDialogElement
-    dialog.close()
+    setDismissed(true)
   }
 
-  useEffect(() => {
-    const dialog = document.getElementById(modal_ID) as HTMLDialogElement
-    if (shouldShow && shouldRotate) {
-      dialog.showModal()
-    } else {
-      dialog.close()
-    }
-  }, [shouldShow, shouldRotate])
+  if (!(shouldShow && shouldRotate) || dismissed) {
+    return null
+  }
 
   return (
-    <dialog id={modal_ID} className="modal">
-      <div className="modal-box bg-white">
-        <p className="text-center text-2xl font-bold">
-          RECOMMENDS :
-          <br />
-          横向きにしてプレイ
-        </p>
-
-        <IconDeviceMobileRotated className="animate-rotate-90-repeat" size={'10rem'} />
-        <style>
-          {`
-            @keyframes rotate-90-repeat {
-              0% { transform: rotate(0deg); }
-              25% { transform: rotate(90deg); }
-              50% { transform: rotate(0deg); }
-              100% { transform: rotate(0deg); }
-            }
-            .animate-rotate-90-repeat {
-              animation: rotate-90-repeat 3.0s cubic-bezier(0.4,0,0.2,1) infinite;
-              display: block;
-              margin: 2rem auto;
-            }
-          `}
-        </style>
-
-        <div className="form-control">
-          <label className="label cursor-pointer justify-end space-x-2">
-            <input ref={checkboxRef} type="checkbox" className="checkbox" />
-            <span className="label-text">再度ページを開くまで表示しない</span>
-          </label>
-        </div>
-        <form method="dialog" className="text-right">
-          <button type="button" onClick={handleClose}>
-            close
-          </button>
-        </form>
-      </div>
-    </dialog>
+    <Affix
+      position={{ top: 'var(--sp-3)', left: 'var(--sp-3)', right: 'var(--sp-3)' }}
+      zIndex={150}
+    >
+      <Paper
+        role="dialog"
+        aria-label="画面の向き"
+        withBorder={true}
+        radius="lg"
+        p="md"
+        mx="auto"
+        maw={377}
+        style={{
+          background: 'var(--surface-raised)',
+          color: 'var(--ink)',
+          boxShadow: 'var(--shadow-2)',
+          borderLeft: '3px solid var(--mod)',
+        }}
+      >
+        <Group align="flex-start" wrap="nowrap" gap="md">
+          <IconDeviceMobileRotated
+            aria-hidden={true}
+            stroke={1.5}
+            size={32}
+            style={{ color: 'var(--mod)', flexShrink: 0 }}
+          />
+          <Stack gap="xs" style={{ flex: 1 }}>
+            <Text fw={700}>横向きにしてプレイ</Text>
+            <Text size="sm" c="var(--ink-muted)">
+              スマートフォンは横向きのほうが手札と場を広く表示できます。
+            </Text>
+            <Checkbox
+              size="sm"
+              label="再度ページを開くまで表示しない"
+              checked={dontShowAgain}
+              onChange={(e) => setDontShowAgain(e.currentTarget.checked)}
+            />
+          </Stack>
+          <CloseButton aria-label="閉じる" size="lg" onClick={handleClose} />
+        </Group>
+      </Paper>
+    </Affix>
   )
 }
 
