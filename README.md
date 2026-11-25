@@ -107,7 +107,8 @@ https://primeqk.themedia.jp/pages/4500251/rules
 - **Biome**: リンティング・フォーマッティング
 - **Vitest + React Testing Library（jsdom）**: ユニットテスト（`unit` プロジェクト）
 - **Storybook 8 + Vitest ブラウザモード（Playwright / Chromium）**: ストーリーの描画・操作テスト（`storybook` プロジェクト）
-- **Playwright**: デザインギャラリーのスクリーンショット取得（`scripts/screens.mjs`, `scripts/flights.mjs`）
+- **Playwright**: 複数ブラウザでの E2E（`e2e/`）と、デザインギャラリーのスクリーンショット取得（`scripts/screens.mjs`, `scripts/flights.mjs`）
+- **wrangler / workerd**: Worker のローカル実行と結合テスト（`worker/test/integration/`）
 
 ## デザインシステム（`src/design`）
 
@@ -129,7 +130,7 @@ UI は「ふるい（Sieve Table）」という数学モチーフのデザイン
 
 ### デザインギャラリー
 
-`/labo/gallery?scene=<scene>&scheme=light|dark` で、サーバーに接続せず固定データで各シーンを表示できます。シーンは `home-parts`, `waiting`, `my-turn`, `opp-turn`, `factor`, `not-prime`, `cut57`, `flow`, `game-set`, `observer`, `connecting`, `flights` です。
+`/labo/gallery?scene=<scene>&scheme=light|dark` で、サーバーに接続せず固定データで各シーンを表示できます。シーンは `home-parts`, `waiting`, `my-turn`, `opp-turn`, `factor`, `not-prime`, `cut57`, `flow`, `game-set`, `observer`, `connecting`, `reconnecting-seat`（相手が再接続中の席）, `superseded`（別のタブで開かれた状態）, `flights` です。
 
 ## ディレクトリ構造と役割
 
