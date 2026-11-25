@@ -98,7 +98,7 @@ export default defineConfig({
             NEXT_PUBLIC_REALTIME_URL: RT_URL,
             NEXT_TELEMETRY_DISABLED: '1',
             // keep clear of a dev server already using `.next` in this checkout
-            NEXT_DIST_DIR: '.next-e2e',
+            NEXT_DIST_DIR: '.next-alt',
           },
           stdout: 'ignore',
           stderr: 'pipe',

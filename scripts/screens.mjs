@@ -45,6 +45,8 @@ const ALL_SCENES = [
   'game-set',
   'observer',
   'connecting',
+  'reconnecting-seat',
+  'superseded',
 ]
 const SCENES = process.env.SCENES
   ? process.env.SCENES.split(',').filter((s) => ALL_SCENES.includes(s))
@@ -97,7 +99,12 @@ async function ensureServer() {
   const child = spawn('npx', ['next', 'dev', '-p', String(PORT)], {
     cwd: ROOT,
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' },
+    env: {
+      ...process.env,
+      NEXT_TELEMETRY_DISABLED: '1',
+      // a separate build dir: a dev server already running in this checkout owns `.next`
+      NEXT_DIST_DIR: process.env.NEXT_DIST_DIR ?? '.next-alt',
+    },
     detached: process.platform !== 'win32',
   })
   let log = ''
