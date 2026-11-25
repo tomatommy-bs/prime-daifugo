@@ -7,7 +7,9 @@
  * - `closed` / `error`: a red `Alert role="alert"` 接続が切れました with [再接続].
  * - with `reason` (a terminal close, rebuild spec §9.4), `closed` / `error` instead show:
  *   - `superseded`: 別のタブで開かれています with [このタブで再開] (calls `onReconnect`);
- *   - `room-gone`: この部屋は閉じられました with a link home (`/`).
+ *   - `room-gone`: この部屋は閉じられました with a link home (`/`);
+ *   - `left`: a neutral 退出しました card (no alert): the player chose to leave and the page is
+ *     on its way home, so the red disconnect copy must not flash up.
  *   Any other reason keeps the default copy.
  * A scrim veils the board and the status cards are opaque, so the board's own captions and
  * empty-field placeholder never show through or poke out beside the card.
@@ -39,6 +41,7 @@ export type ConnectionOverlayProps = {
 export const SUPERSEDED_TITLE = '別のタブで開かれています'
 export const RESUME_HERE_LABEL = 'このタブで再開'
 export const ROOM_GONE_TITLE = 'この部屋は閉じられました'
+export const LEFT_TITLE = '退出しました'
 
 const ALERT_CLASS =
   'pointer-events-auto w-full max-w-[377px] border border-danger/40 shadow-[var(--shadow-2)]'
@@ -52,7 +55,10 @@ export function ConnectionOverlay({
   const preset = useMotionPreset()
   const blocked = state !== 'open'
   const closed = state === 'closed' || state === 'error'
-  const terminal = closed && (reason === 'superseded' || reason === 'room-gone') ? reason : null
+  const terminal =
+    closed && (reason === 'superseded' || reason === 'room-gone' || reason === 'left')
+      ? reason
+      : null
   return (
     <div
       className="relative h-full min-h-0 w-full"
@@ -90,6 +96,15 @@ export function ConnectionOverlay({
               <output className="pointer-events-auto flex items-center gap-fib-3 rounded-[var(--r-3)] border border-line bg-surface px-fib-4 py-fib-3 text-ink-muted shadow-[var(--shadow-1)]">
                 <ModRing n={12} size={32} spin={true} filled={1} />
                 <span className="text-[length:var(--fs-0)]">次のイベントを待っています…</span>
+              </output>
+            ) : null}
+            {terminal === 'left' ? (
+              <output
+                className="pointer-events-auto flex items-center gap-fib-3 rounded-[var(--r-3)] border border-line bg-surface px-fib-4 py-fib-3 text-ink-muted shadow-[var(--shadow-1)]"
+                data-close-reason="left"
+              >
+                <IconDoorExit size="1.25em" stroke={1.5} />
+                <span className="text-[length:var(--fs-0)]">{LEFT_TITLE}</span>
               </output>
             ) : null}
             {terminal === 'superseded' ? (

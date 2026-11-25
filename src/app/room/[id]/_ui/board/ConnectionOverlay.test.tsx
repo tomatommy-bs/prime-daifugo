@@ -86,7 +86,19 @@ describe('ConnectionOverlay', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('別のタブで開かれています')
   })
 
-  it.each([null, undefined, 'left', 'room-full', 'bad-name', 'upgrade-required'] as const)(
+  it('left: a neutral 退出しました, never the red disconnect alert', () => {
+    renderWithProviders(
+      <ConnectionOverlay state="closed" reason="left">
+        <p>board</p>
+      </ConnectionOverlay>,
+    )
+    expect(screen.getByText('退出しました')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByText('接続が切れました')).toBeNull()
+    expect(screen.queryByRole('button', { name: '再接続' })).toBeNull()
+  })
+
+  it.each([null, undefined, 'room-full', 'bad-name', 'upgrade-required'] as const)(
     'reason %s keeps the default closed copy',
     (reason) => {
       renderWithProviders(
