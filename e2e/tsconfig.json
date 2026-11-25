@@ -1,0 +1,18 @@
+{
+  // Typecheck for the Playwright suite (`npx tsc --noEmit -p e2e`). The root tsconfig excludes
+  // e2e/ so Next's program stays free of @playwright/test.
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom"],
+    "types": ["node"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["*.ts"]
+}
