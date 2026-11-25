@@ -15,17 +15,12 @@
  *   `reducedMotion: 'reduce'` for deterministic frames, into
  *   `docs/design/screens/<scene>-<w>x<h>-<scheme>.png` (gitignored). `/`, `/login` and
  *   `/labo/calc` are captured too, as `home-…`, `login-…` and `calc-…`.
- * - Exits non-zero on page errors or console errors. WebSocket errors towards the
- *   PartyKit host (:1999) are expected without `partykit dev` and are ignored.
+ * - Exits non-zero on page errors or console errors. Connection errors towards the local
+ *   realtime Worker (:8787, e.g. the home page lobby socket) are expected when only
+ *   `next dev` runs and are ignored; any other console error still fails the run.
  *
- * Optional full flow (not in CI, needs PartyKit):
- *   1. `npm run dev:pk` (partykit dev on :1999) and `npm run dev` (next on :3000).
- *   2. In Playwright, open two browser contexts, each with a `name` cookie (3–10 chars,
- *      e.g. `alice` / `bob`) for localhost so the middleware lets them into /room.
- *   3. Context A visits `/room/new` and follows the redirect to `/room/<id>`; context B
- *      opens the same URL.
- *   4. Both click 準備OK, A clicks ゲーム開始, then screenshot both boards; play a card
- *      from A's hand (click a hand option, then 出す) to see the director's events.
+ * The full two-player flow against the real backend is the Playwright E2E suite
+ * (`E2E=1 npm run test:e2e`, see e2e/), not this script.
  */
 import { spawn } from 'node:child_process'
 import { mkdir } from 'node:fs/promises'
@@ -67,13 +62,14 @@ const STATIC_PAGES = [
 ]
 
 /**
- * WebSocket noise towards PartyKit (:1999) is expected without `partykit dev`, and the
- * Vercel Analytics script only exists on Vercel (404 under `next start`).
+ * Connection noise towards the realtime Worker (:8787) is expected without
+ * `npm run dev:server` (the home page lobby socket fails and its counters stay at "—"), and
+ * the Vercel Analytics script only exists on Vercel (404 under `next start`).
  */
 const IGNORED = [
-  /:1999\b/,
+  /:8787\b/,
+  /\bwss?:\/\/[^\s'"]*\/lobby\b/,
   /WebSocket connection to .* failed/i,
-  /\bws:\/\/.*1999/,
   /\/_vercel\/insights\//,
 ]
 const ignored = (text) => IGNORED.some((re) => re.test(text))

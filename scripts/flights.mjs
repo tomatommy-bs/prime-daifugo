@@ -134,7 +134,7 @@ async function captureStep(browser, step, viewport, problems) {
   const page = await context.newPage()
   page.on('pageerror', (err) => problems.push(`${step}: pageerror ${err.message}`))
   page.on('console', (msg) => {
-    if (msg.type() === 'error' && !/1999|WebSocket|_vercel/.test(msg.text())) {
+    if (msg.type() === 'error' && !/:8787\b|WebSocket|\/lobby\b|_vercel/.test(msg.text())) {
       problems.push(`${step}: console.error ${msg.text().split('\n')[0]}`)
     }
   })
