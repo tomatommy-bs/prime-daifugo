@@ -12,10 +12,9 @@ import { useReducedMotionSafe } from '@/design/motion'
 import { useBoxSize } from '@/design/use-box-size'
 import { useLayoutMode } from '@/design/use-layout-mode'
 import type { CardId } from '@/game-card/src'
-import type { SubmitCardSet } from '@/interface/client-to-server'
 import type { PrimeDaifugoSetupData } from '@/interface/common'
 import type * as serverToClient from '@/interface/server-to-client'
-import { concatCardNumbers, isValidFactCardIds } from '@/utils/play-card'
+import { concatCardNumbers } from '@/utils/play-card'
 import { useLocalStorage, useSetState } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { LayoutGroup } from 'framer-motion'
@@ -27,11 +26,16 @@ import { ClientMessenger } from '../client-messenger'
 import { useMessageHandler, useMyField } from '../hooks'
 import { RoomChromeContext, SHOW_VALUES_KEY } from './RoomHeader'
 import * as B from './board'
-import { useBoardShortcuts } from './board/ActionBar'
-import { BoardTopBar } from './board/BoardLayout'
+import {
+  ACTION_ORIENTATION,
+  connectionStateOf,
+  drawDisabledReason,
+  isObserver,
+  validateSubmitCardSet,
+  winnerIdOf,
+} from './board/board-state'
 import * as T from './board/classify-transition'
 import { ruleDiff } from './board/rule-diff'
-import { buildSeats, playerSeats } from './board/seat-model'
 import { useBoardDirector } from './board/use-board-director'
 import NotifyMessageContent, * as Notice from './notification-message'
 import { WaitingRoom } from './waiting-room'
@@ -44,13 +48,9 @@ type Props = {
 
 export const TRAY_WIPE_MESSAGE = '場が更新されたので選択を戻しました'
 const TRAY_WIPE_THROTTLE_MS = 5000
+/** For toasts whose text another live region (LiveRegion, the tray) already announces. */
+export const SILENT_TOAST_ROLE = 'none'
 const CEREMONY = new Set<B.BoardEvent['type']>(['submit-ok', 'submit-fail', 'cut57'])
-const ACTION_ORIENTATION = {
-  compact: 'rail',
-  regular: 'rail',
-  portrait: 'bottom',
-  wide: 'row',
-} as const satisfies Record<B.LayoutMode, B.ActionBarProps['orientation']>
 
 const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }) => {
   const [rule, setRule] = useSetState<PrimeDaifugoSetupData>({
@@ -74,6 +74,7 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
   const [live, setLive] = useState<string | null>(null)
   const [, rerender] = useState(0) // socket open / close
   const wipedAt = useRef(0)
+  const errored = useRef(false) // the last connection attempt failed (until the next open)
   const flights = useRef<B.FlightLayerHandle>(null)
   const mode = useLayoutMode()
   const table = useBoxSize()
@@ -92,10 +93,12 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
   /**
    * Board events (draw, pass, plays, the winner) are shown in the board itself and written
    * to the proof log; only errors (red notices, e.g. a failed submit) also toast (§9.2 #29).
+   * The LiveRegion is the one screen-reader channel for board events, so these toasts are
+   * `role="none"` (Mantine's default `alert` would read the same failure a second time).
    */
   const notify = (message: ReactNode, color?: string) => {
     if (color === 'red') {
-      notifications.show({ message, color })
+      notifications.show({ message, color, role: SILENT_TOAST_ROLE })
     }
     props.onLogNotification?.(message)
   }
@@ -149,13 +152,17 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
       if (myPresence?.status === 'not-ready') {
         return
       }
+      // No helper toast for my own submit, nor at game end: the server sends game-end before
+      // the winning submit, so the winner's tray still holds the cards they just played.
       const ownSubmit = msg.action === 'submit' && params.commander.id === ws.id
+      const quiet = ownSubmit || msg.action === 'game-end'
       const trayFull = submitCardIds.length > 0 || factCardIds.length > 0
-      if (trayFull && !ownSubmit && Date.now() - wipedAt.current >= TRAY_WIPE_THROTTLE_MS) {
+      if (trayFull && !quiet && Date.now() - wipedAt.current >= TRAY_WIPE_THROTTLE_MS) {
         wipedAt.current = Date.now()
         notifications.show({ message: TRAY_WIPE_MESSAGE })
       }
-      const hand = params.gameState?.players?.[ws.id]?.hand
+      // a late joiner (ready, but dealt no hand) has no entry in players: an empty hand
+      const hand = params.gameState?.players?.[ws.id]?.hand ?? []
       my.setHandCardIds(hand)
     },
     onRoomStatus: ({ status }) => {
@@ -198,11 +205,15 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
     room: id,
     onMessage: (e) => onMessage(e.data),
     onOpen: () => {
+      errored.current = false
       ClientMessenger.sendName({ ws, name: Cookies.get('name') ?? 'unknown' })
       rerender((n) => n + 1)
     },
     onClose: () => rerender((n) => n + 1),
-    onError: () => rerender((n) => n + 1),
+    onError: () => {
+      errored.current = true
+      rerender((n) => n + 1)
+    },
   })
 
   const myPresence = presence.find((p) => p.id === ws?.id)
@@ -214,19 +225,20 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
 
   const gs = gameServerState?.gameState
   const fieldTop = _.nth(gs?.field, -1)
+  // moves only while the round is live: under GAME SET the server has already moved
+  // currentPlayer on, and a D / P there would run a move on the finished game
+  const playing = roomStatus === 'playing'
   const isMyTurn = gameServerState?.ctx?.currentPlayer === ws.id
+  const canMove = isMyTurn && playing
   const deckCount = gs?.deck.length ?? 0
-  let drawReason: B.DrawDisabledReason | null = null
-  if (!isMyTurn) {
-    drawReason = 'not-your-turn'
-  } else if (gs?.players[ws.id]?.drawRight === false) {
-    drawReason = 'drawn'
-  } else if (deckCount === 0) {
-    drawReason = 'empty'
-  }
-  const canDraw = drawReason === null && gs !== undefined
+  const drawReason = drawDisabledReason({
+    isMyTurn,
+    drawRight: gs?.players[ws.id]?.drawRight,
+    deckCount,
+  })
+  const canDraw = drawReason === null && gs !== undefined && playing
   const current = director.current
-  const seats = buildSeats({
+  const seats = B.buildSeats({
     gameState: gs ?? null,
     ctx: gameServerState?.ctx ?? null,
     presence,
@@ -235,11 +247,10 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
     leftTime,
     penalties: current?.type === 'submit-fail' ? memo.penalties : {},
   })
-  const players = playerSeats(seats)
+  const players = B.playerSeats(seats)
   const n = gs ? players.length : presence.length
-  const observer =
-    myPresence?.status === 'not-ready' || (gs !== undefined && !(ws.id in gs.players))
-  const winnerId = gs && Object.keys(gs.players).find((p) => gs.players[p].hand.length === 0)
+  const observer = isObserver(myPresence?.status, gs?.players, ws.id)
+  const winnerId = winnerIdOf(gs?.players)
 
   useEffect(() => chrome.onBoardInfo?.({ status: roomStatus, n }), [chrome, roomStatus, n])
   // biome-ignore lint/correctness/useExhaustiveDependencies: a tray change clears the message
@@ -258,14 +269,15 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
       factor: factCardIds,
     })
     if (errMessage !== null) {
-      notifications.show({ message: errMessage, color: 'red' })
+      // SubmitTray's polite error region reads the message; the toast stays silent
+      notifications.show({ message: errMessage, color: 'red', role: SILENT_TOAST_ROLE })
       setTray((t) => ({ error: errMessage, shakeKey: t.shakeKey + 1 }))
       return
     }
     ClientMessenger.submit({ ws, submitCardSet: { submit: submitCardIds, factor: factCardIds } })
   }
   const addOperator = (op: '*' | '^') => factorMode && my.selectHandCardIdAsFact(op)
-  useBoardShortcuts(
+  B.useBoardShortcuts(
     {
       x: () => addOperator('*'),
       '*': () => addOperator('*'),
@@ -281,17 +293,15 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
       // Esc skips a ceremony first, then resets the tray
       Escape: () => (current && CEREMONY.has(current.type) ? director.done() : my.reset()),
     },
-    roomStatus === 'playing',
+    playing,
   )
 
-  let conn: B.ConnectionState = 'open'
-  if (ws.readyState === ws.CONNECTING) {
-    conn = 'connecting'
-  } else if (ws.readyState !== ws.OPEN) {
-    conn = 'closed'
-  } else if (roomStatus === null || (roomStatus !== 'waiting' && !gameServerState)) {
-    conn = 'waiting-sync'
-  }
+  const conn = connectionStateOf({
+    readyState: ws.readyState,
+    roomStatus,
+    hasGameState: gameServerState !== null,
+    errored: errored.current,
+  })
   const submitter = current && 'playerId' in current ? nameOf(current.playerId) : ''
   const fieldStack = (
     <B.FieldStack
@@ -340,7 +350,7 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
               mode={mode}
               factorOpen={factorMode}
               top={
-                <BoardTopBar
+                <B.BoardTopBar
                   mode={mode}
                   seats={seats}
                   n={n}
@@ -382,6 +392,7 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
                     fieldTop={fieldTop ?? null}
                     onRemove={my.removeSubmitCardId}
                     onReset={my.reset}
+                    hasFactor={factorMode || factCardIds.length > 0}
                     shakeKey={tray.shakeKey}
                     errorMessage={tray.error}
                   />
@@ -400,10 +411,12 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
                   orientation={ACTION_ORIENTATION[mode]}
                   canDraw={canDraw}
                   drawReason={drawReason}
-                  canPass={isMyTurn}
-                  canSubmit={submitCardIds.length > 0 && isMyTurn}
+                  canPass={canMove}
+                  canSubmit={submitCardIds.length > 0 && canMove}
+                  shortcuts={playing}
                   factorMode={factorMode}
-                  factorDisabled={submitCardIds.length === 0}
+                  // leaving factor mode stays possible even after the tray was emptied
+                  factorDisabled={submitCardIds.length === 0 && !factorMode}
                   isMyTurn={isMyTurn}
                   onDraw={() => ClientMessenger.draw({ ws })}
                   onPass={() => ClientMessenger.pass({ ws })}
@@ -451,29 +464,5 @@ const ObserverNote = () => (
     次のラウンドから参加できます
   </p>
 )
-
-const validateSubmitCardSet = (
-  fieldTop: CardId[] | undefined,
-  submitCardSet: SubmitCardSet,
-): string | null => {
-  const asFactMode = submitCardSet.factor.length > 0
-
-  if (fieldTop !== undefined) {
-    if (concatCardNumbers(fieldTop) > concatCardNumbers(submitCardSet.submit)) {
-      return '場のカードの数より大きくないといけません'
-    }
-    if (submitCardSet.submit.length !== fieldTop.length) {
-      return '出すカードの枚数が合っていません'
-    }
-  }
-
-  if (!asFactMode) {
-    return null
-  }
-  if (fieldTop === undefined && !isValidFactCardIds(submitCardSet.factor)) {
-    return '素因数分解として成立していません'
-  }
-  return null
-}
 
 export { GameBoard }

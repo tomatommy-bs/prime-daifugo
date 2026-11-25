@@ -21,9 +21,9 @@ describe('ProofLog', () => {
     expect(items[2]).toHaveAttribute('data-kind', 'system')
   })
 
-  it('is a polite live region', () => {
+  it('is not a live region (the board LiveRegion announces each event once)', () => {
     renderWithProviders(<ProofLog entries={entries} variant="sidebar" />)
-    expect(screen.getByRole('list', { name: '証明ログ' })).toHaveAttribute('aria-live', 'polite')
+    expect(screen.getByRole('list', { name: '証明ログ' })).toHaveAttribute('aria-live', 'off')
   })
 
   it('shows margin glyphs per kind', () => {

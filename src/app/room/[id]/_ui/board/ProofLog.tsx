@@ -42,9 +42,10 @@ function Lines({ entries }: { entries: LogEntry[] }) {
   const motion = useMotionMode()
   const total = entries.length
   return (
+    // not a live region: every line repeats something the board's LiveRegion (or a toast)
+    // already announced, so a live log would read each event twice
     <ol
-      aria-live="polite"
-      aria-relevant="additions"
+      aria-live="off"
       aria-label="証明ログ"
       data-motion={motion}
       className="m-0 flex list-none flex-col p-0"

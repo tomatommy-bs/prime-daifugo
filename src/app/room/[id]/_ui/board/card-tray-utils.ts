@@ -8,6 +8,7 @@
 import { WORLD_CONFIG } from '@/constants/config'
 import type { CardId } from '@/game-card/src'
 import { concatCardNumbers } from '@/utils/play-card'
+import { beatsField } from './board-state'
 
 export type TrayChecks = {
   /** concatenated value of the tray, `null` when it is empty */
@@ -30,7 +31,8 @@ export function trayChecks(cards: CardId[], fieldTop: CardId[] | null): TrayChec
   return {
     value,
     countOk: free || cards.length === fieldTop.length,
-    greaterOk: free || value > concatCardNumbers(fieldTop),
+    // the same predicate the submit gate uses, so the hint and the gate agree on ties
+    greaterOk: free || beatsField(cards, fieldTop),
     isGrothendieck: value === WORLD_CONFIG.GROTHENDIECK_PRIME,
   }
 }

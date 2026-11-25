@@ -346,6 +346,173 @@ describe('GameBoard (redesign)', () => {
     expect(toastMessages().filter((m) => m === TRAY_WIPE_MESSAGE)).toHaveLength(1)
   })
 
+  it('the helper toast comes back once the 5 s throttle has passed', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
+    renderWithProviders(<GameBoard id="room-1" />)
+    startPlaying({ currentPlayer: 'p2' })
+    const otherEvent = () =>
+      emit(
+        serverMsg.draw({
+          gameState: makeGameState(),
+          ctx: makeCtx({ playOrder: ['p1', 'p2'], currentPlayer: 'p2' }),
+          commander: { id: 'p2', name: 'bob' },
+        }),
+      )
+    const wipes = () => toastMessages().filter((m) => m === TRAY_WIPE_MESSAGE).length
+    fireEvent.click(handOptions()[0])
+    otherEvent()
+    expect(wipes()).toBe(1)
+    vi.setSystemTime(new Date('2026-01-01T00:00:04.900Z'))
+    fireEvent.click(handOptions()[0])
+    otherEvent()
+    expect(wipes()).toBe(1)
+    vi.setSystemTime(new Date('2026-01-01T00:00:05.100Z'))
+    fireEvent.click(handOptions()[0])
+    otherEvent()
+    expect(wipes()).toBe(2)
+  })
+
+  it('the winner gets no tray-wipe toast when game-end arrives before their submit', () => {
+    renderWithProviders(<GameBoard id="room-1" />)
+    startPlaying({ currentPlayer: 'p1', hands: { p1: ['KH'], p2: ['2S', '5C'] } })
+    fireEvent.click(handOptions()[0]) // the winning card sits in my tray
+    const alice = { id: 'p1', name: 'alice' }
+    const finalState = makeGameState({
+      players: { p1: { hand: [] }, p2: { hand: ['2S', '5C'] as never } },
+      field: [['KH']],
+      deckTopPlayer: 'p1',
+    })
+    const ctx = makeCtx({ playOrder: ['p1', 'p2'], currentPlayer: 'p2' })
+    emit(serverMsg.gameEnd({ winner: 'alice', gameState: finalState, ctx, commander: alice }))
+    expect(toastMessages()).not.toContain(TRAY_WIPE_MESSAGE)
+  })
+
+  describe('GAME SET (waitingNextRound)', () => {
+    it('D / P / Enter send nothing while the round is over, even on "my turn"', () => {
+      renderWithProviders(<GameBoard id="room-1" />)
+      startPlaying({ currentPlayer: 'p2' })
+      const bob = { id: 'p2', name: 'bob' }
+      // after the winning submit the server has already moved currentPlayer to me
+      const finalState = makeGameState({
+        players: { p1: { hand: ['AS', '3H'] as never }, p2: { hand: [] } },
+        field: [['KH']],
+      })
+      const ctx = makeCtx({ playOrder: ['p1', 'p2'], currentPlayer: 'p1' })
+      emit(serverMsg.gameEnd({ winner: 'bob', gameState: finalState, ctx, commander: bob }))
+      emit(serverMsg.roomStatus('waitingNextRound'))
+      press('d')
+      press('p')
+      fireEvent.click(handOptions()[0])
+      press('Enter', document.body)
+      expect(gameCount('draw') + gameCount('pass') + gameCount('submit')).toBe(0)
+      expect(screen.getByRole('button', { name: /パス|pass/i })).toBeDisabled()
+    })
+  })
+
+  describe('factor-mode shortcuts', () => {
+    const enterFactorMode = () => {
+      renderWithProviders(<GameBoard id="room-1" />)
+      startPlaying({ currentPlayer: 'p1', hands: { p1: ['QS', '2H', '3C', '7D'], p2: ['5C'] } })
+      fireEvent.click(handOptions()[0]) // 12 into the tray
+      press('f')
+      const panel = () => screen.getByRole('listbox', { name: /因数/ })
+      return { panel }
+    }
+
+    it('x / * add ×, ^ adds a power, Backspace removes the last factor token', () => {
+      const { panel } = enterFactorMode()
+      fireEvent.click(handOptions()[0]) // 2
+      press('x')
+      fireEvent.click(handOptions()[0]) // 3
+      press('*')
+      press('^')
+      const tokens = () => within(panel()).queryAllByRole('option').length
+      expect(tokens()).toBe(5)
+      press('Backspace')
+      expect(tokens()).toBe(4)
+      // the hand cards used as factors are not back in the hand: only 7 remains there
+      expect(handOptions()).toHaveLength(1)
+    })
+
+    it('x and ^ do nothing outside factor mode', () => {
+      renderWithProviders(<GameBoard id="room-1" />)
+      startPlaying({ currentPlayer: 'p1' })
+      fireEvent.click(handOptions()[0])
+      press('x')
+      press('^')
+      expect(screen.queryByRole('listbox', { name: /因数/ })).toBeNull()
+    })
+  })
+
+  it('a count mismatch is blocked locally with its own message', () => {
+    renderWithProviders(<GameBoard id="room-1" />)
+    startPlaying({ currentPlayer: 'p1', hands: { p1: ['AS', '3H', 'JD'], p2: ['2S'] } })
+    emit(
+      serverMsg.pass({
+        gameState: makeGameState({
+          players: { p1: { hand: ['AS', '3H', 'JD'] as never }, p2: { hand: ['2S'] as never } },
+          field: [['2C']],
+        }),
+        ctx: makeCtx({ playOrder: ['p1', 'p2'], currentPlayer: 'p1' }),
+        commander: { id: 'p2', name: 'bob' },
+      }),
+    )
+    fireEvent.click(handOptions()[0]) // A
+    fireEvent.click(handOptions()[0]) // 3 → 13 > 2, but two cards on one
+    press('Enter', document.body)
+    expect(gameCount('submit')).toBe(0)
+    expect(notificationsShow).toHaveBeenCalledWith(
+      expect.objectContaining({ message: '出すカードの枚数が合っていません', role: 'none' }),
+    )
+  })
+
+  it('引く explains ドロー済み after I have drawn', () => {
+    renderWithProviders(<GameBoard id="room-1" />)
+    startPlaying({ currentPlayer: 'p1' })
+    emit(
+      serverMsg.draw({
+        gameState: makeGameState({
+          players: {
+            p1: { hand: ['AS', '3H', 'JD', '4C'] as never, drawRight: false } as never,
+            p2: { hand: ['2S'] as never },
+          },
+        }),
+        ctx: makeCtx({ playOrder: ['p1', 'p2'], currentPlayer: 'p1' }),
+        commander: { id: 'p1', name: 'alice' },
+      }),
+    )
+    const draw = screen.getByRole('button', { name: /引く/ })
+    expect(draw).toBeDisabled()
+    expect(draw).toHaveAccessibleDescription('ドロー済み')
+  })
+
+  it('a late joiner (ready, but not among the players) watches without a hand', () => {
+    renderWithProviders(<GameBoard id="room-1" />)
+    partySocketControl.last()
+    emit(
+      serverMsg.presence(
+        makePresence([
+          { id: 'p1', name: 'alice', status: 'ready' },
+          { id: 'p2', name: 'bob' },
+          { id: 'p3', name: 'carol' },
+        ]),
+      ),
+    )
+    emit(serverMsg.roomStatus('playing'))
+    emit(
+      serverMsg.gameStart({
+        gameState: makeGameState({
+          players: { p2: { hand: ['2S'] as never }, p3: { hand: ['4S'] as never } },
+        }),
+        ctx: makeCtx({ playOrder: ['p2', 'p3'], currentPlayer: 'p2' }),
+        commander: { id: 'p2', name: 'bob' },
+      }),
+    )
+    expect(handOptions()).toHaveLength(0)
+    expect(screen.getByText('次のラウンドから参加できます')).toBeInTheDocument()
+  })
+
   it('board events go to the proof log; only failed submits also toast (§9.2 #29)', () => {
     const logs: ReactNode[] = []
     renderWithProviders(<GameBoard id="room-1" onLogNotification={(m) => logs.push(m)} />)
