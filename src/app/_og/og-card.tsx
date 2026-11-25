@@ -94,6 +94,10 @@ function SieveBoard() {
   )
 }
 
+/**
+ * The card. Its fonts are subsets holding only the characters drawn here: when the copy
+ * changes, refetch them (fonts/README.md); `fonts.test.tsx` fails on any missing glyph.
+ */
 export function OgCard() {
   return (
     <div
