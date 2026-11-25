@@ -49,7 +49,7 @@ jobs:
       - name: Lint and format check (Biome)
         run: npx biome ci src worker e2e
 
-      - name: Typecheck (app and worker)
+      - name: Typecheck (app, worker and e2e)
         run: npm run typecheck
 
       - name: Unit tests

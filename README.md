@@ -206,9 +206,9 @@ npm run dev:web        # Next.js のみ
 npm run dev:server     # Worker のみ（wrangler dev、オフラインで動作）
 
 # コード品質管理
-npm run biome          # リンティング・フォーマット（自動修正あり、src のみ）
+npm run biome          # リンティング・フォーマット（自動修正あり、src・worker・e2e）
 npm run biome:ci       # CI と同じチェック（biome ci src worker e2e、修正なし）
-npm run typecheck      # 型チェック（アプリと Worker）
+npm run typecheck      # 型チェック（アプリ・Worker・E2E）
 
 # テスト
 npm test               # ユニットテスト（Vitest `unit` プロジェクト。ネットワーク・ブラウザ不要）

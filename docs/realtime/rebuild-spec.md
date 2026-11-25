@@ -741,7 +741,7 @@ The pure board modules switch to these types (client R2 option a):
 The `test` job (no secrets) runs:
 - `npm ci`
 - `npx biome ci src worker e2e`
-- `npm run typecheck` (`tsc --noEmit -p . && tsc --noEmit -p worker`)
+- `npm run typecheck` (`tsc --noEmit -p . && tsc --noEmit -p worker && tsc --noEmit -p e2e`)
 - `npm test`
 - `npm run build` (committed default URL)
 - `npm run build-storybook`

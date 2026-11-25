@@ -1,7 +1,7 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "files": {
-    "include": ["src/**", "tests/**", "worker/**", "e2e/**"],
+    "include": ["src/**", "worker/**", "e2e/**"],
     "ignore": [".wrangler/**", "dist-worker/**", "worker/.wrangler/**"],
   },
   "organizeImports": {
@@ -9,7 +9,6 @@
   },
   "linter": {
     "enabled": true,
-    "ignore": ["tests/**"],
     "rules": {
       "all": true,
       "suspicious": {
