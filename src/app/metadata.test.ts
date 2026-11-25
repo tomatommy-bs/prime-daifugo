@@ -49,8 +49,8 @@ describe('route metadata', () => {
       locale: 'ja_JP',
       siteName: '素数大富豪',
     })
-    // tests do not run as the Vercel production deployment
-    expect(root.robots).toMatchObject(PRIVATE)
+    // indexability is decided per request (middleware, robots.txt), not baked into pages
+    expect(root.robots).toBeUndefined()
   })
 
   it('makes the home page canonical with the full site title', () => {

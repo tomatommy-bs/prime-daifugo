@@ -4,15 +4,7 @@ import './globals.css'
 import { geistMono, geistSans } from '@/design/fonts'
 import { MotionProvider } from '@/design/motion-provider'
 import { ThemeProvider } from '@/design/theme-provider'
-import {
-  NOINDEX,
-  SITE_DESCRIPTION,
-  SITE_KEYWORDS,
-  SITE_NAME,
-  SITE_TITLE,
-  SITE_URL,
-  isProductionDeployment,
-} from '@/lib/site'
+import { SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_TITLE, SITE_URL } from '@/lib/site'
 import { ColorSchemeScript, mantineHtmlProps } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
 import type { ReactNode } from 'react'
@@ -29,8 +21,9 @@ export const metadata: Metadata = {
   // Phone numbers and addresses are never auto-linked: long digit strings here are game numbers.
   formatDetection: { telephone: false, email: false, address: false },
   appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: 'default' },
-  // Preview and local builds stay out of search results; production pages are indexable.
-  robots: isProductionDeployment() ? { index: true, follow: true } : NOINDEX,
+  // No site-wide robots meta: it would be baked into prerendered pages at build time. Previews
+  // and local servers are kept out of search results per request instead (`X-Robots-Tag` in
+  // the middleware, `Disallow: /` in robots.txt); private pages set their own `noindex`.
   openGraph: {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,

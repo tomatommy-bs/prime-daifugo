@@ -6,6 +6,7 @@ import {
   absoluteUrl,
   isProductionDeployment,
   isProductionHost,
+  isVercelProduction,
   pageMetadata,
   privatePageMetadata,
 } from './site'
@@ -35,6 +36,13 @@ describe('site', () => {
     expect(isProductionDeployment({ VERCEL_ENV: 'production' })).toBe(true)
     expect(isProductionDeployment({ VERCEL_ENV: 'preview' })).toBe(false)
     expect(isProductionDeployment({})).toBe(false)
+  })
+
+  it('redirects aliases only on the production deployment running on Vercel', () => {
+    expect(isVercelProduction({ VERCEL: '1', VERCEL_ENV: 'production' })).toBe(true)
+    expect(isVercelProduction({ VERCEL: '1', VERCEL_ENV: 'preview' })).toBe(false)
+    // a local `next start` of a production build keeps serving localhost
+    expect(isVercelProduction({ VERCEL_ENV: 'production' })).toBe(false)
   })
 
   it('lists the public content pages', () => {

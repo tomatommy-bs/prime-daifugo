@@ -1,7 +1,7 @@
 /**
  * Site-wide facts for metadata, robots, the sitemap and structured data. The canonical origin
- * is the www host; the apex domain redirects there, and the `*.vercel.app` aliases are
- * duplicates that robots.txt and the canonical links point away from.
+ * is the www host; the apex domain redirects there, and on the production deployment the
+ * middleware 308-redirects the `*.vercel.app` aliases there too.
  */
 import type { Metadata } from 'next'
 
@@ -45,13 +45,27 @@ export type PublicPath = (typeof PUBLIC_PATHS)[number]
 /** Absolute URL on the canonical origin. */
 export const absoluteUrl = (path: string): string => new URL(path, SITE_URL).toString()
 
+type Env = Record<string, string | undefined>
+
 /**
  * Whether this deployment may be indexed. Only the Vercel production deployment qualifies;
- * previews, local builds and `next dev` are kept out of search results.
+ * previews, local builds and `next dev` are kept out of search results. Read per request
+ * (middleware, robots.txt), never baked into prerendered pages, so a page can never ship a
+ * build-time `noindex` that disagrees with robots.txt.
  */
-export const isProductionDeployment = (
-  env: Record<string, string | undefined> = process.env,
-): boolean => env.VERCEL_ENV === 'production'
+export const isProductionDeployment = (env: Env = process.env): boolean =>
+  env.VERCEL_ENV === 'production'
+
+/**
+ * Whether this is the production deployment running on Vercel itself. Only then do requests on
+ * other hosts (`*.vercel.app` aliases) get redirected to the canonical origin; a local
+ * `next start` with `VERCEL_ENV=production` keeps serving localhost.
+ */
+export const isVercelProduction = (env: Env = process.env): boolean =>
+  env.VERCEL === '1' && isProductionDeployment(env)
+
+/** `X-Robots-Tag` value for responses that must stay out of search results. */
+export const X_ROBOTS_NOINDEX = 'noindex, nofollow'
 
 /** Whether a request host (from the `host` header, port allowed) serves indexable pages. */
 export const isProductionHost = (host: string | null | undefined): boolean => {

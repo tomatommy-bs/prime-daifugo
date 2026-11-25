@@ -1,6 +1,6 @@
 import { SID_COOKIE, SID_RE } from '@/shared/ids'
 import { NextRequest } from 'next/server'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { config, middleware } from './middleware'
 
 const VALID_SID = 'A'.repeat(43)
@@ -29,9 +29,93 @@ function sidValue(line: string): string {
   return line.split(';')[0].slice(SID_COOKIE.length + 1)
 }
 
+/** Whether `path` is matched by the middleware's single matcher pattern. */
+function matches(path: string): boolean {
+  const [pattern] = config.matcher as string[]
+  return new RegExp(`^${pattern}$`).test(path)
+}
+
 describe('middleware', () => {
-  it('matches /room/:path* only', () => {
-    expect(config.matcher).toEqual(['/room/:path*'])
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('runs on pages and metadata routes, not on build assets or APIs', () => {
+    for (const path of ['/', '/rules', '/room/13', '/robots.txt', '/opengraph-image']) {
+      expect(matches(path), path).toBe(true)
+    }
+    for (const path of ['/_next/static/chunks/a.js', '/_next/image', '/api/x']) {
+      expect(matches(path), path).toBe(false)
+    }
+  })
+
+  describe('canonical host', () => {
+    const onVercelProduction = () => {
+      vi.stubEnv('VERCEL', '1')
+      vi.stubEnv('VERCEL_ENV', 'production')
+    }
+
+    it('308-redirects a vercel.app alias of production to the same URL on www', () => {
+      onVercelProduction()
+      const res = middleware(request('/rules?x=1', {}, 'https://prime-daifugo.vercel.app'))
+      expect(res.status).toBe(308)
+      expect(res.headers.get('location')).toBe('https://www.prime-daifugo.jp/rules?x=1')
+    })
+
+    it('redirects rooms on the alias before the name gate', () => {
+      onVercelProduction()
+      const res = middleware(request('/room/13', {}, 'https://prime-daifugo.vercel.app'))
+      expect(res.status).toBe(308)
+      expect(res.headers.get('location')).toBe('https://www.prime-daifugo.jp/room/13')
+    })
+
+    it.each(['https://www.prime-daifugo.jp', 'https://prime-daifugo.jp'])(
+      'serves %s without redirecting or noindex',
+      (origin) => {
+        onVercelProduction()
+        const res = middleware(request('/rules', {}, origin))
+        expect(res.headers.get('location')).toBeNull()
+        expect(res.headers.get('x-robots-tag')).toBeNull()
+      },
+    )
+
+    it('never redirects previews or local servers', () => {
+      vi.stubEnv('VERCEL', '1')
+      vi.stubEnv('VERCEL_ENV', 'preview')
+      expect(
+        middleware(request('/', {}, 'https://prime-daifugo-git-x.vercel.app')).headers.get(
+          'location',
+        ),
+      ).toBeNull()
+      vi.stubEnv('VERCEL', '')
+      vi.stubEnv('VERCEL_ENV', 'production')
+      expect(middleware(request('/')).headers.get('location')).toBeNull()
+    })
+  })
+
+  describe('X-Robots-Tag', () => {
+    it('marks every response of a non-production deployment noindex', () => {
+      vi.stubEnv('VERCEL_ENV', 'preview')
+      expect(middleware(request('/rules')).headers.get('x-robots-tag')).toBe('noindex, nofollow')
+    })
+
+    it('marks rooms noindex on production, redirect and page alike', () => {
+      vi.stubEnv('VERCEL', '1')
+      vi.stubEnv('VERCEL_ENV', 'production')
+      const origin = 'https://www.prime-daifugo.jp'
+      const gate = middleware(request('/room/13', {}, origin))
+      expect(gate.status).toBe(307)
+      expect(gate.headers.get('x-robots-tag')).toBe('noindex, nofollow')
+      const room = middleware(request('/room/13', { name: 'alice' }, origin))
+      expect(room.headers.get('x-robots-tag')).toBe('noindex, nofollow')
+    })
+  })
+
+  it('leaves non-room pages alone apart from the headers', () => {
+    const res = middleware(request('/rules'))
+    expect(res.headers.get('location')).toBeNull()
+    expect(res.headers.get('x-middleware-next')).toBe('1')
+    expect(sidSetCookie(res)).toBeUndefined()
   })
 
   describe('name gate', () => {

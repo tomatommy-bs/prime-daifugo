@@ -6,10 +6,15 @@ describe('buildRobots', () => {
     const robots = buildRobots({ production: true, host: 'www.prime-daifugo.jp' })
     expect(robots.rules).toEqual({ userAgent: '*', allow: '/', disallow: DISALLOWED_PATHS })
     expect(robots.sitemap).toBe('https://www.prime-daifugo.jp/sitemap.xml')
+    // `Host` is a Yandex-only directive
+    expect(robots.host).toBeUndefined()
   })
 
-  it('keeps rooms, the name gate, the gallery and API routes out', () => {
-    expect(DISALLOWED_PATHS).toEqual(['/room/', '/login', '/labo/gallery', '/api/'])
+  it('keeps only API routes out, so crawlers can see the noindex on private pages', () => {
+    expect(DISALLOWED_PATHS).toEqual(['/api/'])
+    for (const path of ['/room/', '/login', '/labo/gallery']) {
+      expect(DISALLOWED_PATHS).not.toContain(path)
+    }
   })
 
   it.each([
