@@ -1,9 +1,9 @@
 'use client'
 
 import { m } from 'framer-motion'
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { ulamCells } from './math/ulam'
-import { DUR, useMotionMode } from './motion'
+import { DUR, EASE, useMotionMode } from './motion'
 
 export type UlamFieldProps = {
   /** odd side length; even values are rounded up */
@@ -12,10 +12,56 @@ export type UlamFieldProps = {
   cell?: number
   primeColor?: string
   dotColor?: string
-  /** fade cells in by spiral index (stagger 2 ms, total ≤ 987 ms) */
+  /** reveal from the centre outwards (one clip-path animation, 987 ms) */
   reveal?: boolean
   className?: string
 }
+
+export type UlamGeometry = {
+  size: number
+  /** one path of squares, one per prime */
+  primes: string
+  /** one path of dots, one per composite */
+  dots: string
+  primeCount: number
+  dotCount: number
+}
+
+const r2 = (v: number) => Math.round(v * 100) / 100
+
+/**
+ * The whole field as two path strings (like the card back's `BACK_GEOMETRY`): a 55×55
+ * backdrop used to be ~6k SVG nodes, each with its own motion component.
+ */
+export function ulamGeometry(side: number, cell: number): UlamGeometry {
+  const s = Math.max(1, Math.floor(side) | 1)
+  const sq = r2(cell * 0.62)
+  const inset = cell * 0.19
+  const r = r2(Math.max(0.5, cell * 0.08))
+  const primes: string[] = []
+  const dots: string[] = []
+  for (const c of ulamCells(s)) {
+    const x = c.col * cell
+    const y = c.row * cell
+    if (c.prime) {
+      primes.push(`M${r2(x + inset)} ${r2(y + inset)}h${sq}v${sq}h${-sq}z`)
+    } else {
+      const cx = r2(x + cell / 2 - r)
+      const cy = r2(y + cell / 2)
+      dots.push(`M${cx} ${cy}a${r} ${r} 0 1 0 ${r2(2 * r)} 0a${r} ${r} 0 1 0 ${r2(-2 * r)} 0`)
+    }
+  }
+  return {
+    size: s * cell,
+    primes: primes.join(''),
+    dots: dots.join(''),
+    primeCount: primes.length,
+    dotCount: dots.length,
+  }
+}
+
+const HIDDEN = 'circle(0% at 50% 50%)'
+const SHOWN = 'circle(71% at 50% 50%)' // reaches the corners of the square
 
 /** Decorative Ulam spiral (§6.1): primes as squares, composites as dots. Always aria-hidden. */
 function UlamFieldImpl({
@@ -27,59 +73,27 @@ function UlamFieldImpl({
   className,
 }: UlamFieldProps) {
   const mode = useMotionMode()
-  const s = Math.max(1, Math.floor(side) | 1)
-  const cells = ulamCells(s)
-  const total = cells.length
-  const size = s * cell
+  const g = useMemo(() => ulamGeometry(side, cell), [side, cell])
   const running = reveal && mode === 'full'
-  const delayFor = (k: number) => Math.min(k * 0.002, (DUR.xxl * k) / total)
 
   return (
-    <svg
+    <m.svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox={`0 0 ${size} ${size}`}
-      width={size}
-      height={size}
+      viewBox={`0 0 ${g.size} ${g.size}`}
+      width={g.size}
+      height={g.size}
       aria-hidden="true"
       className={className}
       data-motion={mode}
+      data-reveal={running ? 'true' : undefined}
+      // the spiral grows from its centre, so a widening circle reads as the spiral revealing
+      initial={running ? { clipPath: HIDDEN } : false}
+      animate={running ? { clipPath: SHOWN } : undefined}
+      transition={{ duration: DUR.xxl, ease: EASE.out }}
     >
-      {cells.map((c) => {
-        const x = c.col * cell
-        const y = c.row * cell
-        const shape = c.prime ? (
-          <rect
-            data-cell="prime"
-            x={x + cell * 0.19}
-            y={y + cell * 0.19}
-            width={cell * 0.62}
-            height={cell * 0.62}
-            fill={primeColor}
-          />
-        ) : (
-          <circle
-            data-cell="composite"
-            cx={x + cell / 2}
-            cy={y + cell / 2}
-            r={Math.max(0.5, cell * 0.08)}
-            fill={dotColor}
-          />
-        )
-        if (!running) {
-          return <g key={c.k}>{shape}</g>
-        }
-        return (
-          <m.g
-            key={c.k}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: DUR.sm, delay: delayFor(c.k) }}
-          >
-            {shape}
-          </m.g>
-        )
-      })}
-    </svg>
+      <path data-cell="composite" data-count={g.dotCount} d={g.dots} fill={dotColor} />
+      <path data-cell="prime" data-count={g.primeCount} d={g.primes} fill={primeColor} />
+    </m.svg>
   )
 }
 
