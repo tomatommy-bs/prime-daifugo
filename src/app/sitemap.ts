@@ -1,4 +1,4 @@
-import { CONTENT_UPDATED, PUBLIC_PATHS, type PublicPath, absoluteUrl } from '@/lib/site'
+import { PAGE_UPDATED, PUBLIC_PATHS, type PublicPath, absoluteUrl } from '@/lib/site'
 import type { MetadataRoute } from 'next'
 
 const PRIORITY: Record<PublicPath, number> = { '/': 1, '/rules': 0.8, '/labo/calc': 0.5 }
@@ -7,7 +7,7 @@ const PRIORITY: Record<PublicPath, number> = { '/': 1, '/rules': 0.8, '/labo/cal
 export default function sitemap(): MetadataRoute.Sitemap {
   return PUBLIC_PATHS.map((path) => ({
     url: absoluteUrl(path),
-    lastModified: CONTENT_UPDATED,
+    lastModified: PAGE_UPDATED[path],
     changeFrequency: 'monthly',
     priority: PRIORITY[path],
   }))

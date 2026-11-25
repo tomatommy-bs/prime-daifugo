@@ -27,9 +27,6 @@ export const SITE_KEYWORDS = [
   'Prime Daifugo',
 ]
 
-/** Last meaningful content change of each public page (sitemap `lastmod`). */
-export const CONTENT_UPDATED = '2026-11-25'
-
 export const EXTERNAL_URLS = {
   /** the official rules this app follows (credited on /rules) */
   officialRules: 'https://primeqk.themedia.jp/pages/4500251/rules',
@@ -41,6 +38,16 @@ export const EXTERNAL_URLS = {
 /** The public, indexable pages (the sitemap lists exactly these). */
 export const PUBLIC_PATHS = ['/', '/rules', '/labo/calc'] as const
 export type PublicPath = (typeof PUBLIC_PATHS)[number]
+
+/**
+ * Last meaningful content change of each public page (sitemap `lastmod`). Bump a page's date
+ * when its text changes, not on every deploy: Google ignores `lastmod` that is always fresh.
+ */
+export const PAGE_UPDATED: Record<PublicPath, string> = {
+  '/': '2026-11-25',
+  '/rules': '2026-11-25',
+  '/labo/calc': '2026-11-25',
+}
 
 /** Absolute URL on the canonical origin. */
 export const absoluteUrl = (path: string): string => new URL(path, SITE_URL).toString()
