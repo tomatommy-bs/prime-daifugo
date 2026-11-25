@@ -329,15 +329,14 @@ export class SimHost implements ServerEnd {
     if (this.state !== null) {
       this.apply({ type: 'tick' })
     }
-    if (this.sweepAt !== null && this.sweepAt <= now) {
-      this.sweepAt = null
-      for (const conn of [...this.conns]) {
-        if (conn.lastPongAt(now) < now - SWEEP_STALE_MS) {
-          this.conns.delete(conn)
-          this.opts.network.serverClose(conn, 1001)
-          if (conn.helloDone && conn.pid !== null && this.state !== null) {
-            this.apply({ type: 'disconnect', pid: conn.pid, connNo: conn.connNo })
-          }
+    // Like the Worker host: sweep on every alarm, since a hibernation wake forgets `sweepAt`.
+    this.sweepAt = null
+    for (const conn of [...this.conns]) {
+      if (conn.lastPongAt(now) < now - SWEEP_STALE_MS) {
+        this.conns.delete(conn)
+        this.opts.network.serverClose(conn, 1001)
+        if (conn.helloDone && conn.pid !== null && this.state !== null) {
+          this.apply({ type: 'disconnect', pid: conn.pid, connNo: conn.connNo })
         }
       }
     }
@@ -368,7 +367,10 @@ export class SimHost implements ServerEnd {
 
   /** A hibernation wake: sockets survive, so reconcile must change nothing. */
   hibernateWake(): ReducerResult | null {
+    // The in-memory sweep deadline does not survive hibernation (a new host object is built).
+    this.sweepAt = null
     if (this.state === null) {
+      this.armAlarm()
       return null
     }
     const live = [...this.conns]

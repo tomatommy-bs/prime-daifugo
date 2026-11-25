@@ -123,10 +123,11 @@ export class RoomHost {
   /** whether `state` has a stored row (a fresh room is persisted on its first change) */
   private persisted = false
   private reducerWakeAt: number | null = null
+  /**
+   * When the next sweep alarm is due. In memory only: a hibernated object loses it, so the
+   * sweep itself runs on every alarm (it is idempotent) rather than only when this is due.
+   */
   private nextSweepAt: number | null = null
-  /** -1 forces a report after load, so the lobby agrees with us after a restart */
-  private lastReportedCount = -1
-  private lastReportAt = 0
   private readonly locals = new WeakMap<HostSocket, SocketLocal>()
 
   constructor(deps: RoomHostDeps) {
@@ -235,7 +236,13 @@ export class RoomHost {
     this.syncAlarm(this.clock.now())
   }
 
-  /** `alarm()`: tick the reducer, expire silent pre-hello sockets, sweep, re-arm (spec §5). */
+  /**
+   * `alarm()`: tick the reducer, expire silent pre-hello sockets, sweep, re-arm (spec §5).
+   *
+   * The sweep runs on every alarm. Each wake from hibernation builds a new host whose in-memory
+   * sweep deadline is already pushed a full interval ahead by `onLoad`, so gating the sweep on
+   * that deadline would skip it forever in a room that only receives auto-answered pings.
+   */
   onAlarm(): void {
     this.storage.alarmFired()
     const now = this.clock.now()
@@ -243,9 +250,7 @@ export class RoomHost {
       this.apply({ type: 'tick' })
     }
     this.expireHellos(now)
-    if (this.nextSweepAt !== null && this.nextSweepAt <= now) {
-      this.sweep(now)
-    }
+    this.sweep(now)
     this.syncAlarm(now)
   }
 
@@ -373,11 +378,19 @@ export class RoomHost {
     })
     const destroying = result.directives.some((d) => d.type === 'destroy')
 
-    // 1-2. Persist the state row and the ring events (one transaction).
-    if (!destroying && result.state !== before) {
-      this.persist(result)
+    // The lobby bookkeeping lives in the state row, so it survives hibernation and restarts
+    // and a report is only sent when the count actually changed (spec §8.2).
+    let state = result.state
+    const report = !destroying && result.lobbyCount !== state.lastReportedCount
+    if (report) {
+      state = { ...state, lastReportedCount: result.lobbyCount, lastReportAt: now }
     }
-    this.state = result.state
+
+    // 1-2. Persist the state row and the ring events (one transaction).
+    if (!destroying && state !== before) {
+      this.persist(state, result)
+    }
+    this.state = state
     this.reducerWakeAt = result.wakeAt
 
     // 3. Re-arm the alarm before anything is sent.
@@ -393,16 +406,19 @@ export class RoomHost {
 
     if (destroying) {
       this.destroy(result.state.roomId)
-    } else {
-      this.reportCount(result.lobbyCount, result.state, now)
+    } else if (report) {
+      this.lobby.report(state.roomId, state.lastReportedCount, state.status)
     }
     // Directives may have closed sockets, which changes the sweep and hello deadlines.
     this.syncAlarm(now)
   }
 
-  private persist(result: ReducerResult): void {
-    const s = result.state
-    const rows: EventRow[] = result.events.map((ev) => ({ seq: ev.seq, e: ev.e, state: s }))
+  private persist(s: RoomState, result: ReducerResult | null): void {
+    const rows: EventRow[] = (result?.events ?? []).map((ev) => ({
+      seq: ev.seq,
+      e: ev.e,
+      state: result?.state ?? s,
+    }))
     const ringFloor = Math.max(1, s.ringFloor, s.version - this.config.ringSize + 1)
     this.storage.persist(s, rows, ringFloor)
     this.persisted = true
@@ -605,11 +621,13 @@ export class RoomHost {
     const state = this.state
     if (
       state &&
-      this.lastReportedCount > 0 &&
-      now - this.lastReportAt >= LOBBY_REPORT_INTERVAL_MS
+      this.persisted &&
+      state.lastReportedCount > 0 &&
+      now - state.lastReportAt >= LOBBY_REPORT_INTERVAL_MS
     ) {
-      this.lobby.report(state.roomId, this.lastReportedCount, state.status)
-      this.lastReportAt = now
+      this.state = { ...state, lastReportAt: now }
+      this.persist(this.state, null)
+      this.lobby.report(state.roomId, state.lastReportedCount, state.status)
     }
   }
 
@@ -650,15 +668,6 @@ export class RoomHost {
     }
   }
 
-  private reportCount(count: number, state: RoomState, now: number): void {
-    if (count === this.lastReportedCount) {
-      return
-    }
-    this.lastReportedCount = count
-    this.lastReportAt = now
-    this.lobby.report(state.roomId, count, state.status)
-  }
-
   /** Room GC (spec §4.2): wipe storage, release the lobby row, start over with a new epoch. */
   private destroy(roomId: string): void {
     for (const socket of this.liveSockets()) {
@@ -666,8 +675,6 @@ export class RoomHost {
     }
     this.storage.deleteAll()
     this.lobby.release(roomId)
-    this.lastReportedCount = 0
-    this.lastReportAt = this.clock.now()
     this.reducerWakeAt = null
     this.state = this.initialState(roomId, this.newEpoch(), this.config)
     this.persisted = false

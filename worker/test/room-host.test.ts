@@ -418,6 +418,9 @@ describe('RoomHost: load and reconcile (RQ-S19)', () => {
       ...freshState('1009', 'epoch-stored'),
       version: 5,
       ringFloor: 1,
+      // what the room last told the lobby before it was evicted
+      lastReportedCount: connected ? 1 : 0,
+      lastReportAt: 1_700_000_000_000 - 1_000,
       members: {
         [pid]: {
           name: 'user1',
@@ -447,7 +450,8 @@ describe('RoomHost: load and reconcile (RQ-S19)', () => {
     expect(t.host.current?.epoch).toBe('epoch-stored')
     expect(storage.log.filter((l) => l.startsWith('persist'))).toEqual(['persist:6'])
     expect(storage.alarm).toBe(m?.graceUntil)
-    // the lobby hears the (now zero) count after every load
+    // the lobby hears that the count dropped to zero, and that is stored in the same write
+    expect(t.host.current?.lastReportedCount).toBe(0)
     expect(t.lobby.calls).toEqual([{ op: 'report', roomId: '1009', count: 0, status: 'waiting' }])
   })
 
@@ -459,7 +463,8 @@ describe('RoomHost: load and reconcile (RQ-S19)', () => {
     const t = setup({ storage, registry, roomId: null })
     expect(t.host.current?.members[pid]?.connected).toBe(true)
     expect(storage.log.filter((l) => l.startsWith('persist'))).toEqual([])
-    expect(t.lobby.calls).toEqual([{ op: 'report', roomId: '1009', count: 1, status: 'waiting' }])
+    // the stored count still matches, so a wake does not re-report (and write) every time
+    expect(t.lobby.calls).toEqual([])
   })
 
   it('writes nothing when reconcile changes nothing', async () => {
@@ -588,6 +593,68 @@ describe('RoomHost: sweep', () => {
     }
     expect(reports()).toBe(2)
     expect(LOBBY_REPORT_INTERVAL_MS).toBe(5 * SWEEP_INTERVAL_MS)
+  })
+
+  /**
+   * A room whose clients only send auto-answered pings hibernates between alarms, so every alarm
+   * runs on a freshly constructed host (constructor → onLoad → onAlarm) with no in-memory sweep
+   * deadline.
+   */
+  function hibernatingRoom() {
+    const first = setup()
+    const { storage, registry, clock } = first
+    const reports: { count: number; at: number }[] = []
+    const wake = () => {
+      const t = setup({ storage, registry, clock, roomId: null })
+      t.host.onAlarm()
+      for (const c of t.lobby.calls) {
+        if (c.op === 'report') {
+          reports.push({ count: c.count, at: clock.now() })
+        }
+      }
+      return t
+    }
+    return { first, storage, registry, clock, reports, wake }
+  }
+
+  it('sweeps a half-open socket even when every alarm wakes a new host', async () => {
+    const r = hibernatingRoom()
+    const a = await r.first.join(1)
+    const b = await r.first.join(2)
+    let last = r.first
+    for (let i = 0; i < 15 && a.closedWith === null; i += 1) {
+      const at = r.storage.alarm
+      expect(at).not.toBeNull()
+      r.clock.advance((at as number) - r.clock.now())
+      // b keeps answering pings through the runtime; a went silent without a FIN
+      b.autoAt = r.clock.now()
+      last = r.wake()
+    }
+    expect(a.closedWith?.code).toBe(STALE_CLOSE_CODE)
+    expect(b.closedWith).toBeNull()
+    expect(last.host.current?.members[await pidOf(1)]?.connected).toBe(false)
+    expect(last.host.current?.members[await pidOf(2)]?.connected).toBe(true)
+    // within two sweep intervals of a's last frame, not "never"
+    expect(r.clock.now() - a.attachment.lastMessageAt).toBeLessThanOrEqual(
+      STALE_SOCKET_MS + SWEEP_INTERVAL_MS,
+    )
+  })
+
+  it('re-reports the lobby count every 5 minutes across wakes, not on every wake', async () => {
+    const r = hibernatingRoom()
+    const s = await r.first.join(1)
+    const start = r.clock.now()
+    for (let i = 0; i < 10; i += 1) {
+      r.clock.advance((r.storage.alarm as number) - r.clock.now())
+      s.autoAt = r.clock.now()
+      r.wake()
+    }
+    expect(r.clock.now() - start).toBe(10 * SWEEP_INTERVAL_MS)
+    expect(r.reports.map((x) => x.at - start)).toEqual([
+      LOBBY_REPORT_INTERVAL_MS,
+      2 * LOBBY_REPORT_INTERVAL_MS,
+    ])
+    expect(r.reports.every((x) => x.count === 1)).toBe(true)
   })
 })
 
