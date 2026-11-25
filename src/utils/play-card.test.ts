@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest'
 import {
   compareCard,
   concatCardNumbers,
-  concatFactCardIds,
   evalFactCardIds,
   extractCardIdsFromFactCardIds,
   getCardNumber,
@@ -130,8 +129,7 @@ describe('display helpers', () => {
     expect(concatCardNumbers(['2C', '3C', '4C'])).toBe(234)
   })
 
-  it('concatFactCardIds and extractCardIdsFromFactCardIds', () => {
-    expect(concatFactCardIds(['2C', '^', '3C', '*', 'KD'])).toBe('2^3*13')
+  it('extractCardIdsFromFactCardIds', () => {
     expect(extractCardIdsFromFactCardIds(['2C', '^', '3C', '*', 'KD'])).toEqual(['2C', '3C', 'KD'])
   })
 

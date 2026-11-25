@@ -346,7 +346,11 @@ const ACTION_ORIENTATION: Record<LayoutMode, 'rail' | 'row' | 'bottom'> = {
 const toLogEntries = (scene: BoardScene): LogEntry[] =>
   [...scene.log].reverse().map((line) => ({ id: line.id, kind: line.kind, node: line.text }))
 
-/** Local, socket-free copy of `useMyField` so the gallery can exercise card flights. */
+/**
+ * A deliberately smaller stand-in for `useMyField` (`src/app/room/[id]/hooks.ts`): the gallery
+ * stages exact hands and trays from its scenes, so it skips the hook's hand sorting and the
+ * `maxSubmitNumCards` check and only moves cards between hand, tray and factor row for the flights.
+ */
 function useGalleryField(scene: BoardScene) {
   const initial = scene.myField
   const [hand, setHand] = useState<CardId[]>(initial?.hand ?? [])

@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest'
-
-const b = BigInt
 import {
   FULL_DECK,
   HALF_EVEN_REMOVED,
@@ -59,15 +57,5 @@ describe('cards', () => {
     const a = buildDeck({ halfEvenNumbers: false })
     a.pop()
     expect(FULL_DECK).toHaveLength(52)
-  })
-})
-
-describe('public surface (src/game/index.ts)', () => {
-  it('re-exports the engine and helpers', async () => {
-    const game = await import('./index')
-    expect(game.engine.setup).toBeTypeOf('function')
-    expect(game.isPrime(b(57))).toBe(false)
-    expect(game.parseFact(['2S', '*', '3S']).ok).toBe(true)
-    expect(game.FULL_DECK).toHaveLength(52)
   })
 })

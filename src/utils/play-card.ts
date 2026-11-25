@@ -37,15 +37,6 @@ export const concatCardNumbers = (cards: CardId[]): number => {
 
 /**
  * @example
- * ['2C', '*', '3C'] => '2*3'
- * ['2C', '^', '3C'] => '2^3'
- */
-export const concatFactCardIds = (cards: FactCardId[]): string => {
-  return cards.map((card) => (isCardId(card) ? getCardNumber(card) : card)).join('')
-}
-
-/**
- * @example
  * ['2C', '3C'] => '23'
  * ['2C', '3C', '4C'] => '234'
  * ['2C', '*', '3C'] => '2*3'
