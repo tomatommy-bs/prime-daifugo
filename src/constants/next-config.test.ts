@@ -6,7 +6,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 let n = 0
 /** A fresh evaluation of next.config.mjs (its guard runs at import time). */
-const loadConfig = () => import(/* @vite-ignore */ `../../next.config.mjs?case=${(n += 1)}`)
+const loadConfig = () => {
+  n += 1
+  return import(/* @vite-ignore */ `../../next.config.mjs?case=${n}`)
+}
 
 describe('next.config.mjs production guard (RQ-O2)', () => {
   afterEach(() => {
