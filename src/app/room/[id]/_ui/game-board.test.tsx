@@ -800,6 +800,24 @@ describe('GameBoard (redesign)', () => {
     expect(document.querySelector('[data-live-region]')).not.toHaveTextContent('あなたの番です')
   })
 
+  it('a first welcome snapshot that brings selfId and the game together still shows my hand', () => {
+    // a fresh tab: the snapshot transition runs before any render knows selfId
+    roomSession.reset({ selfId: null })
+    renderWithProviders(<GameBoard id="room-1" />)
+    emit(
+      { action: 'snapshot' },
+      bundle({ currentPlayer: 'p1', hands: { p1: ['2S', '4D', '7H'], p2: ['3C'] } }),
+      {
+        patch: {
+          selfId: SELF,
+          presence: makeSessionPresence(['alice', 'bob']),
+          roomStatus: 'playing',
+        },
+      },
+    )
+    expect(handOptions()).toHaveLength(3)
+  })
+
   it('announces my turn in the live region', () => {
     renderWithProviders(<GameBoard id="room-1" />)
     startPlaying({ currentPlayer: 'p1' })

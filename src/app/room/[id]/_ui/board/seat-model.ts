@@ -117,6 +117,12 @@ const hueIndexOf = (id: string, playOrder: string[], fallback: number) => {
  * Build the seat models for the table.
  * Returns the players first (self = k0, clockwise in play order), then the observers.
  */
+/**
+ * Shown for a seat whose member is gone (e.g. removed after GAME SET): a raw pid is never shown
+ * as a name (RQ-S2).
+ */
+export const UNKNOWN_SEAT_NAME = '???'
+
 export function buildSeats({
   gameState,
   ctx,
@@ -162,7 +168,7 @@ export function buildSeats({
     const isActive = id === activeId
     const seat: SeatModel = {
       id,
-      name: nameOf.get(id) ?? id,
+      name: nameOf.get(id) ?? UNKNOWN_SEAT_NAME,
       handCount: gameState.players[id]?.handCount ?? 0,
       hueIndex: hueIndexOf(id, playOrder, k),
       k,
@@ -188,7 +194,7 @@ export function buildSeats({
   observerIds.forEach((id, i) => {
     seats.push({
       id,
-      name: nameOf.get(id) ?? id,
+      name: nameOf.get(id) ?? UNKNOWN_SEAT_NAME,
       handCount: null,
       hueIndex: hueIndexOf(id, playOrder, ordered.length + i),
       k: ordered.length + i,

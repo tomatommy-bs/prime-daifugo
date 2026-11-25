@@ -124,14 +124,14 @@ describe('buildSeats', () => {
     expect(observerSeats(seats)[0]).toMatchObject({ id: 'p3', isSelf: true, observer: true })
   })
 
-  it('falls back to the id when a player has no presence entry', () => {
+  it('shows ??? (never the raw pid) when a player has no presence entry', () => {
     const seats = buildSeats({
       gameState: makeClientGameState({ players: { p1: {}, ghost: {} } }),
       ctx: makeClientCtx({ playOrder: ['p1', 'ghost'] }),
       presence: makeSessionPresence(['alice']),
       selfId: 'p1',
     })
-    expect(seats[1]).toMatchObject({ id: 'ghost', name: 'ghost', observer: false })
+    expect(seats[1]).toMatchObject({ id: 'ghost', name: '???', observer: false })
   })
 
   it('reads hand sizes from handCount: other hands carry no card ids', () => {

@@ -198,16 +198,18 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
   onTransitionRef.current = onTransition
   useEffect(() => session.subscribe((t) => onTransitionRef.current(t)), [session.subscribe])
 
-  // a session that already holds a game when the board mounts (e.g. a remount)
+  // A session that already holds a game when the board mounts (a remount), or a first welcome
+  // snapshot that carried selfId and the game together: its transition ran with the previous
+  // render's (empty) selfId, so the hand is synced again once selfId is known.
   const sessionRef = useRef(session)
   sessionRef.current = session
-  // biome-ignore lint/correctness/useExhaustiveDependencies: once, on mount
+  // biome-ignore lint/correctness/useExhaustiveDependencies: on mount and when selfId changes
   useEffect(() => {
     const hand = handOf(sessionRef.current.game)
     if (hand.length > 0) {
       my.setHandCardIds(hand)
     }
-  }, [])
+  }, [self])
   // keeps the rule-diff baseline in step with snapshots (late join, reconnect)
   useEffect(() => {
     ruleRef.current = rule
