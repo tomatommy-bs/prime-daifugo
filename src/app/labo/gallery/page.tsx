@@ -420,7 +420,7 @@ function BoardSceneView({ scene }: { scene: BoardScene }) {
   const self = gameState?.players[selfId]
   const fieldTop = scene.fieldView.at(-1) ?? null
   const leadName = players.find((s) => s.isLead)?.name ?? null
-  const deckCount = gameState?.deck.length ?? 0
+  const deckCount = gameState?.deckCount ?? 0
   const drawReason = !isMyTurn
     ? 'not-your-turn'
     : deckCount === 0
@@ -560,7 +560,7 @@ function BoardSceneView({ scene }: { scene: BoardScene }) {
   )
   const boardWithOverlay = (
     <LayoutGroup id="board">
-      <ConnectionOverlay state={scene.connection} onReconnect={noop}>
+      <ConnectionOverlay state={scene.connection} reason={scene.closeReason} onReconnect={noop}>
         {board}
       </ConnectionOverlay>
     </LayoutGroup>

@@ -174,7 +174,7 @@ function StepBoard({ stepId, run }: { stepId: FlightStepId; run: number }) {
           }
           deck={
             <DeckPile
-              count={gameState.deck.length}
+              count={gameState.deckCount}
               canDraw={isMyTurn}
               onDraw={layoutMode === 'wide' ? noop : undefined}
               compact={layoutMode !== 'wide'}

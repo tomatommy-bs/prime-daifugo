@@ -8,7 +8,16 @@
  */
 import type { GameState, SystemMessage } from '@/app/room/[id]/_ui/board/classify-transition'
 import type { CardId } from '@/game-card/src'
-import { CAST, PLAYERS, buildCtx, buildState, presenceOf, systemMessage } from './fixtures'
+import {
+  CAST,
+  type GalleryAction,
+  PLAYERS,
+  buildCtx,
+  buildDeal,
+  buildState,
+  presenceOf,
+  systemMessage,
+} from './fixtures'
 
 export const FLIGHT_STEP_IDS = [
   'draw-me',
@@ -62,33 +71,36 @@ const HANDS: Record<string, CardId[]> = {
 }
 const FIELD: CardId[][] = [['KS']] // 13
 
+/** The UI state alice receives: her hand by id, the others by count only (spec §9.3). */
 const state = (
   hands: Record<string, CardId[]>,
   field: CardId[][],
   current: string,
   lead: string | null = CAROL,
 ): GameState => ({
-  gameState: buildState({ hands, field, deckTopPlayer: field.length > 0 ? lead : null }),
-  ctx: buildCtx(current),
+  gameState: buildState({
+    hands,
+    field,
+    deckTopPlayer: field.length > 0 ? lead : null,
+    selfId: SELF,
+  }),
+  ctx: buildCtx(current, { leftTime: 42 }),
 })
 
 const NEXT_OF: Record<string, string> = { [SELF]: BOB, [BOB]: CAROL, [CAROL]: SELF }
 
 const without = (hand: CardId[], cards: CardId[]) => hand.filter((c) => !cards.includes(c))
 
-/** The first `n` cards of the deck of `s` (what a draw takes). */
-const deckTop = (s: GameState, n: number): CardId[] => s.gameState.deck.slice(0, n)
+/** The first `n` cards of the server's deck for this layout (what a draw takes). */
+const deckTop = (hands: Record<string, CardId[]>, field: CardId[][], n: number): CardId[] =>
+  buildDeal(hands, field).deck.slice(0, n)
 
-const msg = (
-  commander: string,
-  next: GameState,
-  a: Parameters<typeof systemMessage>[3],
-): SystemMessage => systemMessage(commander, next.gameState, next.ctx, a)
+const msg = (commander: string, a: GalleryAction): SystemMessage => systemMessage(commander, a)
 
 /** A draw (`fail` unset) or a failed submission of `fail` with an `n`-card penalty. */
 function drawStep(id: FlightStepId, who: string, n: number, fail?: CardId[]): FlightStep {
   const before = state(HANDS, FIELD, who)
-  const drawn = deckTop(before, n)
+  const drawn = deckTop(HANDS, FIELD, n)
   // a failed submission keeps the cards in hand and adds the penalty
   const hands = { ...HANDS, [who]: [...HANDS[who], ...drawn] }
   const next = state(hands, FIELD, fail ? NEXT_OF[who] : who)
@@ -99,8 +111,8 @@ function drawStep(id: FlightStepId, who: string, n: number, fail?: CardId[]): Fl
     tray: fail && who === SELF ? fail : [],
     next,
     msg: fail
-      ? msg(who, next, { action: 'submit', submit: fail, result: 'BASE_IS_NOT_PRIME' })
-      : msg(who, next, { action: 'draw' }),
+      ? msg(who, { action: 'submit', submit: fail, result: 'BASE_IS_NOT_PRIME' })
+      : msg(who, { action: 'draw' }),
   }
 }
 
@@ -114,7 +126,7 @@ function playStep(id: FlightStepId, who: string, cards: CardId[], nextPlayer: st
     before,
     tray: who === SELF ? cards : [],
     next,
-    msg: msg(who, next, { action: 'submit', submit: cards, result: null }),
+    msg: msg(who, { action: 'submit', submit: cards, result: null }),
   }
 }
 
@@ -129,7 +141,7 @@ function flowStep(): FlightStep {
     before,
     tray: [],
     next,
-    msg: msg(BOB, next, { action: 'pass' }),
+    msg: msg(BOB, { action: 'pass' }),
   }
 }
 
@@ -150,7 +162,7 @@ function cut57Step(): FlightStep {
     before,
     tray: cards,
     next,
-    msg: msg(SELF, next, { action: 'submit', submit: cards, result: null }),
+    msg: msg(SELF, { action: 'submit', submit: cards, result: null }),
   }
 }
 
@@ -163,7 +175,7 @@ function dealStep(): FlightStep {
     before,
     tray: [],
     next,
-    msg: msg(SELF, next, { action: 'game-start' }),
+    msg: msg(SELF, { action: 'game-start' }),
   }
 }
 
