@@ -12,6 +12,12 @@ export const PRIME_LIMIT = 1_000_000
 export const RESERVATION_MS = 10 * 60_000
 /** Rows with `count > 0` and no report for this long are dropped (RQ-L2). */
 export const STALE_ROW_MS = 12 * 60_000
+/**
+ * A room whose count fell to 0 (or that stopped reporting) may still hold state until its own GC
+ * (at most 30 min, RQ-S15), which then calls `release`. Until then its id stays out of
+ * `allocate`, so `/room/new` never hands out a room with a stale game in it (RQ-L3).
+ */
+export const EMPTY_ROOM_HOLD_MS = 31 * 60_000
 /** At most one stats broadcast per this interval. */
 export const BROADCAST_INTERVAL_MS = 1_000
 
@@ -88,13 +94,15 @@ export class LobbyCore {
   report(id: string, count: number, status: string | null): void {
     const now = this.clock.now()
     const prev = this.storage.getRow(id)
-    const reserved = prev?.reservedUntil != null && prev.reservedUntil > now
     if (count <= 0) {
-      if (reserved && prev) {
-        this.storage.upsertRow({ ...prev, count: 0, status, updatedAt: now })
-      } else if (prev) {
-        this.storage.deleteRow(id)
-      }
+      // keep the id held until the room's GC releases it
+      this.storage.upsertRow({
+        id,
+        count: 0,
+        status,
+        reservedUntil: Math.max(prev?.reservedUntil ?? 0, now + EMPTY_ROOM_HOLD_MS),
+        updatedAt: now,
+      })
     } else {
       this.storage.upsertRow({
         id,
@@ -174,14 +182,19 @@ export class LobbyCore {
   }
 
   /**
-   * Drop rows of rooms that stopped reporting and rows whose reservation lapsed unused.
+   * Hide rooms that stopped reporting and drop rows whose reservation or hold lapsed.
    * Returns whether a visible count changed.
    */
   private purge(now: number): boolean {
     let changed = false
     for (const row of this.storage.listRows()) {
       if (row.count > 0 && row.updatedAt + STALE_ROW_MS <= now) {
-        this.storage.deleteRow(row.id)
+        // gone from the counters, but its id stays held in case the room still has state
+        this.storage.upsertRow({
+          ...row,
+          count: 0,
+          reservedUntil: Math.max(row.reservedUntil ?? 0, now + EMPTY_ROOM_HOLD_MS),
+        })
         changed = true
       } else if (row.count <= 0 && (row.reservedUntil === null || row.reservedUntil <= now)) {
         this.storage.deleteRow(row.id)

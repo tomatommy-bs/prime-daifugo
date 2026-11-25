@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { BROADCAST_INTERVAL_MS, LobbyCore, RESERVATION_MS, STALE_ROW_MS } from '../src/lobby-core'
+import {
+  BROADCAST_INTERVAL_MS,
+  EMPTY_ROOM_HOLD_MS,
+  LobbyCore,
+  RESERVATION_MS,
+  STALE_ROW_MS,
+} from '../src/lobby-core'
 import { MemoryLobbyStorage } from '../src/storage'
 import { FakeClock } from './fakes'
 
@@ -75,13 +81,26 @@ describe('LobbyCore.allocate', () => {
 })
 
 describe('LobbyCore.report / release', () => {
-  it('a count of 0 deletes an unreserved row', () => {
+  it('a count of 0 hides the room but holds its id until GC could have run', () => {
     const t = setup()
-    t.core.report('1009', 2, 'waiting')
-    t.core.report('1009', 0, 'waiting')
-    expect(t.storage.getRow('1009')).toBeNull()
-    t.core.report('77', 0, 'waiting') // unknown room: nothing to delete
-    expect(t.storage.rows.size).toBe(0)
+    t.core.report('2', 2, 'playing')
+    t.core.report('2', 0, 'playing')
+    expect(t.core.stats().room).toEqual({})
+    // the empty room may still hold a game: never hand it out as a fresh room
+    expect(t.core.allocate()).toBe('3')
+    t.clock.advance(EMPTY_ROOM_HOLD_MS)
+    expect(t.storage.getRow('2')).toMatchObject({ count: 0 })
+    expect(t.core.allocate()).toBe('2')
+  })
+
+  it('a stale room is hidden at once and its id held', () => {
+    const t = setup()
+    t.core.report('2', 2, 'playing')
+    t.clock.advance(STALE_ROW_MS)
+    expect(t.core.stats().room).toEqual({})
+    expect(t.core.allocate()).toBe('3')
+    t.clock.advance(EMPTY_ROOM_HOLD_MS)
+    expect(t.core.allocate()).toBe('2')
   })
 
   it('a count of 0 keeps a reserved row', () => {
@@ -108,7 +127,7 @@ describe('LobbyCore.report / release', () => {
     expect(t.core.stats().room).toEqual({ '1009': 2, '11': 1 })
     t.clock.advance(1)
     expect(t.core.stats().room).toEqual({ '11': 1 })
-    expect(t.storage.getRow('1009')).toBeNull()
+    expect(t.storage.getRow('1009')).toMatchObject({ count: 0 })
   })
 
   it('a periodic report keeps a room fresh', () => {
