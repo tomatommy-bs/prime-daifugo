@@ -3,8 +3,6 @@
  * Uses Node 22's global WebSocket. Opt-in: `INTEGRATION=1 npm run test:integration`.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { ENGINE_IS_STUB } from '../../../src/game/engine'
-import { REDUCER_IS_STUB } from '../../../src/session/reducer'
 import { PV } from '../../../src/shared/ids'
 import type { RoomServerFrame, View } from '../../../src/shared/protocol'
 import {
@@ -165,9 +163,7 @@ async function startGame(worker: RunningWorker, roomId: string) {
   return { a, b }
 }
 
-const gameReady = !(REDUCER_IS_STUB || ENGINE_IS_STUB)
-
-describe.skipIf(!gameReady)('RoomDO in workerd', () => {
+describe('RoomDO in workerd', () => {
   let worker: RunningWorker
   let persistDir: string
   const clients: Client[] = []

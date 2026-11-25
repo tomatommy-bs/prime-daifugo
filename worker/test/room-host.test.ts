@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { ENGINE_IS_STUB, engine } from '../../src/game/engine'
-import { REDUCER_IS_STUB, roomReduce } from '../../src/session/reducer'
+import { engine } from '../../src/game/engine'
+import { roomReduce } from '../../src/session/reducer'
 import type { RoomReducer, RoomState } from '../../src/session/types'
 import { viewFor } from '../../src/session/view'
 import { PV } from '../../src/shared/ids'
@@ -646,51 +646,46 @@ describe('RoomHost: lobby and GC', () => {
   })
 })
 
-describe.skipIf(REDUCER_IS_STUB || ENGINE_IS_STUB)(
-  'RoomHost with the real reducer and engine',
-  () => {
-    it('welcomes, starts a game and never sends another player their cards', async () => {
-      const t = setup({ real: true })
-      const a = await t.join(1)
-      const b = await t.join(2)
-      const pa = await pidOf(1)
-      const pb = await pidOf(2)
-      expect(a.frames()[0]).toMatchObject({ t: 'welcome', mode: 'snapshot', selfId: pa })
-      await t.cmd(a, 'ra', { type: 'ready' })
-      await t.cmd(b, 'rb', { type: 'ready' })
-      const version = t.host.current?.version as number
-      await t.cmd(a, 'go', { type: 'start', expectedVersion: version })
-      expect(t.host.current?.status).toBe('playing')
-      const core = t.host.current?.game?.core
-      const handA = core?.players[pa]?.hand ?? []
-      const handB = core?.players[pb]?.hand ?? []
-      const started = (s: FakeSocket) =>
-        s.frames().find((f) => f.t === 'evt' && f.e.type === 'game-started')
-      expect(started(a).snap.game.hand).toEqual(handA)
-      expect(started(b).snap.game.hand).toEqual(handB)
-      for (const card of handB) {
-        expect(a.sent.join('\n')).not.toContain(`"${card}"`)
-      }
-      expect(t.storage.alarm).not.toBeNull()
-    })
+describe('RoomHost with the real reducer and engine', () => {
+  it('welcomes, starts a game and never sends another player their cards', async () => {
+    const t = setup({ real: true })
+    const a = await t.join(1)
+    const b = await t.join(2)
+    const pa = await pidOf(1)
+    const pb = await pidOf(2)
+    expect(a.frames()[0]).toMatchObject({ t: 'welcome', mode: 'snapshot', selfId: pa })
+    await t.cmd(a, 'ra', { type: 'ready' })
+    await t.cmd(b, 'rb', { type: 'ready' })
+    const version = t.host.current?.version as number
+    await t.cmd(a, 'go', { type: 'start', expectedVersion: version })
+    expect(t.host.current?.status).toBe('playing')
+    const core = t.host.current?.game?.core
+    const handA = core?.players[pa]?.hand ?? []
+    const handB = core?.players[pb]?.hand ?? []
+    const started = (s: FakeSocket) =>
+      s.frames().find((f) => f.t === 'evt' && f.e.type === 'game-started')
+    expect(started(a).snap.game.hand).toEqual(handA)
+    expect(started(b).snap.game.hand).toEqual(handB)
+    for (const card of handB) {
+      expect(a.sent.join('\n')).not.toContain(`"${card}"`)
+    }
+    expect(t.storage.alarm).not.toBeNull()
+  })
 
-    it('a reload with the same sid restores the same seat and hand by replay', async () => {
-      const t = setup({ real: true })
-      const a = await t.join(1)
-      const b = await t.join(2)
-      await t.cmd(a, 'ra', { type: 'ready' })
-      await t.cmd(b, 'rb', { type: 'ready' })
-      await t.cmd(a, 'go', { type: 'start', expectedVersion: t.host.current?.version as number })
-      const lastSeq = b.last().seq as number
-      const epoch = b.frames()[0].epoch as string
-      t.clientClose(b)
-      const b2 = await t.join(2, { lastSeq, epoch })
-      const welcome = b2.frames()[0]
-      expect(welcome).toMatchObject({ selfId: await pidOf(2), mode: 'replay' })
-      const lastEvt = b2.last()
-      expect(lastEvt.snap.game.hand).toEqual(
-        t.host.current?.game?.core.players[await pidOf(2)]?.hand,
-      )
-    })
-  },
-)
+  it('a reload with the same sid restores the same seat and hand by replay', async () => {
+    const t = setup({ real: true })
+    const a = await t.join(1)
+    const b = await t.join(2)
+    await t.cmd(a, 'ra', { type: 'ready' })
+    await t.cmd(b, 'rb', { type: 'ready' })
+    await t.cmd(a, 'go', { type: 'start', expectedVersion: t.host.current?.version as number })
+    const lastSeq = b.last().seq as number
+    const epoch = b.frames()[0].epoch as string
+    t.clientClose(b)
+    const b2 = await t.join(2, { lastSeq, epoch })
+    const welcome = b2.frames()[0]
+    expect(welcome).toMatchObject({ selfId: await pidOf(2), mode: 'replay' })
+    const lastEvt = b2.last()
+    expect(lastEvt.snap.game.hand).toEqual(t.host.current?.game?.core.players[await pidOf(2)]?.hand)
+  })
+})

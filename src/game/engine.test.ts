@@ -6,7 +6,7 @@ import assert from 'assert'
 import { describe, expect, it } from 'vitest'
 import { mulberry32 } from '../shared/rng'
 import { type CardId, FULL_DECK, buildDeck } from './cards'
-import { ENGINE_IS_STUB, engine } from './engine'
+import { engine } from './engine'
 import type { FactCardId, GameCore, Move, Pid, PrimeDaifugoSetupData } from './types'
 
 const RULE: PrimeDaifugoSetupData = {
@@ -82,10 +82,6 @@ function reject(core: GameCore, by: Pid, move: Move, reason: string) {
 }
 
 describe('engine', () => {
-  it('is implemented', () => {
-    expect(ENGINE_IS_STUB).toBe(false)
-  })
-
   describe('setup (RQ-R6, RQ-R7)', () => {
     it('rejects fewer than 2, more than 4, or repeated seats', () => {
       expect(engine.setup(['a'], RULE, rng())).toEqual({ ok: false, reason: 'bad-player-count' })

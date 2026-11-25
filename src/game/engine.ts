@@ -299,6 +299,3 @@ function forfeit(
 }
 
 export const engine: GameEngine = { setup, applyMove, timeoutPass, forfeit }
-
-/** False now that the engine is implemented (dependent tests used it to `skipIf` the stub). */
-export const ENGINE_IS_STUB = false

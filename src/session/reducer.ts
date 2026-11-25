@@ -50,9 +50,6 @@ export const roomReduce: RoomReducer = (state, input, deps) => {
   return tx.finish()
 }
 
-/** False once T2 landed (dependent tests used `skipIf(REDUCER_IS_STUB)`). */
-export const REDUCER_IS_STUB = false
-
 /* ------------------------------------------------------------------ */
 
 /** Spec §3.3: newest connection wins; welcome mode from epoch/lastSeq/ring. */

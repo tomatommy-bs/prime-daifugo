@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { CardId, GameCore, GameEngine } from '../game/types'
 import { DEFAULT_RULE } from '../shared/rule-options'
-import { REDUCER_IS_STUB, initialRoomState, roomReduce } from './reducer'
+import { initialRoomState, roomReduce } from './reducer'
 import { Driver } from './testing/driver'
 import { createFakeEngine, fakeEngine, fullDeck } from './testing/fake-engine'
 import type { Directive, RoomState } from './types'
@@ -43,7 +43,6 @@ describe('initialRoomState', () => {
       gcAt: null,
     })
     expect(s.rule).toEqual(DEFAULT_RULE)
-    expect(REDUCER_IS_STUB).toBe(false)
   })
 })
 
