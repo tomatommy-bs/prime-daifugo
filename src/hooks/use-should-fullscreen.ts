@@ -19,6 +19,7 @@ export const useShouldFullscreen = (): {
     }
     case 'macos':
     case 'windows':
+    case 'chromeos':
     case 'linux':
       if (process.env.NODE_ENV === 'development') {
         shouldFullscreen = !fullscreen

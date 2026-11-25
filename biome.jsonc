@@ -1,0 +1,121 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "files": {
+    "include": ["src/**", "worker/**", "e2e/**"],
+    "ignore": [".wrangler/**", "dist-worker/**", "worker/.wrangler/**"],
+  },
+  "organizeImports": {
+    "enabled": true,
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "all": true,
+      "suspicious": {
+        "noExplicitAny": "off",
+        "noReactSpecificProps": "off",
+      },
+      "style": {
+        "useNamingConvention": "off",
+        "noDefaultExport": "off",
+        "useFilenamingConvention": "off",
+        "useNodejsImportProtocol": "off",
+        "noNegationElse": "off",
+      },
+      "complexity": {
+        "useSimplifiedLogicExpression": "off",
+        "noExcessiveCognitiveComplexity": "off",
+        "noStaticOnlyClass": "off",
+      },
+      "correctness": {
+        "noNodejsModules": "off",
+        "useImportExtensions": "off",
+      },
+    },
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": false,
+    // globals.css keeps the spec §2.2 skeleton verbatim (tokens.test.ts parses its hex values)
+    "ignore": ["src/app/globals.css"],
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+  },
+  "json": {
+    "parser": {
+      "allowComments": true,
+    },
+    "formatter": {
+      "enabled": true,
+      "indentStyle": "space",
+      "indentWidth": 2,
+      "lineWidth": 100,
+    },
+  },
+  "javascript": {
+    "formatter": {
+      "enabled": true,
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "double",
+      "trailingCommas": "all",
+      "semicolons": "asNeeded",
+      "arrowParentheses": "always",
+      "indentStyle": "space",
+      "indentWidth": 2,
+      "lineWidth": 100,
+      "quoteProperties": "asNeeded",
+    },
+  },
+  // テストコードに含まれるJest関数が no undeclared variables と判定されるため、テストファイルのみ設定を上書き
+  "overrides": [
+    {
+      // Workers globals (DurableObjectState, ExportedHandler, ...) are ambient types from
+      // @cloudflare/workers-types; `tsc -p worker` already rejects undeclared names.
+      "include": ["worker/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUndeclaredVariables": "off",
+          },
+        },
+      },
+    },
+    {
+      // Durable Objects must not keep timers: they block hibernation (spec §2.4). Use the alarm.
+      "include": ["worker/src/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": { "deniedGlobals": ["setTimeout", "setInterval"] },
+            },
+          },
+        },
+      },
+    },
+    {
+      "include": [
+        "*.test.ts",
+        "*.test.tsx",
+        "*.spec.ts",
+        "*.spec.tsx",
+        "**/__tests__/**",
+      ],
+      "javascript": {
+        "globals": [
+          "afterAll",
+          "afterEach",
+          "beforeAll",
+          "beforeEach",
+          "describe",
+          "expect",
+          "it",
+          "jest",
+          "test",
+        ],
+      },
+    },
+  ],
+}

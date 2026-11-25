@@ -1,11 +1,11 @@
 import { Analytics } from '@vercel/analytics/react'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
-import '@mantine/core/styles.css'
-import '@mantine/notifications/styles.css'
-import { ColorSchemeScript, MantineProvider } from '@mantine/core'
+import { geistMono, geistSans } from '@/design/fonts'
+import { MotionProvider } from '@/design/motion-provider'
+import { ThemeProvider } from '@/design/theme-provider'
+import { ColorSchemeScript, mantineHtmlProps } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
-import {} from '@tabler/icons-react'
 import type { ReactNode } from 'react'
 import DeviceRotateRecommender from './_ui/device-rotate-recommender'
 import { NavBurger } from './_ui/nav-burger'
@@ -28,28 +28,40 @@ export const metadata: Metadata = {
   },
 }
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F6F4EE' },
+    { media: '(prefers-color-scheme: dark)', color: '#0D0F13' },
+  ],
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="ja" className={`${geistSans.variable} ${geistMono.variable}`} {...mantineHtmlProps}>
       <head>
         <meta
           name="google-site-verification"
           content="OM6MabqtLgm91v3FViWdePee1L56MH4XggcWidSiJFk"
         />
-        <Analytics />
-        <ColorSchemeScript />
+        <ColorSchemeScript defaultColorScheme="auto" />
       </head>
-      <body className="min-h-screen">
-        <MantineProvider>
-          <Notifications position="top-right" />
-          {children}
-          <NavBurger />
-          <DeviceRotateRecommender />
-        </MantineProvider>
+      <body className="min-h-dvh">
+        <ThemeProvider>
+          <MotionProvider>
+            <Notifications position="top-right" />
+            {children}
+            <NavBurger />
+            <DeviceRotateRecommender />
+          </MotionProvider>
+        </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   )

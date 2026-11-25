@@ -1,26 +1,22 @@
-import { CONFIG } from '@/constants/config'
-import { PARTYKIT_HOST } from '@/constants/env'
+import { createRoom } from '@/lib/realtime-http'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import PartySocket from 'partysocket'
 
-type Response = {
-  roomId: number
+// Every visit reserves a fresh room id; never prerender or cache this route.
+export const dynamic = 'force-dynamic'
+
+/**
+ * `/room/new` (spec §8.3, RQ-L3): reserve a prime room id from the realtime backend and redirect
+ * to it. A failure throws, so the sibling `error.tsx` boundary shows; `loading.tsx` covers the wait.
+ */
+export default async function NewRoomPage() {
+  const { roomId } = await createRoom({ clientIp: clientIp() })
+  redirect(`/room/${roomId}`)
 }
 
-export default async function RandomRoomPage() {
-  const res = await PartySocket.fetch(
-    {
-      host: PARTYKIT_HOST,
-      room: CONFIG.SINGLETON_LOBBY_ROOM_ID,
-      party: 'lobby',
-      query: {
-        q: 'random',
-      },
-    },
-    { cache: 'no-cache' },
-  )
-
-  const data: Response = await res.json()
-  const roomId = data.roomId
-  redirect(`/room/${roomId}`)
+/** The visitor's IP as the platform proxy reports it (first `x-forwarded-for` hop). */
+function clientIp(): string | null {
+  const h = headers()
+  const forwarded = h.get('x-forwarded-for')?.split(',')[0]?.trim()
+  return forwarded || h.get('x-real-ip') || null
 }

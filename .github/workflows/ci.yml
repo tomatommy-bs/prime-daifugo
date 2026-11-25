@@ -1,0 +1,118 @@
+# CI for the Next.js app and the realtime Worker (docs/realtime/rebuild-spec.md §12.4).
+# The `test` job needs no secrets: the build uses the committed NEXT_PUBLIC_REALTIME_URL default
+# and the Worker is only bundled (dry run), never deployed.
+# `integration` (workerd) and `e2e` (Playwright) are opt-in: run the workflow manually, or add
+# the label `e2e` to a pull request.
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A label other than `e2e` starts a run whose jobs are all skipped; it gets its own group so it
+# never cancels the real run for the same ref. An `e2e` label run (which also runs `test`) shares
+# the group with pushes and replaces the previous run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'e2e' && format('-label-{0}', github.event.label.name) || '' }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 22.16.0
+  NEXT_TELEMETRY_DISABLED: "1"
+  WRANGLER_SEND_METRICS: "false"
+
+jobs:
+  test:
+    # adding a label other than `e2e` changes nothing this job checks
+    if: github.event.action != 'labeled' || github.event.label.name == 'e2e'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint and format check (Biome)
+        run: npx biome ci src worker e2e
+
+      - name: Typecheck (app, worker and e2e)
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build application
+        run: npm run build
+
+      - name: Build Storybook
+        run: npm run build-storybook
+
+      - name: Bundle the Worker (dry run, no deploy)
+        run: npx wrangler deploy --dry-run -c worker/wrangler.jsonc --outdir dist-worker
+
+  integration:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'e2e')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Worker integration tests (workerd)
+        run: INTEGRATION=1 npm run test:integration
+
+  e2e:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'e2e')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E (local wrangler dev + next dev)
+        run: E2E=1 npm run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
