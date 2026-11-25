@@ -1,7 +1,14 @@
 import { renderWithProviders } from '@/test-utils'
 import { act, fireEvent, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { CUT_AGAIN, CUT_CAPTION, CUT_TOTAL_MS, GrothendieckCut } from './GrothendieckCut'
+import {
+  CLEAVE_SHIFT,
+  CUT_AGAIN,
+  CUT_CAPTION,
+  CUT_TOTAL_MS,
+  GrothendieckCut,
+  cleaveHalves,
+} from './GrothendieckCut'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -85,5 +92,39 @@ describe('GrothendieckCut', () => {
     expect(container.querySelector('[data-slash]')).toBeNull()
     expect(container.querySelector('[data-cleave]')).toBeNull()
     expect(screen.getByText(CUT_CAPTION)).toBeInTheDocument()
+  })
+})
+
+describe('cleaveHalves', () => {
+  it('splits a centred card along the one slash and parts the halves along its normal', () => {
+    const [a, b] = cleaveHalves({ x: 170, y: 60, w: 60, h: 87 }, 400, 200)
+    expect(a.clip.startsWith('polygon(')).toBe(true)
+    expect(b.clip.startsWith('polygon(')).toBe(true)
+    expect(a.clip).not.toBe('polygon(0 0, 0 0, 0 0)')
+    expect(b.clip).not.toBe('polygon(0 0, 0 0, 0 0)')
+    // opposite directions, CLEAVE_SHIFT px each, the upper-left half goes up-left
+    expect(Math.hypot(a.x, a.y)).toBeCloseTo(CLEAVE_SHIFT)
+    expect(a.x).toBeCloseTo(-b.x)
+    expect(a.y).toBeCloseTo(-b.y)
+    expect(a.x).toBeLessThan(0)
+    expect(a.y).toBeLessThan(0)
+    expect(a.rotate).toBe(-b.rotate)
+  })
+
+  it('a card the slash misses stays whole on one side', () => {
+    const [a, b] = cleaveHalves({ x: 0, y: 0, w: 20, h: 20 }, 400, 200)
+    expect(a.clip).toBe('polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)')
+    expect(b.clip).toBe('polygon(0 0, 0 0, 0 0)')
+  })
+})
+
+describe('GrothendieckCut flight anchors', () => {
+  it('each cut card carries data-cut-card for its flight', () => {
+    const { container } = renderWithProviders(
+      <GrothendieckCut active={true} onDone={vi.fn()} cards={['5S', '7H']} />,
+      { reducedMotion: false },
+    )
+    expect(container.querySelector('[data-cut-card="5S"]')).not.toBeNull()
+    expect(container.querySelector('[data-cut-card="7H"]')).not.toBeNull()
   })
 })

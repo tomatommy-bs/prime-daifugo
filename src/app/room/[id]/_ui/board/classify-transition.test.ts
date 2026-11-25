@@ -83,7 +83,7 @@ const rows: Row[] = [
       commander: alice,
       submitCardSet: { submit: ['5S', '7H'], factor: [] },
     }) as SystemMessage,
-    expected: [{ type: 'cut57', playerId: 'p1' }],
+    expected: [{ type: 'cut57', playerId: 'p1', cards: ['5S', '7H'] }],
   },
   {
     name: 'flow after pass when the turn returns to the lead',

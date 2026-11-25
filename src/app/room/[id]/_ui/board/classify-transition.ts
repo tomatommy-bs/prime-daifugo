@@ -66,7 +66,10 @@ export function classifyTransition(
       if (result === null) {
         if (value === WORLD_CONFIG.GROTHENDIECK_PRIME) {
           // The cut clears the field and keeps the turn: never a plain flow.
-          return [{ type: 'cut57', playerId }, ...turnEvent(prev, next)]
+          return [
+            { type: 'cut57', playerId, cards: submitCardSet.submit },
+            ...turnEvent(prev, next),
+          ]
         }
         events.push({
           type: 'submit-ok',

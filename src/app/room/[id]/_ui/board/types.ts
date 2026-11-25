@@ -77,7 +77,7 @@ export type BoardEvent =
   /** field non-empty → [] not caused by a 57 cut */
   | { type: 'flow' }
   /** successful submission of exactly 57 */
-  | { type: 'cut57'; playerId: string }
+  | { type: 'cut57'; playerId: string; cards: CardId[] }
   | { type: 'turn'; from: string | null; to: string }
   /** game-end / waitingNextRound, held by the director until the winning submit has played */
   | { type: 'end'; winner: string | null }

@@ -208,7 +208,7 @@ describe('useBoardDirector', () => {
     const { result } = renderHook(() => useBoardDirector({ reduced: true }))
     const events: BoardEvent[] = [
       { type: 'deal' },
-      { type: 'cut57', playerId: 'p1' },
+      { type: 'cut57', playerId: 'p1', cards: ['5S', '7H'] },
       ok,
       { type: 'flow' },
       { type: 'draw', who: 'me', playerId: 'p1' },
