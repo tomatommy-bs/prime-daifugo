@@ -55,7 +55,8 @@ const Page = ({ params: { id } }: Props) => {
 
   const [info, setInfo] = useState<BoardInfo>({ status: null, n: 0 })
   const chrome = useMemo(() => ({ onBoardInfo: setInfo, toggleLog }), [toggleLog])
-  const collapsed = mode === 'compact' && info.status === 'playing'
+  // phones (landscape and portrait) give the 36px bar to the SeatLine while playing
+  const collapsed = (mode === 'compact' || mode === 'portrait') && info.status === 'playing'
   const wideLog = mode === 'wide' && sidebar
 
   return (

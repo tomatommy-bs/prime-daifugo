@@ -64,6 +64,12 @@ export function seatLabel({
 }
 
 /** One or two stacked card backs, decorative. */
+/** A hairline in ink so the dark Ulam back still reads on the dark surfaces. */
+const BACK_EDGE = {
+  outline: '1px solid color-mix(in srgb, var(--ink) 30%, transparent)',
+  borderRadius: 2,
+} as const
+
 function MiniBacks({ count, height }: { count: number; height: number | string }) {
   const layers = count >= 2 ? 2 : count === 1 ? 1 : 0
   if (layers === 0) {
@@ -89,7 +95,7 @@ function MiniBacks({ count, height }: { count: number; height: number | string }
           aria-hidden="true"
           focusable="false"
           className="absolute top-0 left-0"
-          style={{ fontSize: height, transform: 'translate(3px, -1px) rotate(6deg)' }}
+          style={{ fontSize: height, transform: 'translate(3px, -1px) rotate(6deg)', ...BACK_EDGE }}
         />
       ) : null}
       <GameCard
@@ -98,7 +104,7 @@ function MiniBacks({ count, height }: { count: number; height: number | string }
         aria-hidden="true"
         focusable="false"
         className="relative"
-        style={{ fontSize: height, filter: 'drop-shadow(0 1px 0 rgb(0 0 0 / .15))' }}
+        style={{ fontSize: height, filter: 'drop-shadow(0 1px 0 rgb(0 0 0 / .15))', ...BACK_EDGE }}
       />
     </span>
   )

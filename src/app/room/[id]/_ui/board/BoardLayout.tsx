@@ -183,7 +183,11 @@ export function BoardLayout({
       <div style={area('deck')} data-area="deck" className="flex items-center justify-center">
         {deck}
       </div>
-      <div style={area('field')} data-area="field" className="relative">
+      <div
+        style={area('field')}
+        data-area="field"
+        className="relative flex flex-col justify-center"
+      >
         {field}
       </div>
       {hasReset ? (

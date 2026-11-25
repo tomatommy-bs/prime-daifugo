@@ -337,7 +337,7 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
                   n={n}
                   timer={timer}
                   isMyTurn={isMyTurn}
-                  reserveRight={mode === 'compact'}
+                  reserveRight={mode === 'compact' || mode === 'portrait'}
                 />
               }
               deck={
