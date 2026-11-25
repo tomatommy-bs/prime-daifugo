@@ -143,7 +143,13 @@ export function BoardLayout({
             {actions}
           </div>
         </div>
-        <div style={area('hand')} data-area="hand" className="pb-fib-3">
+        {/* a fixed floor (a fanned hand's height), so the table oval keeps its size when
+            an observer has no hand */}
+        <div
+          style={{ ...area('hand'), minHeight: 'calc(var(--card-hand) * 1.1 + 18px)' }}
+          data-area="hand"
+          className="pb-fib-3"
+        >
           {hand}
         </div>
       </div>

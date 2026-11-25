@@ -3,7 +3,7 @@ import type { CardId } from '@/game-card/src'
 import { makeCtx, makeGameState, makePresence, renderWithProviders } from '@/test-utils'
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { SeatRing, ellipseArcPath, ringGeometry, shortestTurn } from './SeatRing'
+import { ARC_FROM, SeatRing, ellipseArcPath, ringGeometry, shortestTurn } from './SeatRing'
 import { buildSeats } from './seat-model'
 
 const hand = (n: number) => Array.from({ length: n }, () => 'AS' as CardId)
@@ -94,6 +94,9 @@ describe('SeatRing', () => {
     )
     expect(container.querySelector('[data-seat-ring]')).toHaveAttribute('data-active-k', '1')
     expect(container.querySelector('[data-turn-radius]')).not.toBeNull()
+    // the radius has no loose end dot, and the arc starts beside the active chip
+    expect(container.querySelector('[data-turn-radius] circle')).toBeNull()
+    expect(ARC_FROM).toBeLessThanOrEqual(0.1)
     expect(container.querySelector('[data-direction-arc]')).not.toBeNull()
     const active = screen.getAllByRole('group').filter((g) => g.getAttribute('aria-current'))
     expect(active).toHaveLength(1)

@@ -107,7 +107,8 @@ export const WaitingRoom: FC<Props> = (props) => {
 
   return (
     <div
-      className="mx-auto grid w-full max-w-[987px] items-start gap-fib-4"
+      // compact (844×390): tighter gaps and a bottom margin so both panes fit the viewport
+      className="mx-auto grid w-full max-w-[987px] items-start gap-fib-4 compact:gap-fib-3 compact:pb-fib-2"
       style={{
         gridTemplateColumns: stacked ? 'minmax(0, 1fr)' : 'minmax(0, 360px) minmax(0, 1fr)',
       }}
@@ -116,7 +117,7 @@ export const WaitingRoom: FC<Props> = (props) => {
     >
       <section
         aria-labelledby="waiting-seats-title"
-        className="flex flex-col items-center gap-fib-3 rounded-[var(--r-3)] p-fib-3"
+        className="flex flex-col items-center gap-fib-3 rounded-[var(--r-3)] p-fib-3 compact:gap-fib-2 compact:p-fib-2"
         style={{
           background: 'var(--surface)',
           border: '1px solid var(--line)',
@@ -155,7 +156,7 @@ export const WaitingRoom: FC<Props> = (props) => {
 
       <m.section
         aria-labelledby="waiting-axioms-title"
-        className="flex flex-col gap-fib-2 rounded-[var(--r-3)] p-fib-4"
+        className="flex flex-col gap-fib-2 rounded-[var(--r-3)] p-fib-4 compact:gap-fib-1 compact:p-fib-3"
         style={{
           background: 'var(--surface)',
           border: '1px solid var(--line)',
@@ -285,7 +286,7 @@ function SeatRing({
   const side = compact ? 'min(100%, 360px, max(176px, calc(100dvh - 210px)))' : 'min(100%, 360px)'
 
   return (
-    <div className="relative mb-fib-5 aspect-square" style={{ width: side }}>
+    <div className="relative mb-fib-5 aspect-square compact:mb-fib-4" style={{ width: side }}>
       <ModRing n={slots} size={360} className="absolute inset-0 h-full w-full" />
       <div
         aria-hidden="true"

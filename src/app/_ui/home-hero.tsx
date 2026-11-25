@@ -162,11 +162,18 @@ export function HomeHero({ reduced = false, intro, variant = 'stack' }: HomeHero
           className="m-0 mt-fib-1 text-ink-muted"
           style={{ fontSize: variant === 'stack' ? 'var(--fs-1)' : 'var(--fs-0)' }}
         >
-          <span lang="ja-Latn">Prime Daifugō</span>
-          <span aria-hidden="true" className="mx-fib-2">
-            ·
-          </span>
-          <span className="num" role="math" aria-label="すべての素数 p について p は場より大きい">
+          {/* each half is unbreakable, so a narrow phone wraps before ∀, never inside it */}
+          <span lang="ja-Latn" className="whitespace-nowrap">
+            Prime Daifugō
+            <span aria-hidden="true" className="mx-fib-2">
+              ·
+            </span>
+          </span>{' '}
+          <span
+            className="num inline-block whitespace-nowrap"
+            role="math"
+            aria-label="すべての素数 p について p は場より大きい"
+          >
             ∀p∈ℙ, p &gt; 場
           </span>
         </p>

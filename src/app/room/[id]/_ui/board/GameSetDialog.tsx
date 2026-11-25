@@ -113,9 +113,16 @@ export function GameSetDialog({
           ? { transition: EXIT, duration: DUR.md * 1000, timingFunction: 'var(--ease-in)' }
           : { transition: 'fade', duration: DUR.sm * 1000 }
       }
+      // One Fibonacci padding all round: Mantine's header has a 60px min-height, which left
+      // ~31px above GAME SET against 12px at the sides; the header now hugs the title.
       styles={{
         content: { background: 'var(--surface-raised)', boxShadow: 'var(--shadow-2)' },
-        header: { background: 'var(--surface-raised)', paddingBottom: 0 },
+        header: {
+          background: 'var(--surface-raised)',
+          minHeight: 0,
+          padding: 'var(--sp-4) var(--sp-4) 0',
+        },
+        body: { padding: 'var(--sp-3) var(--sp-4) var(--sp-4)' },
       }}
     >
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: tap-to-skip; Esc (window listener) is the keyboard path */}
@@ -127,7 +134,7 @@ export function GameSetDialog({
         data-game-set=""
         data-motion={mode}
         data-skipped={skipped ? 'true' : undefined}
-        className="relative flex flex-col gap-fib-4 pb-fib-2 compact:gap-fib-2 compact:pb-0"
+        className="relative flex flex-col gap-fib-4 compact:gap-fib-2"
         onClick={() => setSkipped(true)}
       >
         <dl
@@ -156,7 +163,8 @@ export function GameSetDialog({
           transition={animated ? { duration: DUR.md, delay: DUR.md } : { duration: 0 }}
         />
 
-        <div className="flex items-end justify-between gap-fib-4">
+        {/* on a narrow phone Q.E.D. drops below the scores instead of crowding them */}
+        <div className="flex flex-wrap items-end justify-between gap-x-fib-4 gap-y-fib-2">
           <table className="num border-collapse" style={{ fontSize: 'var(--fs--1)' }}>
             <caption className="sr-only">残り手札</caption>
             <thead className="sr-only">
@@ -200,7 +208,7 @@ export function GameSetDialog({
             key={skipped ? 'final' : 'stamp'}
             data-qed=""
             // the --fs-6 stamp, one step down on a 390px-tall phone so the CTA stays in view
-            className="num block select-none whitespace-nowrap font-bold text-[length:var(--fs-6)] leading-none compact:text-[length:var(--fs-4)]"
+            className="num ml-auto block select-none whitespace-nowrap font-bold text-[length:var(--fs-6)] leading-none compact:text-[length:var(--fs-4)] portrait-phone:text-[length:var(--fs-4)]"
             style={{ color: 'var(--gold)' }}
             variants={full ? preset.stamp : preset.fadeUp}
             initial={animated ? 'hidden' : false}

@@ -36,6 +36,8 @@ const RADIUS_INSET = 0.82
 /** the radius starts outside the table centre so it never crosses the field cards */
 const RADIUS_START = 0.62
 const ARC_SCALE = 0.86
+/** where the direction arc starts, as a fraction of the angle to the next seat */
+export const ARC_FROM = 0.1
 const SIEVE_CELL = 14
 
 /** Ring geometry: semi-axes and the centre. */
@@ -221,7 +223,8 @@ export function SeatRing({
       ? (() => {
           const t0 = seatAngle(active.k, n)
           const span = (2 * Math.PI) / n
-          const from = t0 + span * 0.2
+          // starts right beside the active chip (0.2 of the span left it ~80px detached)
+          const from = t0 + span * ARC_FROM
           const to = t0 + span * 0.8
           const aa = a * ARC_SCALE
           const bb = b * ARC_SCALE
@@ -339,8 +342,8 @@ export function SeatRing({
             )
           })}
           {active ? (
+            // no end dot: it sat in empty space between the field and the seat
             <g data-turn-radius="">
-              <m.circle cx={x1} cy={y1} r={2.5} fill="var(--mod)" />
               <m.line
                 x1={x1}
                 y1={y1}
@@ -424,8 +427,15 @@ export function SeatRing({
         <ul
           aria-label="観戦"
           data-observers=""
-          className="absolute top-0 left-0 m-0 flex list-none flex-wrap gap-fib-1 p-0"
+          // boxed like the seat nodes, with its own label, instead of loose chips
+          className="absolute top-0 left-0 m-0 flex list-none flex-wrap items-center gap-fib-1 rounded-[var(--r-3)] border border-line bg-surface px-fib-2 py-fib-1 shadow-[var(--shadow-1)]"
         >
+          <li
+            aria-hidden="true"
+            className="pr-fib-1 font-semibold text-[length:var(--fs--1)] text-ink-muted"
+          >
+            観戦
+          </li>
           {observers.map((s) => (
             <li key={s.id}>
               <Seat {...s} layout="chip" />

@@ -29,6 +29,11 @@ export type FieldStackProps = {
    * `layoutId` hand-over and lets a flowing top vanish at once under its ghosts.
    */
   flightHandoff?: boolean
+  /**
+   * A struck (flowed) sequence to show as if the field had just cleared: lets the gallery and
+   * stories render the flow state in the exact place the live transition puts it.
+   */
+  struckHistory?: number[]
 }
 
 export const FREE_READOUT = 'k = 自由'
@@ -70,6 +75,7 @@ export function FieldStack({
   variant = 'default',
   resultOverlay,
   flightHandoff = false,
+  struckHistory,
 }: FieldStackProps) {
   const mode = useMotionMode()
   const full = mode === 'full'
@@ -81,7 +87,8 @@ export function FieldStack({
 
   // flow: remember the last non-empty sequence and strike it out once the field clears
   const lastSequence = useRef<number[]>([])
-  const [struckValues, setStruckValues] = useState<number[] | null>(null)
+  const [struckLive, setStruckValues] = useState<number[] | null>(null)
+  const struckValues = struckLive ?? struckHistory ?? null
   useEffect(() => {
     if (field.length > 0) {
       lastSequence.current = field.map((cards) => concatCardNumbers(cards))

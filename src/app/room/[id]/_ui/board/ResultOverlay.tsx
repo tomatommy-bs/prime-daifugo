@@ -294,10 +294,11 @@ export function ResultOverlay({ result, onDone }: ResultOverlayProps) {
           transition={{ duration: full ? DUR.md : DUR.sm, ease: EASE.out }}
         >
           <m.div
-            // opaque, so field cards never show through the factor tree; tighter on compact
-            // phones so the popover stays inside the 132px field row, under the seat line
+            // opaque, so field cards never show through the factor tree; on compact phones the
+            // parts sit in a row, so the plate stays inside the 132px field row (it used to
+            // stand ~170px tall and cover the seat line)
             data-result-plate=""
-            className="flex max-w-full flex-col items-center gap-fib-2 rounded-[var(--r-3)] px-fib-4 py-fib-3 compact:gap-fib-1 compact:py-fib-1"
+            className="flex max-w-full flex-col items-center gap-fib-2 rounded-[var(--r-3)] px-fib-4 py-fib-3 compact:flex-row compact:flex-wrap compact:justify-center compact:gap-x-fib-3 compact:gap-y-fib-1 compact:py-fib-2"
             style={{
               background: 'var(--surface-raised)',
               boxShadow: 'var(--shadow-2)',

@@ -126,4 +126,13 @@ describe('FieldStack flight hand-off', () => {
     const { container } = renderWithProviders(<FieldStack field={[PLAY_13]} />)
     expect(container.querySelector('[data-field-stack]')).not.toHaveAttribute('data-flight-handoff')
   })
+
+  it('struckHistory shows a flowed sequence in the live position (gallery / stories)', () => {
+    const { container } = renderWithProviders(
+      <FieldStack field={[]} struckHistory={[13, 47, 1013]} />,
+    )
+    const struck = container.querySelector('[data-field-sequence][data-struck="true"]')
+    expect(struck).toHaveTextContent('13 < 47 < 1013')
+    expect(struck?.closest('[data-field-stack]')).not.toBeNull()
+  })
 })

@@ -204,11 +204,15 @@ const Page: NextPage = () => {
         <div className="mt-auto flex min-w-0 items-center gap-fib-2 border-t border-line pt-fib-3">
           <div className="min-h-16 min-w-0 flex-1">
             {selectedCards.length === 0 ? (
-              <p className="text-[length:var(--fs--1)] text-ink-muted">
+              // keep-all: Japanese breaks between phrases, not mid-word; the key hint is
+              // one unbreakable chip on its own line
+              <p className="text-[length:var(--fs--1)] text-ink-muted [word-break:keep-all]">
                 カードを選ぶと数が並びます
-                <span className="hidden fine:inline">
-                  {' '}
-                  · キー <span className="num">1–9 · 0 = 10 · j q k</span>
+                <span
+                  className="mt-fib-1 hidden w-fit whitespace-nowrap rounded-[var(--r-1)] border border-line px-fib-1 fine:block"
+                  data-key-hint=""
+                >
+                  キー <span className="num">1–9 · 0 = 10 · j q k</span>
                 </span>
               </p>
             ) : (
@@ -250,14 +254,15 @@ const Page: NextPage = () => {
       {/* keypad (0.382) */}
       <section
         aria-label="キーパッド（♣）"
-        className="grid grid-cols-12 content-center justify-items-center gap-fib-2 rounded-[var(--r-3)] border border-line bg-surface p-fib-3 shadow-[var(--shadow-1)]"
+        className="grid grid-cols-4 content-center justify-items-center gap-fib-2 rounded-[var(--r-3)] border border-line bg-surface p-fib-3 shadow-[var(--shadow-1)]"
       >
-        {cardIds.map((cardId, i) => (
+        {cardIds.map((cardId) => (
           <KeypadKey
             key={cardId}
             cardId={cardId}
-            // A–9 in rows of three, then 10 J Q K in a row of four
-            span={i < 9 ? 'col-span-4' : 'col-span-3'}
+            // one uniform 4-column grid (rows of three then four looked broken, and put the
+            // key badges in different places)
+            span="col-span-1"
             pulse={pulse?.card === cardId ? pulse.n : null}
             reduced={mode === 'reduced'}
             onPress={handleClickInputCard}

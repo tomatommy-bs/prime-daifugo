@@ -150,3 +150,14 @@ describe('/labo/calc', () => {
     expect(container.querySelector('.ring-mod')).toBeNull()
   })
 })
+
+describe('LaboCalc keypad layout', () => {
+  it('lays all 13 keys in one uniform 4-column grid', () => {
+    renderWithProviders(<Page />)
+    const pad = screen.getByRole('region', { name: 'キーパッド（♣）' })
+    expect(pad.className).toContain('grid-cols-4')
+    for (const key of pad.querySelectorAll('[data-card-key]')) {
+      expect(key.className).toContain('col-span-1')
+    }
+  })
+})

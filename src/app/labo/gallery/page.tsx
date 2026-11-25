@@ -14,7 +14,6 @@ import {
   ConnectionOverlay,
   DeckPile,
   FactorPanel,
-  FieldSequence,
   FieldStack,
   GameSetDialog,
   GrothendieckCut,
@@ -315,7 +314,8 @@ function WaitingScene() {
       <header className="h-[36px] shrink-0 border-b border-line wide:h-[52px]">
         <GalleryTopBar n={current.length} />
       </header>
-      <main className="mx-auto flex w-full max-w-[987px] flex-1 items-center py-fib-3">
+      {/* like the room page: no vertical padding on compact phones */}
+      <main className="mx-auto flex w-full max-w-[987px] flex-1 items-center py-fib-3 compact:py-0">
         <div className="w-full">
           <WaitingRoom
             rule={currentRule}
@@ -439,10 +439,13 @@ function BoardSceneView({ scene }: { scene: BoardScene }) {
 
   const fieldNode = (
     <div className="flex h-full min-w-0 flex-col items-stretch justify-center gap-fib-1">
-      {scene.struckSequence ? (
-        <FieldSequence values={scene.struckSequence} struck={true} layout="line" />
-      ) : null}
-      <FieldStack field={scene.fieldView} leadName={leadName} resultOverlay={overlay} />
+      {/* the struck flow history goes through FieldStack, where the live board shows it */}
+      <FieldStack
+        field={scene.fieldView}
+        leadName={leadName}
+        resultOverlay={overlay}
+        struckHistory={scene.struckSequence}
+      />
     </div>
   )
 

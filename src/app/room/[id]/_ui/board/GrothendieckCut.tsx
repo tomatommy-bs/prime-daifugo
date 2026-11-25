@@ -302,7 +302,9 @@ export function GrothendieckCut({ active, onDone, skippable = true, cards }: Gro
     className:
       'absolute top-1/2 left-1/2 z-20 flex w-[max(100%,min(30rem,92vw))] -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden rounded-[var(--r-3)] border-0 p-0 text-center portrait-phone:w-full',
     style: {
-      height: 'max(100%, calc(var(--card-field) * 1.236))',
+      // a floor, not a fixed height: the wrapped portrait caption grows the box instead of
+      // being clipped by it
+      minHeight: 'max(100%, calc(var(--card-field) * 1.236))',
       background: 'var(--bg)',
     },
     initial: { opacity: 0 },

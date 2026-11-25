@@ -65,7 +65,7 @@ export default function Home() {
 
   const counters = <LobbyCounters online={nOnline} lobby={nLobby} rooms={nRooms} inline={compact} />
   const actions = <HomeActions play={play} short={compact} />
-  const links = <FooterLinks play={play} />
+  const links = <FooterLinks play={play} scrim={!compact} />
 
   return (
     <main
@@ -77,7 +77,8 @@ export default function Home() {
     >
       {compact ? (
         <div
-          className="grid w-full max-w-[987px] items-center gap-fib-5 rounded-[var(--r-3)] p-fib-4"
+          // tops aligned: the hero column is taller, so centring left the CTA column higher
+          className="grid w-full max-w-[987px] items-start gap-fib-5 rounded-[var(--r-3)] p-fib-4"
           style={{
             gridTemplateColumns: 'minmax(0, 0.618fr) minmax(0, 0.382fr)',
             background: 'var(--surface)',
@@ -256,14 +257,16 @@ function HomeActions({ play, short }: { play: boolean; short: boolean }) {
   )
 }
 
-function FooterLinks({ play }: { play: boolean }) {
+/** `scrim`: on the bare page (not inside the card) the links get a backing over the Ulam field. */
+function FooterLinks({ play, scrim = false }: { play: boolean; scrim?: boolean }) {
   const linkClass =
     'inline-flex min-h-[44px] items-center gap-fib-1 px-fib-2 text-ink-muted no-underline hover:text-ink'
   return (
     <Reveal play={play} delay={CTA_DELAY + 0.144}>
       <nav
         aria-label="関連リンク"
-        className="flex flex-wrap items-center justify-center"
+        data-scrim={scrim ? 'true' : undefined}
+        className={`flex flex-wrap items-center justify-center ${scrim ? 'rounded-[var(--r-3)] bg-bg/90 px-fib-2' : ''}`}
         style={{ fontSize: 'var(--fs--1)' }}
       >
         <a className={linkClass} href={URLS.feedback} target="_blank" rel="noopener noreferrer">

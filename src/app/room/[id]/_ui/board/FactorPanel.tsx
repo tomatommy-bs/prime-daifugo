@@ -261,9 +261,10 @@ export function FactorPanel({
           </div>
 
           <div
-            className="flex flex-wrap items-baseline gap-x-[var(--sp-2)] gap-y-[var(--sp-1)]"
+            // one step smaller on compact phones, so the panel fits its 144px row instead of
+            // running under the hand divider
+            className="flex flex-wrap items-baseline gap-x-[var(--sp-2)] gap-y-[var(--sp-1)] text-[length:var(--fs-2)] leading-[1.236] compact:text-[length:var(--fs-1)]"
             data-readout=""
-            style={{ fontSize: 'var(--fs-2)' }}
           >
             {factCards.length > 0 ? <Expr tokens={factCards} className="font-bold" /> : null}
             {readout.valid ? (
