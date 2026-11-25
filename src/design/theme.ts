@@ -1,4 +1,4 @@
-import { type MantineColorsTuple, createTheme } from '@mantine/core'
+import { type CSSVariablesResolver, type MantineColorsTuple, createTheme } from '@mantine/core'
 
 // generated around --prime light #B3361B (index 7 = light primary, index 4 = dark primary ≈ #FF8A5C)
 export const prime: MantineColorsTuple = [
@@ -97,4 +97,29 @@ export const theme = createTheme({
     Tooltip: { defaultProps: { withArrow: true, openDelay: 233 } },
     Popover: { defaultProps: { radius: 'md', shadow: 'md' } },
   },
+})
+
+/**
+ * Maps Mantine's scheme variables onto the design tokens. Mantine emits these unlayered,
+ * so they win over its own `@layer mantine` defaults (which otherwise paint the body
+ * `#fff` / `#242424` and the text `#000` / `#C9C9C9` over our `@layer base` tokens).
+ */
+const TOKEN_VARS: Record<string, string> = {
+  '--mantine-color-body': 'var(--bg)',
+  '--mantine-color-text': 'var(--ink)',
+  '--mantine-color-dimmed': 'var(--ink-muted)',
+  '--mantine-color-placeholder': 'var(--ink-muted)',
+  '--mantine-color-default': 'var(--surface)',
+  '--mantine-color-default-hover': 'var(--surface-raised)',
+  '--mantine-color-default-color': 'var(--ink)',
+  '--mantine-color-default-border': 'var(--border-strong)',
+  '--mantine-color-disabled': 'var(--line)',
+  '--mantine-color-disabled-color': 'var(--ink-muted)',
+  '--mantine-color-disabled-border': 'var(--line)',
+}
+
+export const cssVariablesResolver: CSSVariablesResolver = () => ({
+  variables: {},
+  light: TOKEN_VARS,
+  dark: TOKEN_VARS,
 })

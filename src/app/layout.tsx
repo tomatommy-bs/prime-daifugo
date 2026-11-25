@@ -1,12 +1,10 @@
 import { Analytics } from '@vercel/analytics/react'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
-import '@mantine/core/styles.layer.css'
-import '@mantine/notifications/styles.layer.css'
 import { geistMono, geistSans } from '@/design/fonts'
 import { MotionProvider } from '@/design/motion-provider'
-import { theme } from '@/design/theme'
-import { ColorSchemeScript, MantineProvider, mantineHtmlProps } from '@mantine/core'
+import { ThemeProvider } from '@/design/theme-provider'
+import { ColorSchemeScript, mantineHtmlProps } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
 import type { ReactNode } from 'react'
 import DeviceRotateRecommender from './_ui/device-rotate-recommender'
@@ -55,14 +53,14 @@ export default function RootLayout({
         <ColorSchemeScript defaultColorScheme="auto" />
       </head>
       <body className="min-h-dvh">
-        <MantineProvider theme={theme} defaultColorScheme="auto">
+        <ThemeProvider>
           <MotionProvider>
             <Notifications position="top-right" />
             {children}
             <NavBurger />
             <DeviceRotateRecommender />
           </MotionProvider>
-        </MantineProvider>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

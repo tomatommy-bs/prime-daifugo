@@ -1,5 +1,10 @@
 @layer theme, base, mantine, components, utilities;
 @import "tailwindcss";
+/* Mantine is imported here, after the layer order statement, so `mantine` sits between
+   `base` and `components` (Next 14 hoists node_modules CSS imported from layout.tsx
+   above globals.css, which made Tailwind base win over Mantine). */
+@import "@mantine/core/styles.layer.css";
+@import "@mantine/notifications/styles.layer.css";
 
 @custom-variant dark (&:where([data-mantine-color-scheme=dark], [data-mantine-color-scheme=dark] *));
 @custom-variant compact (@media (orientation: landscape) and (max-height: 500px));
@@ -44,6 +49,14 @@
     --seat-0:#64D1D7; --seat-1:#E8A5D5; --seat-2:#BBC679; --seat-3:#8FC2FD;
     --shadow-1: 0 1px 0 rgb(0 0 0 / .4);
     --shadow-2: 0 1px 2px rgb(0 0 0 / .5), 0 5px 13px rgb(0 0 0 / .35);
+  }
+  /* phone portrait: width, not height, limits the cards (the dvh clamps assume landscape) */
+  @media (orientation: portrait) and (max-width: 600px) {
+    :root {
+      --card-hand:  calc(clamp(64px, 24vw, 112px) * var(--card-k));
+      --card-field: calc(clamp(56px, 22vw, 96px) * var(--card-k));
+      --card-tray:  calc(clamp(44px, 15vw, 72px) * var(--card-k));
+    }
   }
   [data-card-size='S'] { --card-k: .8; }
   [data-card-size='L'] { --card-k: 1.25; }

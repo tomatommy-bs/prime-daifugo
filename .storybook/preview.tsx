@@ -1,10 +1,8 @@
 import '../src/app/globals.css'
-import '@mantine/core/styles.layer.css'
-import '@mantine/notifications/styles.layer.css'
 import { MantineProvider } from '@mantine/core'
 import type { Preview } from '@storybook/react'
 import { MotionProvider } from '../src/design/motion-provider'
-import { theme } from '../src/design/theme'
+import { cssVariablesResolver, theme } from '../src/design/theme'
 
 const VIEWPORTS = {
   compact: {
@@ -59,7 +57,7 @@ const preview: Preview = {
     (Story, context) => {
       const scheme = context.globals.colorScheme === 'dark' ? 'dark' : 'light'
       return (
-        <MantineProvider theme={theme} forceColorScheme={scheme}>
+        <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver} forceColorScheme={scheme}>
           <MotionProvider>
             <div style={{ background: 'var(--bg)', color: 'var(--ink)', padding: 'var(--sp-4)' }}>
               <Story />

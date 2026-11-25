@@ -17,7 +17,7 @@ import { MantineProvider } from '@mantine/core'
 import { type RenderOptions, render } from '@testing-library/react'
 import type { ReactElement, ReactNode } from 'react'
 import { MotionProvider } from './design/motion-provider'
-import { theme } from './design/theme'
+import { cssVariablesResolver, theme } from './design/theme'
 
 export const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
 
@@ -47,7 +47,11 @@ export function Providers({
   colorScheme?: 'light' | 'dark'
 }) {
   return (
-    <MantineProvider theme={theme} forceColorScheme={colorScheme}>
+    <MantineProvider
+      theme={theme}
+      cssVariablesResolver={cssVariablesResolver}
+      forceColorScheme={colorScheme}
+    >
       <MotionProvider>{children}</MotionProvider>
     </MantineProvider>
   )
