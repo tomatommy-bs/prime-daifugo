@@ -1,4 +1,5 @@
 import type { SVGAttributes, SVGProps } from 'react'
+import { cardLabel } from '../tools/card-label'
 import type { CardId } from '../tools/suit-num'
 import * as svgCards from './icons'
 
@@ -62,8 +63,27 @@ export interface GameCardProps extends SVGProps<SVGSVGElement> {
   card: CardId | 'Back'
 }
 
+const HIDDEN_ROLES = new Set(['presentation', 'none'])
+
+/**
+ * A playing card face (or the back), sized by `fontSize` (1em = card height).
+ * Defaults: `role="option"` and an `aria-label` from `cardLabel()` (e.g. `"ハートのJ, 11"`),
+ * both overridable. Decorative uses (`role="presentation"` or `aria-hidden`) get no label.
+ */
 export const GameCard: React.FC<GameCardProps> = ({ card, ...props }) => {
-  props.role ??= 'option'
-  const className: SVGAttributes<SVGSVGElement>['className'] = `select-none ${props.className}`
-  return svgCards[cardIdToModuleName[card]]({ ...props, className })
+  const role = props.role ?? 'option'
+  const decorative =
+    HIDDEN_ROLES.has(role) || props['aria-hidden'] === true || props['aria-hidden'] === 'true'
+  const ariaLabel = props['aria-label'] ?? (decorative ? undefined : cardLabel(card))
+  const className: SVGAttributes<SVGSVGElement>['className'] = props.className
+    ? `select-none ${props.className}`
+    : 'select-none'
+  const svgProps = {
+    ...props,
+    role,
+    'aria-label': ariaLabel,
+    'data-card': card,
+    className,
+  } as SVGProps<SVGSVGElement>
+  return svgCards[cardIdToModuleName[card]](svgProps)
 }
