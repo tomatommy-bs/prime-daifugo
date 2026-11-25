@@ -64,7 +64,7 @@ export default function Home() {
   const compact = variant === 'compact'
 
   const counters = <LobbyCounters online={nOnline} lobby={nLobby} rooms={nRooms} inline={compact} />
-  const actions = <HomeActions play={play} />
+  const actions = <HomeActions play={play} short={compact} />
   const links = <FooterLinks play={play} />
 
   return (
@@ -201,7 +201,7 @@ function Reveal({ play, delay, children }: { play: boolean; delay: number; child
   )
 }
 
-function HomeActions({ play }: { play: boolean }) {
+function HomeActions({ play, short }: { play: boolean; short: boolean }) {
   return (
     <nav aria-label="ゲームメニュー" className="flex flex-col gap-fib-3">
       <Reveal play={play} delay={CTA_DELAY}>
@@ -233,20 +233,22 @@ function HomeActions({ play }: { play: boolean }) {
           <Button
             component="a"
             href={URLS.rules}
+            aria-label={short ? 'ゲームルール' : undefined}
             target="_blank"
             rel="noopener noreferrer"
             variant="default"
             rightSection={<IconArrowUpRight {...ICON} />}
           >
-            ゲームルール
+            {short ? 'ルール' : 'ゲームルール'}
           </Button>
           <Button
             component={Link}
             href="/labo/calc"
+            aria-label={short ? '素数判定ラボ' : undefined}
             variant="default"
             rightSection={<IconTherefore style={{ fontSize: '1.25em' }} />}
           >
-            素数判定ラボ
+            {short ? 'ラボ' : '素数判定ラボ'}
           </Button>
         </div>
       </Reveal>
@@ -275,7 +277,14 @@ function FooterLinks({ play }: { play: boolean }) {
         <a className={linkClass} href={URLS.x} target="_blank" rel="noopener noreferrer">
           <IconBrandX {...ICON} />X ↗
         </a>
-        <Button disabled={true} variant="subtle" size="compact-sm" mih={44}>
+        <Button
+          disabled={true}
+          variant="subtle"
+          size="compact-sm"
+          mih={44}
+          // a quiet text-like item beside the footer links, still a real disabled button
+          styles={{ root: { background: 'transparent', fontWeight: 400 } }}
+        >
           トレーニング · 準備中
         </Button>
       </nav>

@@ -372,7 +372,7 @@ function SeatNode({
       >
         <SeatGlyph ready={ready} isSelf={isSelf} reduced={preset.reduced} />
         <span
-          className="flex max-w-[7em] items-center gap-fib-1 font-semibold leading-tight"
+          className="flex items-center gap-fib-1 whitespace-nowrap font-semibold leading-tight"
           style={{ fontSize: 'var(--fs--1)' }}
           aria-hidden="true"
         >
@@ -382,21 +382,20 @@ function SeatNode({
             style={{ background: `var(--seat-${k % 4})` }}
           />
           <span className="num shrink-0 text-ink-muted">{residue(k)}</span>
-          <span className="truncate">{player.name}</span>
+          <span className="max-w-[6em] truncate">{player.name}</span>
+          {/* inline, so the top seat's label never reaches the ring's centre caption */}
+          {isSelf ? (
+            <span
+              className="shrink-0 rounded-[var(--r-1)] px-fib-1 font-semibold leading-tight"
+              style={{
+                color: 'var(--mod)',
+                background: 'color-mix(in srgb, var(--mod) 12%, transparent)',
+              }}
+            >
+              あなた
+            </span>
+          ) : null}
         </span>
-        {isSelf ? (
-          <span
-            className="rounded-[var(--r-1)] px-fib-1 font-semibold leading-tight"
-            style={{
-              fontSize: 'var(--fs--1)',
-              color: 'var(--mod)',
-              background: 'color-mix(in srgb, var(--mod) 12%, transparent)',
-            }}
-            aria-hidden="true"
-          >
-            あなた
-          </span>
-        ) : null}
       </m.div>
     </li>
   )
