@@ -165,7 +165,7 @@ worker/
 ├── src/                   # Worker のルーター、RoomDO / LobbyDO とその純粋なホスト層
 ├── test/                  # ホスト層のユニットテスト（integration/ は workerd での結合テスト）
 └── wrangler.jsonc         # Worker の設定（Durable Object、vars、本番環境）
-e2e/                       # Playwright E2E（2 ブラウザでの対戦シナリオ）
+e2e/                       # Playwright E2E（複数ブラウザでの対戦・セッションのシナリオ）
 docs/realtime/             # リアルタイム基盤の仕様書・実装計画・運用手順書
 ```
 
@@ -229,10 +229,11 @@ npm run screens   # デザインギャラリー全シーン + / , /login , /labo
 npm run flights   # カード飛行アニメーションのフレーム連番とコンタクトシート
 ```
 
-- `npm run screens` は各シーンを 3 つのビューポート（844×390, 390×844, 1440×900）× ライト / ダークで撮影し、`docs/design/screens/<scene>-<w>x<h>-<scheme>.png`（git 管理外）に保存します（現在 84 枚）。再現性のため reduced motion で撮影し、ページエラーやコンソールエラーがあれば終了コード 1 で失敗します。
+- `npm run screens` は各シーンを 3 つのビューポート（844×390, 390×844, 1440×900）× ライト / ダークで撮影し、`docs/design/screens/<scene>-<w>x<h>-<scheme>.png`（git 管理外）に保存します（現在 96 枚）。再現性のため reduced motion で撮影し、ページエラーやコンソールエラーがあれば終了コード 1 で失敗します。
 - `BASE_URL` に何も応答しなければ `next dev -p 3123` を自動で起動・終了します。既存のサーバーを使う場合は `BASE_URL=http://localhost:3000`、一部だけ撮る場合は `SCENES=factor,cut57` を指定します。
 - Playwright 同梱の Chromium が無い環境では `PW_CHROMIUM_PATH` に既存の `chrome-headless-shell` のパスを指定します（例: `~/Library/Caches/ms-playwright/chromium_headless_shell-<rev>/chrome-headless-shell-mac-arm64/chrome-headless-shell`）。`npm run test:storybook` も同じブラウザを使います。
 - `npm run flights` は `STEPS`, `VIEWPORTS`, `FRAME_MS` で対象と間隔を絞れます。出力先は `docs/design/screens/flights/` です。
+- 自動起動する `next dev` はビルド先を `.next-alt` にします（`NEXT_DIST_DIR`）。同じチェックアウトで `npm run dev` が動いていても `.next` を取り合いません。
 - `npm run screens` / `npm run flights` は `next dev` だけで動きます。Worker（`:8787`）への接続エラー（ホームのロビー接続など）は想定内として無視し、それ以外のコンソールエラーでは失敗します。
 - `next dev` / `next build` は `package-lock.json` を書き換えることがあります。その差分はコミットせずに戻してください。
 
@@ -243,8 +244,9 @@ E2E=1 npm run test:e2e
 E2E=1 E2E_RT_PORT=8799 npm run test:e2e   # :8787 が使用中のとき
 ```
 
-- `alice` と `bob` の 2 つのブラウザコンテキストで、部屋の作成・参加・開始、リロード、回線断、切断中の自動パス、猶予切れの棄権、二重タブ、退出、ロビーのカウンターを検証します（仕様書 §12.2）。
-- Worker は短い猶予（`GRACE_PLAYING_MS=5000` など）で、Next.js は `next dev -p 3124` で自動起動します。どちらも既存のサーバーは再利用しません。
+- `e2e/session.spec.ts` / `lobby.spec.ts`: `alice` と `bob` の 2 つのブラウザコンテキストで、部屋の作成・参加・開始、リロード、回線断（リプレイで復帰）、切断中の自動パス（20 秒上限を短縮した 3 秒）、猶予切れの棄権、二重タブ、退出、ロビーのカウンターを検証します（仕様書 §12.2）。
+- `e2e/game.spec.ts`: 3 人で GAME SET まで対局、素因数分解の提出、素数でない提出のペナルティ、途中参加の観戦者が次のラウンドで着席、対局中の Worker の強制終了と再起動（デプロイ相当）からの復帰を検証します。
+- Worker（`wrangler dev --local`、短い猶予 `GRACE_PLAYING_MS=5000` など、毎回空にする `.wrangler/e2e-state`）はテスト側のフィクスチャ（`e2e/realtime-server.ts`）が起動し、再起動シナリオで止めて同じ保存先で立ち上げ直します。Next.js は `next dev -p 3124`（ビルド先 `.next-alt`）で自動起動します。どちらも既存のサーバーは再利用しません。
 - `E2E=1` を付けないと全テストがスキップされます。Chromium は `PW_CHROMIUM_PATH` で差し替えられます。
 
 ### 6. デプロイメント
