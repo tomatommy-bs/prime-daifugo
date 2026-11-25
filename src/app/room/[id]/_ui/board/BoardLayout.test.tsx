@@ -32,10 +32,13 @@ describe('BoardLayout', () => {
     expect(GRID.compact.rowGap).toBe('var(--sp-1)')
   })
 
-  it('factor mode swaps the field and tray rows with a transition', () => {
+  it('factor mode swaps the field and tray rows with a transition (384px budget kept)', () => {
     renderWithProviders(<BoardLayout mode="compact" factorOpen={true} {...slots} />)
-    expect(root().style.gridTemplateRows).toBe('36px 76px 132px 128px')
+    expect(root().style.gridTemplateRows).toBe('36px 64px 144px 128px')
     expect(root()).toHaveAttribute('data-factor', 'true')
+    // the field shrinks to mini cards and the tray condenses so the panel fits
+    expect(root().style.getPropertyValue('--card-field')).toContain('44px')
+    expect(root().style.getPropertyValue('--card-tray')).toContain('38px')
     expect(gridStyle('compact', true, false).transition).toContain('grid-template-rows')
   })
 
@@ -107,6 +110,24 @@ describe('BoardTopBar', () => {
     )
     expect(screen.getByText('ℤ/2ℤ')).toBeInTheDocument()
     expect(screen.getByText('bob の番')).toBeInTheDocument()
+  })
+
+  it('draws its own timer only when no seat carries the clock', () => {
+    const { rerender } = renderWithProviders(
+      <BoardTopBar mode="compact" seats={seats} n={2} timer={<span>T</span>} isMyTurn={false} />,
+    )
+    expect(screen.getByText('T')).toBeInTheDocument()
+    const timed = seats.map((s) => ({ ...s, leftTime: 30, timeLimit: 60 }))
+    rerender(
+      <BoardTopBar mode="compact" seats={timed} n={2} timer={<span>T</span>} isMyTurn={false} />,
+    )
+    expect(screen.queryByText('T')).toBeNull()
+    rerender(
+      <BoardTopBar mode="wide" seats={timed} n={2} timer={<span>T</span>} isMyTurn={false} />,
+    )
+    // wide: only the active seat's node draws a clock
+    const anyActive = timed.some((s) => s.isActive)
+    expect(screen.queryByText('T') === null).toBe(anyActive)
   })
 
   it('wide says あなたの番です on my turn', () => {

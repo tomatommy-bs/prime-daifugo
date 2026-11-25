@@ -167,9 +167,10 @@ export function Seat({
       />
       <span
         data-seat-name=""
-        className="truncate"
+        className={
+          node ? 'max-w-[9em] truncate' : 'max-w-[6.5em] truncate portrait-phone:max-w-[4.5em]'
+        }
         style={{
-          maxWidth: node ? '9em' : '6.5em',
           fontWeight: isActive ? 700 : 600,
           color: quiet || !isActive ? 'var(--ink-muted)' : 'var(--ink)',
           fontSize: node ? 'var(--fs-0)' : 'var(--fs--1)',
@@ -206,7 +207,10 @@ export function Seat({
     </span>
   ) : (
     <span className="inline-flex shrink-0 items-center gap-fib-1" style={{ color: 'var(--ink)' }}>
-      <MiniBacks count={handCount ?? 0} height={node ? 'var(--card-seat)' : 16} />
+      {/* phone portrait: the count alone, so the residue line fits 390px */}
+      <span className={node ? 'inline-flex' : 'inline-flex portrait-phone:hidden'}>
+        <MiniBacks count={handCount ?? 0} height={node ? 'var(--card-seat)' : 16} />
+      </span>
       {handCount === null ? (
         <span className="num" style={{ fontSize: 'var(--fs--1)', color: 'var(--ink-muted)' }}>
           —

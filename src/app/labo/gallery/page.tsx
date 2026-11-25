@@ -453,8 +453,10 @@ function BoardSceneView({ scene }: { scene: BoardScene }) {
           count={deckCount}
           canDraw={drawReason === null && scene.myField !== null}
           disabledReason={scene.myField ? drawReason : null}
-          onDraw={scene.myField ? noop : undefined}
-          compact={layoutMode === 'compact'}
+          // same wiring as GameBoard: the pile is the draw button only in wide,
+          // elsewhere 引く lives in the ActionBar
+          onDraw={scene.myField && layoutMode === 'wide' ? noop : undefined}
+          compact={layoutMode !== 'wide'}
         />
       }
       field={table}
@@ -493,7 +495,6 @@ function BoardSceneView({ scene }: { scene: BoardScene }) {
             onSubmit={noop}
             onToggleFactor={field.toggleMode}
             orientation={ACTION_ORIENTATION[layoutMode]}
-            showKbd={true}
           />
         ) : null
       }
@@ -504,11 +505,12 @@ function BoardSceneView({ scene }: { scene: BoardScene }) {
             isMyTurn={isMyTurn}
             mode={field.mode}
             freshIds={scene.freshIds}
+            layout={layoutMode === 'portrait' ? 'wrap' : 'auto'}
             onSelect={field.select}
           />
-        ) : (
+        ) : gameState ? (
           observerNotice
-        )
+        ) : null
       }
       log={
         layoutMode === 'wide' ? (
@@ -520,7 +522,7 @@ function BoardSceneView({ scene }: { scene: BoardScene }) {
   )
 
   return (
-    <div className="min-h-dvh" data-card-size="M" data-self={selfId}>
+    <div className="h-dvh overflow-auto" data-card-size="M" data-self={selfId}>
       <LayoutGroup id="board">
         <ConnectionOverlay state={scene.connection} onReconnect={noop}>
           {board}

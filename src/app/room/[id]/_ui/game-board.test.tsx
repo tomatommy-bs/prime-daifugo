@@ -346,6 +346,29 @@ describe('GameBoard (redesign)', () => {
     expect(toastMessages().filter((m) => m === TRAY_WIPE_MESSAGE)).toHaveLength(1)
   })
 
+  it('board events go to the proof log; only failed submits also toast (§9.2 #29)', () => {
+    const logs: ReactNode[] = []
+    renderWithProviders(<GameBoard id="room-1" onLogNotification={(m) => logs.push(m)} />)
+    startPlaying({ currentPlayer: 'p2' })
+    const bob = { id: 'p2', name: 'bob' }
+    const before = logs.length
+    emit(serverMsg.draw({ commander: bob }))
+    emit(serverMsg.pass({ commander: bob }))
+    emit(serverMsg.submit({ commander: bob, submitCardSet: { submit: ['5C'], factor: [] } }))
+    expect(logs.length - before).toBe(3)
+    expect(
+      notificationsShow.mock.calls.filter(([a]) => (a as { color?: string }).color !== 'red'),
+    ).toHaveLength(0)
+    emit(
+      serverMsg.submit({
+        commander: bob,
+        submitCardSet: { submit: ['KH'], factor: [] },
+        result: 'BASE_IS_NOT_PRIME',
+      }),
+    )
+    expect(notificationsShow).toHaveBeenCalledWith(expect.objectContaining({ color: 'red' }))
+  })
+
   it('an empty tray wipe is silent', () => {
     renderWithProviders(<GameBoard id="room-1" />)
     startPlaying({ currentPlayer: 'p2' })

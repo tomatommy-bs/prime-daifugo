@@ -102,7 +102,7 @@ export function FieldStack({
       data-empty={hasTop ? undefined : 'true'}
       className="relative flex min-w-0 flex-col items-center justify-center gap-fib-2"
     >
-      <div className="flex min-w-0 max-w-full items-center gap-fib-3">
+      <div className="flex min-w-0 max-w-full flex-wrap items-center justify-center gap-x-fib-3 gap-y-fib-1">
         {struckValues ? (
           <FieldSequence values={struckValues} struck={true} layout="line" max={compactHistory} />
         ) : history.length > 0 ? (

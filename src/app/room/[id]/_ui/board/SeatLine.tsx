@@ -7,6 +7,7 @@
  */
 import { DUR, EASE, useMotionMode } from '@/design/motion'
 import { m } from 'framer-motion'
+import { useEffect, useRef } from 'react'
 import { Seat } from './Seat'
 import { TurnTimer } from './TurnTimer'
 import { observerSeats, playerSeats, residueLabel } from './seat-model'
@@ -53,8 +54,21 @@ export function SeatLine({ seats, n }: SeatLineProps) {
   const timeLimit = players.find((s) => s.timeLimit !== undefined)?.timeLimit
   const ring = `ℤ/${n}ℤ`
 
+  // The line scrolls sideways when it is wider than the bar: keep the active seat in view.
+  const navRef = useRef<HTMLElement>(null)
+  const activeId = active?.id ?? null
+  useEffect(() => {
+    if (!activeId) {
+      return
+    }
+    const items = navRef.current?.querySelectorAll<HTMLElement>('[data-seat-id]') ?? []
+    const li = [...items].find((el) => el.dataset.seatId === activeId)
+    li?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' })
+  }, [activeId])
+
   return (
     <nav
+      ref={navRef}
       aria-label="席順"
       data-seat-line=""
       data-motion={mode}
@@ -74,6 +88,7 @@ export function SeatLine({ seats, n }: SeatLineProps) {
             <li
               key={s.id}
               data-k={s.k}
+              data-seat-id={s.id}
               className="relative flex items-center gap-[3px] pb-[3px]"
               aria-current={s.isActive ? 'step' : undefined}
             >

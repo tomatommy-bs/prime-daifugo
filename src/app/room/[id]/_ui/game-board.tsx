@@ -8,15 +8,16 @@
 import { GAME_CONFIG } from '@/constants/config'
 import { PARTYKIT_HOST } from '@/constants/env'
 import type { ROOM_STATUS } from '@/constants/status'
+import { useReducedMotionSafe } from '@/design/motion'
 import { useLayoutMode } from '@/design/use-layout-mode'
 import type { CardId } from '@/game-card/src'
 import type { SubmitCardSet } from '@/interface/client-to-server'
 import type { PrimeDaifugoSetupData } from '@/interface/common'
 import type * as serverToClient from '@/interface/server-to-client'
 import { concatCardNumbers, isValidFactCardIds } from '@/utils/play-card'
-import { useLocalStorage, useSetState } from '@mantine/hooks'
+import { useElementSize, useLocalStorage, useSetState } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
-import { LayoutGroup, useReducedMotion } from 'framer-motion'
+import { LayoutGroup } from 'framer-motion'
 import Cookies from 'js-cookie'
 import _ from 'lodash'
 import usePartySocket from 'partysocket/react'
@@ -73,7 +74,8 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
   const [, rerender] = useState(0) // socket open / close
   const wipedAt = useRef(0)
   const mode = useLayoutMode()
-  const director = useBoardDirector({ reduced: useReducedMotion() === true })
+  const table = useElementSize()
+  const director = useBoardDirector({ reduced: useReducedMotionSafe() })
   const chrome = useContext(RoomChromeContext)
   const [showValues] = useLocalStorage({ key: SHOW_VALUES_KEY, defaultValue: false })
 
@@ -85,8 +87,14 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
   const { submitCardIds, factCardIds, isFactorizationMode: factorMode } = my
   const nameOf = (pid?: string | null) => presence.find((p) => p.id === pid)?.name ?? ''
   const announce = (m: string) => setLive((prev) => (prev === m ? `${m}​` : m))
+  /**
+   * Board events (draw, pass, plays, the winner) are shown in the board itself and written
+   * to the proof log; only errors (red notices, e.g. a failed submit) also toast (§9.2 #29).
+   */
   const notify = (message: ReactNode, color?: string) => {
-    notifications.show({ message, color })
+    if (color === 'red') {
+      notifications.show({ message, color })
+    }
     props.onLogNotification?.(message)
   }
 
@@ -343,15 +351,17 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
               }
               field={
                 mode === 'wide' ? (
-                  <B.SeatRing
-                    seats={seats}
-                    width={960}
-                    height={420}
-                    shimmerKey={current?.type === 'submit-ok' ? memo.plays : null}
-                    rippleFromId={director.ended ? winnerId : null}
-                  >
-                    {fieldStack}
-                  </B.SeatRing>
+                  <div ref={table.ref} className="h-full min-h-[320px] w-full">
+                    <B.SeatRing
+                      seats={seats}
+                      width={table.width || 960}
+                      height={table.height || 420}
+                      shimmerKey={current?.type === 'submit-ok' ? memo.plays : null}
+                      rippleFromId={director.ended ? winnerId : null}
+                    >
+                      {fieldStack}
+                    </B.SeatRing>
+                  </div>
                 ) : (
                   fieldStack
                 )
@@ -403,6 +413,7 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
                     mode={factorMode ? 'factor' : 'basic'}
                     freshIds={freshIds}
                     showValues={showValues}
+                    layout={mode === 'portrait' ? 'wrap' : 'auto'}
                     onSelect={factorMode ? my.selectHandCardIdAsFact : my.selectHandCardIdAsSubmit}
                   />
                   {observer && gs ? <ObserverNote /> : null}

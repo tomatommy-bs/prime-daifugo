@@ -91,7 +91,7 @@ describe('MathCard', () => {
     const { container, rerender } = renderWithProviders(
       <MathCard card="JS" size="tray" state="selected" onActivate={() => {}} />,
     )
-    expect(container.querySelector('[data-badge]')).toHaveTextContent('J = 11')
+    expect(container.querySelector('[data-badge]')).toHaveTextContent('J=11')
     rerender(<MathCard card="7S" size="tray" state="selected" onActivate={() => {}} />)
     expect(container.querySelector('[data-badge]')).toBeNull()
   })

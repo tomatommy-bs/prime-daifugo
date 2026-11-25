@@ -169,7 +169,7 @@ export function FactorPanel({
           aria-label="素因数分解"
           data-motion={motionMode}
           data-valid={readout.valid}
-          className="relative flex w-full flex-col gap-[var(--sp-2)] rounded-[var(--r-3)] border border-factor bg-surface px-[var(--sp-3)] py-[var(--sp-2)]"
+          className="relative flex w-full flex-col gap-[var(--sp-1)] rounded-[var(--r-3)] border border-factor bg-surface px-[var(--sp-3)] py-[var(--sp-1)]"
           variants={panelVariants}
           initial="hidden"
           animate="show"
@@ -189,7 +189,7 @@ export function FactorPanel({
               aria-label="因数"
               aria-orientation="horizontal"
               tabIndex={factCards.length === 0 ? 0 : -1}
-              className="flex min-h-[var(--card-tray)] min-w-0 items-center gap-[var(--sp-1)] outline-none"
+              className="flex min-h-[var(--card-tray)] min-w-0 flex-1 flex-wrap items-center gap-[var(--sp-1)] outline-none"
             >
               {factCards.length === 0 ? (
                 <span className="text-ink-muted" style={{ fontSize: 'var(--fs--1)' }}>
@@ -230,6 +230,28 @@ export function FactorPanel({
                 )
               )}
             </div>
+            <div className="ml-auto flex shrink-0 items-center gap-[var(--sp-2)]" data-ops="">
+              <OpButton
+                kind="times"
+                label="掛ける"
+                onClick={() => onAddOperator('*')}
+                disabled={!canAddOperator}
+              >
+                <IconTimes size="1.25em" />
+                <span className="sr-only">·</span>
+              </OpButton>
+              <OpButton
+                kind="pow"
+                label="累乗"
+                onClick={() => onAddOperator('^')}
+                disabled={!canAddOperator}
+              >
+                <span aria-hidden="true">xʸ</span>
+              </OpButton>
+              <OpButton kind="close" label="戻る" onClick={onClose}>
+                戻る
+              </OpButton>
+            </div>
           </div>
 
           <div
@@ -262,29 +284,6 @@ export function FactorPanel({
                 <Relation state="pending" />
               </span>
             )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-[var(--sp-2)]" data-ops="">
-            <OpButton
-              kind="times"
-              label="掛ける"
-              onClick={() => onAddOperator('*')}
-              disabled={!canAddOperator}
-            >
-              <IconTimes size="1.25em" />
-              <span className="sr-only">·</span>
-            </OpButton>
-            <OpButton
-              kind="pow"
-              label="累乗"
-              onClick={() => onAddOperator('^')}
-              disabled={!canAddOperator}
-            >
-              <span aria-hidden="true">xʸ</span>
-            </OpButton>
-            <OpButton kind="close" label="戻る" onClick={onClose}>
-              戻る
-            </OpButton>
           </div>
         </m.section>
       ) : null}

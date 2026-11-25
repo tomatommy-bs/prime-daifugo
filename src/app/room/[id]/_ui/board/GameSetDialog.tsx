@@ -127,7 +127,7 @@ export function GameSetDialog({
         data-game-set=""
         data-motion={mode}
         data-skipped={skipped ? 'true' : undefined}
-        className="relative flex flex-col gap-fib-4 pb-fib-2"
+        className="relative flex flex-col gap-fib-4 pb-fib-2 compact:gap-fib-2 compact:pb-0"
         onClick={() => setSkipped(true)}
       >
         <dl
@@ -199,8 +199,9 @@ export function GameSetDialog({
           <m.span
             key={skipped ? 'final' : 'stamp'}
             data-qed=""
-            className="num block select-none whitespace-nowrap font-bold leading-none"
-            style={{ fontSize: 'var(--fs-6)', color: 'var(--gold)' }}
+            // the --fs-6 stamp, one step down on a 390px-tall phone so the CTA stays in view
+            className="num block select-none whitespace-nowrap font-bold text-[length:var(--fs-6)] leading-none compact:text-[length:var(--fs-4)]"
+            style={{ color: 'var(--gold)' }}
             variants={full ? preset.stamp : preset.fadeUp}
             initial={animated ? 'hidden' : false}
             animate="show"

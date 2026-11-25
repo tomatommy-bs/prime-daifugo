@@ -47,7 +47,9 @@ export const GRID: Record<LayoutMode, Grid> = {
   compact: {
     columns: '72px minmax(0, 1fr) 168px',
     rows: '36px 132px 76px 128px',
-    factorRows: '36px 76px 132px 128px',
+    // spec: 76 / 132; the field keeps only its value and mini cards (44px) so the tray row
+    // can hold the condensed tray plus the two-row FactorPanel (still 384 ≤ 390).
+    factorRows: '36px 64px 144px 128px',
     areas: ['top top top', 'deck field rail', 'reset tray rail', 'hand hand hand'],
     columnGap: 'var(--sp-3)',
     rowGap: 'var(--sp-1)',
@@ -100,6 +102,17 @@ export function gridStyle(mode: LayoutMode, factorOpen: boolean, withLog: boolea
 
 const area = (name: string): CSSProperties => ({ gridArea: name, minWidth: 0, minHeight: 0 })
 
+/** Card-size overrides while the factor panel is open on a phone (compact rows are fixed). */
+function factorVars(mode: LayoutMode, factorOpen: boolean): CSSProperties {
+  if (!factorOpen || mode !== 'compact') {
+    return {}
+  }
+  return {
+    '--card-field': 'calc(44px * var(--card-k))',
+    '--card-tray': 'calc(38px * var(--card-k))',
+  } as CSSProperties
+}
+
 export function BoardLayout({
   mode,
   top,
@@ -120,7 +133,7 @@ export function BoardLayout({
     'data-motion': motion,
     className:
       'relative mx-auto h-full w-full px-[max(var(--sp-3),env(safe-area-inset-left),env(safe-area-inset-right))]',
-    style: gridStyle(mode, factorOpen, withLog),
+    style: { ...gridStyle(mode, factorOpen, withLog), ...factorVars(mode, factorOpen) },
   }
 
   if (mode === 'wide') {
@@ -217,6 +230,13 @@ export type BoardTopBarProps = {
  * SeatRing, so the bar is a one-line status: `ℤ/nℤ · bob の番 ◔`.
  */
 export function BoardTopBar({ mode, seats, n, timer, isMyTurn, reserveRight }: BoardTopBarProps) {
+  // The active seat already draws the clock (SeatLine end / SeatRing node): show the
+  // bar's own timer only when no seat does, so there is never a second clock.
+  const seatClock =
+    mode === 'wide'
+      ? seats.some((s) => s.isActive && !s.observer && s.timeLimit !== undefined)
+      : seats.some((s) => !s.observer && s.timeLimit !== undefined)
+  const ownTimer = seatClock ? null : timer
   if (mode === 'wide') {
     const active = seats.find((s) => s.isActive && !s.observer)
     let turn = '—'
@@ -227,9 +247,10 @@ export function BoardTopBar({ mode, seats, n, timer, isMyTurn, reserveRight }: B
     }
     return (
       <div className="flex w-full items-center gap-fib-3 text-ink-muted" data-top-bar="status">
-        <span className="num font-bold text-mod">ℤ/{n}ℤ</span>
+        {/* ℤ/nℤ already heads the RoomHeader above this bar in wide */}
+        <span className="sr-only">ℤ/{n}ℤ</span>
         <span className={isMyTurn ? 'font-semibold text-ink' : ''}>{turn}</span>
-        {timer}
+        {ownTimer}
       </div>
     )
   }
@@ -242,7 +263,7 @@ export function BoardTopBar({ mode, seats, n, timer, isMyTurn, reserveRight }: B
       <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none]">
         <SeatLine seats={seats} n={n} />
       </div>
-      <div className="shrink-0">{timer}</div>
+      {ownTimer ? <div className="shrink-0">{ownTimer}</div> : null}
     </div>
   )
 }

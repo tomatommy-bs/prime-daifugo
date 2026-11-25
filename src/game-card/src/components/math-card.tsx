@@ -218,10 +218,11 @@ function MathCardImpl({
           <span
             aria-hidden="true"
             data-badge=""
-            className="num pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-[var(--r-1)] bg-ink px-1 font-semibold text-bg leading-none"
+            className="num pointer-events-none absolute left-1/2 z-[1] -translate-x-1/2 whitespace-nowrap rounded-[var(--r-1)] bg-ink px-[3px] font-semibold text-bg leading-none tracking-[-0.04em]"
             style={{ top: -7, fontSize: 'var(--fs--1)', paddingBlock: 2 }}
           >
-            {badge}
+            {/* mono spaces are a full cell wide: drop them so `J=11` fits a tray card */}
+            {badge.replaceAll(' ', '')}
           </span>
         ) : null}
 

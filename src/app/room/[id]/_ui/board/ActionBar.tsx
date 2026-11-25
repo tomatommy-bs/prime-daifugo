@@ -108,6 +108,8 @@ type ActionProps = {
   tone?: Tone
   pressed?: boolean
   height: 44 | 55
+  /** icon above a small label (portrait bottom bar, where four buttons share 390px) */
+  stacked?: boolean
 }
 
 const TONE: Record<Tone, string> = {
@@ -116,7 +118,7 @@ const TONE: Record<Tone, string> = {
   primary:
     'bg-prime text-on-prime border-transparent shadow-[var(--shadow-1)] enabled:hover:shadow-[var(--shadow-2)] enabled:hover:brightness-110',
   factor:
-    'bg-surface text-factor border-factor enabled:hover:bg-raised aria-pressed:bg-factor aria-pressed:text-on-prime',
+    'bg-surface text-factor border-factor enabled:hover:bg-raised aria-pressed:bg-factor aria-pressed:text-on-prime aria-pressed:enabled:hover:bg-factor',
 }
 
 function ActionButton({
@@ -131,6 +133,7 @@ function ActionButton({
   tone = 'default',
   pressed,
   height,
+  stacked = false,
 }: ActionProps) {
   const reasonId = useId()
   const why = disabled && reason ? reason : null
@@ -146,12 +149,17 @@ function ActionButton({
       data-height={height}
       style={{ height, minHeight: height }}
       className={[
-        'relative flex w-full items-center justify-center gap-fib-2 rounded-[var(--r-2)] border px-fib-3',
+        'relative flex w-full items-center justify-center rounded-[var(--r-2)] border',
+        stacked ? 'flex-col gap-fib-1 px-fib-1' : 'gap-fib-2 px-fib-3',
         'select-none whitespace-nowrap font-semibold leading-none',
         'transition-[transform,box-shadow,background-color,filter] duration-[var(--t-sm)] ease-[var(--ease-out)]',
         'enabled:active:scale-[0.97] disabled:cursor-not-allowed',
         'disabled:border-line disabled:bg-bg disabled:text-ink-muted disabled:shadow-none',
-        height === 55 ? 'text-[length:var(--fs-1)]' : 'text-[length:var(--fs-0)]',
+        stacked
+          ? 'text-[length:var(--fs--1)]'
+          : height === 55
+            ? 'text-[length:var(--fs-1)]'
+            : 'text-[length:var(--fs-0)]',
         TONE[tone],
       ].join(' ')}
     >
@@ -159,7 +167,7 @@ function ActionButton({
         {icon}
       </span>
       <span>{label}</span>
-      {showKbd && kbd ? (
+      {showKbd && kbd && !stacked ? (
         <Kbd
           size="xs"
           aria-hidden="true"
@@ -243,10 +251,12 @@ export function ActionBar({
     shortcuts,
   )
 
+  const stacked = orientation === 'bottom'
   const draw = (h: 44 | 55) => (
     <ActionButton
       action="draw"
       label="引く"
+      stacked={stacked}
       icon={<IconDrawCard />}
       kbd="D"
       showKbd={showKbd}
@@ -260,6 +270,7 @@ export function ActionBar({
     <ActionButton
       action="pass"
       label="パス"
+      stacked={stacked}
       icon={<IconEmpty />}
       kbd="P"
       showKbd={showKbd}
@@ -273,6 +284,7 @@ export function ActionBar({
     <ActionButton
       action="factor"
       label="素因数分解"
+      stacked={stacked}
       icon={<IconTree />}
       kbd="F"
       showKbd={showKbd && orientation !== 'bottom'}
@@ -288,6 +300,7 @@ export function ActionBar({
     <ActionButton
       action="submit"
       label="出す"
+      stacked={stacked}
       icon={<IconSubmit />}
       kbd="↵"
       showKbd={showKbd}
@@ -324,7 +337,7 @@ export function ActionBar({
     return (
       <div
         {...common}
-        className="grid grid-cols-[1fr_1fr_1.382fr_1.618fr] gap-fib-2 pb-[env(safe-area-inset-bottom)] text-[length:var(--fs--1)]"
+        className="grid grid-cols-[1fr_1fr_1.382fr_1.618fr] gap-fib-2 pb-[env(safe-area-inset-bottom)]"
       >
         {draw(55)}
         {pass(55)}

@@ -38,7 +38,13 @@ type ResolvedLayout = 'fan' | 'scroll' | 'wrap'
 const FALLBACK_CARD_H = 132
 /** Room above the cards for the hover lift (max 8px) and the focus ring. */
 const PAD_TOP = 12
-const PAD_BOTTOM = 10
+const PAD_BOTTOM = 6
+/** Deepest arc drop, as a fraction of the card height. */
+const ARC_MAX = 0.1
+/** sin 10°: how far a rotated fan card's top corner swings out, per unit of card height. */
+const ROTATE_OVERHANG = 0.174
+/** Card width / height (spec §7.5: w = 0.6886·h). */
+const CARD_RATIO = 0.6886
 const CHIP_H = 20
 
 /** Layout of `n` cards for the requested mode (exported for tests and stories). */
@@ -60,12 +66,24 @@ export function resolveHandLayout({
     // not measured yet: a plain row never overlaps
     return { mode: layout === 'fan' ? 'fan' : 'scroll', step: cardW + 8, items: [] }
   }
-  const fan = fanLayout({ n, W, cardW })
+  // Rotated cards swing their top corners out by about h·sin θ (θ ≤ 10°): fan inside an
+  // inset row so the outer cards never cross the board edge.
+  const inset = n > 1 ? Math.ceil(ROTATE_OVERHANG * (cardW / CARD_RATIO)) : 0
+  const fan = fanLayout({ n, W: W - 2 * inset, cardW })
   if (layout === 'scroll' || (layout === 'auto' && fan.mode === 'scroll')) {
     return { mode: 'scroll', step: fan.mode === 'scroll' ? fan.step : cardW + 8, items: [] }
   }
   if (fan.mode === 'fan') {
-    return { mode: 'fan', step: fan.step, items: fan.items }
+    // R = 4W gives a deep arc on wide rows; keep the drop within ARC_MAX of the card
+    // height so the fan fits the 128px compact hand row (§7.5 vertical budget).
+    const depth = fan.items.reduce((acc, it) => Math.max(acc, it.y), 0)
+    const cap = ARC_MAX * (cardW / CARD_RATIO)
+    const k = depth > cap ? cap / depth : 1
+    return {
+      mode: 'fan',
+      step: fan.step,
+      items: fan.items.map((it) => ({ ...it, x: it.x + inset, y: it.y * k })),
+    }
   }
   // forced fan with too many cards: spread evenly, overlapping below the slice threshold
   const step = n > 1 ? Math.max(0, (W - cardW) / (n - 1)) : 0
@@ -275,12 +293,18 @@ export function Hand({
           return option(
             card,
             i,
+            // Static placement through left/top and the CSS `rotate` property: framer's
+            // projection owns `transform` on layoutId cards (and dropped animate x/y), so
+            // slot moves are animated as layout position changes instead.
+            { layout: reduced ? false : 'position', transition: SPRING.card },
             {
-              initial: false,
-              animate: { x: it.x, y: it.y, rotate: it.rotate },
-              transition: reduced ? { duration: 0 } : SPRING.card,
+              position: 'absolute',
+              left: it.x,
+              top: PAD_TOP + it.y,
+              rotate: `${it.rotate}deg`,
+              zIndex: i,
+              transformOrigin: '50% 100%',
             },
-            { position: 'absolute', left: 0, top: PAD_TOP, zIndex: i, transformOrigin: '50% 100%' },
           )
         })}
       </div>
