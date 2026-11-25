@@ -19,7 +19,7 @@ describe('DeviceRotateRecommender', () => {
 
   it('shows the Japanese banner when the device should rotate', async () => {
     renderWithProviders(<DeviceRotateRecommender />)
-    expect(await screen.findByRole('dialog', DIALOG)).toBeInTheDocument()
+    expect(await screen.findByRole('region', DIALOG)).toBeInTheDocument()
     expect(screen.getByText('横向きにしてプレイ')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '閉じる' })).toBeInTheDocument()
   })
@@ -27,19 +27,19 @@ describe('DeviceRotateRecommender', () => {
   it('renders nothing when the device need not rotate', () => {
     rotate.shouldRotate = false
     renderWithProviders(<DeviceRotateRecommender />)
-    expect(screen.queryByRole('dialog', DIALOG)).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', DIALOG)).not.toBeInTheDocument()
   })
 
   it('honours sessionStorage shouldShowRotateRecommender=false', async () => {
     window.sessionStorage.setItem(KEY, 'false')
     renderWithProviders(<DeviceRotateRecommender />)
-    await waitFor(() => expect(screen.queryByRole('dialog', DIALOG)).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByRole('region', DIALOG)).not.toBeInTheDocument())
   })
 
   it('closing without the checkbox hides it but keeps the key', async () => {
     renderWithProviders(<DeviceRotateRecommender />)
     fireEvent.click(await screen.findByRole('button', { name: '閉じる' }))
-    expect(screen.queryByRole('dialog', DIALOG)).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', DIALOG)).not.toBeInTheDocument()
     expect(window.sessionStorage.getItem(KEY)).not.toBe('false')
   })
 
@@ -47,7 +47,7 @@ describe('DeviceRotateRecommender', () => {
     renderWithProviders(<DeviceRotateRecommender />)
     fireEvent.click(await screen.findByRole('checkbox', { name: /再度ページを開くまで表示しない/ }))
     fireEvent.click(screen.getByRole('button', { name: '閉じる' }))
-    expect(screen.queryByRole('dialog', DIALOG)).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', DIALOG)).not.toBeInTheDocument()
     expect(window.sessionStorage.getItem(KEY)).toBe('false')
   })
 })

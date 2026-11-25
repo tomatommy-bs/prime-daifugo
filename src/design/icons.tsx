@@ -23,6 +23,7 @@ function Glyph({
 }: GlyphProps & { children: ReactNode }) {
   const a11y = title ? { role: 'img' as const } : { 'aria-hidden': true as const }
   return (
+    // biome-ignore lint/a11y/noSvgWithoutTitle: aria-hidden unless `title` is passed, then <title> is rendered
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
@@ -106,6 +107,7 @@ export const IconModRing = ({ n = 4, ...p }: GlyphProps & { n?: number }) => {
     const y1 = 12 + 6 * Math.sin(t)
     const x2 = 12 + 9.5 * Math.cos(t)
     const y2 = 12 + 9.5 * Math.sin(t)
+    // biome-ignore lint/suspicious/noArrayIndexKey: ticks are positional
     return <line key={k} x1={x1} y1={y1} x2={x2} y2={y2} />
   })
   return (

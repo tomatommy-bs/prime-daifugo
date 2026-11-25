@@ -44,7 +44,7 @@ const DeviceRotateRecommender: React.FC = () => {
       zIndex={150}
     >
       <Paper
-        role="dialog"
+        component="section"
         aria-label="画面の向き"
         withBorder={true}
         radius="lg"

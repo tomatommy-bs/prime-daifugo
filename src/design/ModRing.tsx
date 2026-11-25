@@ -42,6 +42,7 @@ export function ModRing({
     const on = k < filled
     return (
       <line
+        // biome-ignore lint/suspicious/noArrayIndexKey: ticks are positional
         key={k}
         data-tick={on ? 'filled' : 'empty'}
         x1={c + tickIn * Math.cos(t)}
@@ -56,6 +57,7 @@ export function ModRing({
   })
 
   return (
+    // biome-ignore lint/a11y/noSvgWithoutTitle: aria-hidden, or labelled with <title>
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox={`0 0 ${size} ${size}`}
@@ -66,6 +68,7 @@ export function ModRing({
       data-spin={spinning ? 'true' : 'false'}
       {...a11y}
     >
+      {label ? <title>{label}</title> : null}
       <circle cx={c} cy={c} r={r} fill="none" stroke="var(--line)" strokeWidth={1} />
       {spinning ? (
         <m.g

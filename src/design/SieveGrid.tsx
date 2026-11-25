@@ -63,14 +63,16 @@ function SieveGridImpl({
   const passIndex = (p: number | null) => (p === null ? -1 : passes.indexOf(p))
   const delayFor = (p: number | null) => passIndex(p) * (DUR.md + PASS_GAP)
 
+  const label = `1 から ${n} までのふるい（素数 ${primesUpTo(n).length} 個）`
   const a11y = ariaHidden
     ? { 'aria-hidden': true as const }
     : {
         role: 'img' as const,
-        'aria-label': `1 から ${n} までのふるい（素数 ${primesUpTo(n).length} 個）`,
+        'aria-label': label,
       }
 
   return (
+    // biome-ignore lint/a11y/noSvgWithoutTitle: aria-hidden, or labelled with <title>
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox={`0 0 ${width} ${height}`}
@@ -81,6 +83,7 @@ function SieveGridImpl({
       data-animate={running ? 'true' : 'false'}
       {...a11y}
     >
+      {ariaHidden ? null : <title>{label}</title>}
       {cells.map((c) => {
         const x = c.col * size
         const y = c.row * size
