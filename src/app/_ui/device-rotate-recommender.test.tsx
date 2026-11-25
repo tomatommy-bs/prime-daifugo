@@ -8,6 +8,9 @@ vi.mock('@/hooks/use-should-rotate', () => ({
   useShouldRotate: () => ({ shouldRotate: rotate.shouldRotate, canRotate: true }),
 }))
 
+const nav = vi.hoisted(() => ({ pathname: '/' as string | null }))
+vi.mock('next/navigation', () => ({ usePathname: () => nav.pathname }))
+
 const KEY = 'shouldShowRotateRecommender'
 const DIALOG = { name: '画面の向き' }
 
@@ -15,6 +18,13 @@ describe('DeviceRotateRecommender', () => {
   beforeEach(() => {
     window.sessionStorage.clear()
     rotate.shouldRotate = true
+    nav.pathname = '/'
+  })
+
+  it('stays hidden on the rules page, which reads best in portrait', () => {
+    nav.pathname = '/rules'
+    renderWithProviders(<DeviceRotateRecommender />)
+    expect(screen.queryByRole('region', DIALOG)).not.toBeInTheDocument()
   })
 
   it('shows the Japanese banner when the device should rotate', async () => {
