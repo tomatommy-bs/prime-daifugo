@@ -36,8 +36,8 @@
         ]
       },
       "vars": {
-        // Placeholders: replace with the production domain before the first deploy (spec §11).
-        "ALLOWED_ORIGINS": "https://prime-daifugo.example.com,https://prime-daifugo-*.vercel.app",
+        // Production domains (Vercel project prime-daifugo) and its preview deployments.
+        "ALLOWED_ORIGINS": "https://prime-daifugo.jp,https://www.prime-daifugo.jp,https://prime-daifugo.vercel.app,https://prime-daifugo-*.vercel.app",
         "GRACE_PLAYING_MS": "120000",
         "GRACE_IDLE_MS": "60000",
         "AWAY_TURN_CAP_MS": "20000",
