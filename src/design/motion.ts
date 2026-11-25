@@ -3,6 +3,7 @@
  * Springs are described by `visualDuration` and `bounce`.
  */
 import { type Transition, type Variants, useReducedMotion } from 'framer-motion'
+import { useSyncExternalStore } from 'react'
 
 export const DUR = {
   xs: 0.089,
@@ -205,12 +206,35 @@ export function motionPreset(reduced: boolean): MotionPreset {
   }
 }
 
+const subscribeNever = () => () => {}
+
+/**
+ * `false` while the server renders and during hydration, `true` afterwards (and on
+ * purely client-side renders). Gates client-only values so hydration never mismatches.
+ */
+export function useHydrated(): boolean {
+  return useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false,
+  )
+}
+
+/**
+ * The OS reduced-motion setting, hydration-safe: the server cannot know it, so the first
+ * hydration pass reports `false` (matching the server HTML) and the real value follows.
+ */
+export function useReducedMotionSafe(): boolean {
+  const reduced = useReducedMotion() === true
+  return useHydrated() && reduced
+}
+
 /** `'full' | 'reduced'` from the OS setting; every animated component writes it to `data-motion`. */
 export function useMotionMode(): 'full' | 'reduced' {
-  return useReducedMotion() ? 'reduced' : 'full'
+  return useReducedMotionSafe() ? 'reduced' : 'full'
 }
 
 /** Convenience: the preset matching the viewer's reduced-motion setting. */
 export function useMotionPreset(): MotionPreset {
-  return motionPreset(useReducedMotion() === true)
+  return motionPreset(useReducedMotionSafe())
 }

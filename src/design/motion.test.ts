@@ -9,6 +9,7 @@ import {
   motionPreset,
   shakeEnvelope,
   stagger,
+  useHydrated,
   useMotionMode,
   useMotionPreset,
   variants,
@@ -122,5 +123,18 @@ describe('useMotionMode', () => {
     mockMatchMedia({ '(prefers-reduced-motion: reduce)': true })
     expect(renderHook(() => useMotionMode()).result.current).toBe('reduced')
     expect(renderHook(() => useMotionPreset()).result.current.reduced).toBe(true)
+  })
+})
+
+describe('hydration safety', () => {
+  it('server HTML always says full; the client switches after hydration', async () => {
+    mockMatchMedia({ '(prefers-reduced-motion: reduce)': true })
+    const { createElement } = await import('react')
+    const { renderToString } = await import('react-dom/server')
+    const Probe = () => createElement('i', { 'data-motion': useMotionMode() })
+    // the server snapshot of useHydrated is false, so SSR can never disagree with hydration
+    expect(renderToString(createElement(Probe))).toContain('data-motion="full"')
+    expect(renderHook(() => useHydrated()).result.current).toBe(true)
+    expect(renderHook(() => useMotionMode()).result.current).toBe('reduced')
   })
 })
