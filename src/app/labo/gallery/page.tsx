@@ -58,6 +58,8 @@ import {
   isBoardSceneId,
   isSceneId,
 } from './fixtures'
+import { FlightScene } from './flight-scene'
+import { FLIGHT_STEP_IDS, isFlightStepId } from './flight-script'
 
 const noop = () => undefined
 
@@ -94,6 +96,19 @@ export default function GalleryPage() {
     return <div className="min-h-dvh bg-bg" data-gallery-loading="true" />
   }
 
+  if (sceneParam === 'flights') {
+    // live motion scene: card flights replayed through the real pipeline (§9.2)
+    const play = params.get('play')
+    return (
+      <div
+        className="min-h-dvh bg-bg text-ink"
+        data-gallery-scene="flights"
+        data-scheme={scheme ?? 'auto'}
+      >
+        <FlightScene initial={isFlightStepId(play) ? play : FLIGHT_STEP_IDS[0]} />
+      </div>
+    )
+  }
   if (!isSceneId(sceneParam)) {
     return <GalleryIndex />
   }
@@ -176,6 +191,24 @@ function GalleryIndex() {
           </li>
         ))}
       </ol>
+      <section className="flex flex-col gap-fib-2">
+        <h2 className="m-0 font-bold text-[length:var(--fs-1)]">モーション</h2>
+        <p className="m-0 text-ink-muted text-[length:var(--fs--1)]">
+          カードの軌道（引く・出す・ペナルティ・流れ・57 の切断・配る）を実際の演出で再生します。
+        </p>
+        <ul className="m-0 flex list-none flex-wrap gap-fib-2 p-0">
+          {FLIGHT_STEP_IDS.map((id) => (
+            <li key={id}>
+              <Link
+                href={`/labo/gallery?scene=flights&play=${id}`}
+                className="num inline-flex min-h-11 items-center rounded-[var(--r-1)] border border-line px-fib-2 text-[length:var(--fs--1)] text-ink"
+              >
+                {id}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
     </main>
   )
 }

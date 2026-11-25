@@ -90,9 +90,9 @@ export const CAST = {
   dave: { id: 'p4', name: 'dave' },
 } as const
 
-const PLAYERS = [CAST.alice, CAST.bob, CAST.carol]
+export const PLAYERS = [CAST.alice, CAST.bob, CAST.carol]
 
-const presenceOf = (
+export const presenceOf = (
   list: readonly { id: string; name: string }[],
   notReady: string[] = [],
 ): PresenceEntry[] =>
@@ -109,7 +109,7 @@ const nameOf = (id: string | null): string | null =>
  * A full 52-card state: hands and field as given, the rest of the deck in canonical order.
  * Observers are never in `players`.
  */
-function buildState({
+export function buildState({
   hands,
   field,
   deckTopPlayer,
@@ -137,7 +137,7 @@ function buildState({
   }
 }
 
-function buildCtx(currentPlayer: string, observers: string[] = []): Ctx {
+export function buildCtx(currentPlayer: string, observers: string[] = []): Ctx {
   const playOrder = [...PLAYERS.map((p) => p.id), ...observers]
   return {
     numPlayers: playOrder.length,
@@ -150,13 +150,13 @@ function buildCtx(currentPlayer: string, observers: string[] = []): Ctx {
   }
 }
 
-type SystemAction =
+export type SystemAction =
   | { action: 'game-start' | 'draw' | 'pass' }
   | { action: 'submit'; submit: CardId[]; factor?: FactCardId[]; result: SubmitResult }
   | { action: 'game-end'; winner: string }
 type SubmitResult = serverToClient.SubmissionResult['result']
 
-function systemMessage(
+export function systemMessage(
   commanderId: string,
   gameState: PrimeDaifugoGameState,
   ctx: Ctx,

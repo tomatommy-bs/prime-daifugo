@@ -15,7 +15,8 @@
     "build-storybook": "storybook build",
     "test:storybook": "STORYBOOK_TESTS=1 vitest run --project storybook",
     "test:coverage": "vitest run --project unit --coverage",
-    "screens": "node scripts/screens.mjs"
+    "screens": "node scripts/screens.mjs",
+    "flights": "node scripts/flights.mjs"
   },
   "dependencies": {
     "@mantine/core": "^8.1.1",
