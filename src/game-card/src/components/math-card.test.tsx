@@ -1,7 +1,13 @@
 import { REDUCED_MOTION_QUERY, renderWithProviders } from '@/test-utils'
 import { act, fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ERROR_OUTLINE_MS, MathCard, type MathCardState, cardHeight } from './math-card'
+import {
+  ERROR_OUTLINE_MS,
+  MathCard,
+  type MathCardState,
+  cardHeight,
+  mathCardPropsEqual,
+} from './math-card'
 
 const root = () => screen.getByRole('option')
 
@@ -162,5 +168,48 @@ describe('MathCard', () => {
     )
     expect(spy).not.toHaveBeenCalled()
     spy.mockRestore()
+  })
+
+  it('passes its card to onActivate, so one stable handler serves a whole hand', () => {
+    const onActivate = vi.fn()
+    renderWithProviders(<MathCard card="9C" size="hand" onActivate={onActivate} />)
+    fireEvent.click(root())
+    expect(onActivate).toHaveBeenCalledWith('9C')
+  })
+
+  it('reduced motion: no shared layoutId (it would teleport); the card fades instead', () => {
+    renderWithProviders(<MathCard card="JD" size="hand" onActivate={() => undefined} />, {
+      reducedMotion: true,
+    })
+    expect(root()).not.toHaveAttribute('data-layout-id')
+  })
+})
+
+describe('mathCardPropsEqual (memo)', () => {
+  const noop = () => undefined
+  const base = { card: '7H' as const, size: 'hand', onActivate: noop }
+  it('treats fresh but equal style / motionProps objects as unchanged', () => {
+    const transition = { type: 'spring' as const }
+    expect(
+      mathCardPropsEqual(
+        {
+          ...base,
+          style: { left: 4, rotate: -5 },
+          motionProps: { layout: 'position', transition },
+        },
+        {
+          ...base,
+          style: { left: 4, rotate: -5 },
+          motionProps: { layout: 'position', transition },
+        },
+      ),
+    ).toBe(true)
+  })
+  it('detects real changes', () => {
+    expect(
+      mathCardPropsEqual({ ...base, style: { left: 4 } }, { ...base, style: { left: 5 } }),
+    ).toBe(false)
+    expect(mathCardPropsEqual(base, { ...base, state: 'selected' })).toBe(false)
+    expect(mathCardPropsEqual(base, { ...base, onActivate: () => undefined })).toBe(false)
   })
 })

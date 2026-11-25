@@ -3,7 +3,7 @@ import { cardIds as ALL } from '@/game-card/src'
 import { renderWithProviders } from '@/test-utils'
 import { act, fireEvent, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Hand, resolveHandLayout } from './Hand'
+import { Hand, fanCardStyle, resolveHandLayout } from './Hand'
 import { FRESH_MS } from './card-tray-utils'
 
 const HAND: CardId[] = ['AS', '3H', '7C', 'JD', 'KS']
@@ -201,9 +201,9 @@ describe('Hand', () => {
     expect(container.querySelector('[data-turn-glow]')).toBeNull()
   })
 
-  it('empty hand still renders a focusable listbox', () => {
+  it('empty hand: the listbox is focusable by script (focus fallback) but not a tab stop', () => {
     const { listbox } = setup({ cardIds: [] })
-    expect(listbox).toHaveAttribute('tabindex', '0')
+    expect(listbox).toHaveAttribute('tabindex', '-1')
     expect(screen.getByText('手札なし')).toBeInTheDocument()
   })
 })
@@ -227,5 +227,26 @@ describe('resolveHandLayout', () => {
   })
   it('wrap ignores geometry', () => {
     expect(resolveHandLayout({ layout: 'wrap', n: 30, W: 400, cardW: 69 }).mode).toBe('wrap')
+  })
+
+  it('fan rotation is a number, which framer can compose with the layout projection', () => {
+    const style = fanCardStyle({ x: 10, y: 3, rotate: -7.5 } as never, 2)
+    expect(style.rotate).toBe(-7.5)
+    expect(typeof style.rotate).toBe('number')
+  })
+
+  it('fan cards get a valid rotate transform (a unit string became "degdeg" under projection)', () => {
+    const { options } = setup({ layout: 'fan', width: 600 })
+    const transforms = options().map((o) => o.style.transform)
+    expect(transforms.some((t) => /rotate\(-?\d+(\.\d+)?deg\)/.test(t))).toBe(true)
+    for (const t of transforms) {
+      expect(t).not.toContain('degdeg')
+    }
+  })
+
+  it('selects through one stable handler with the card as argument', () => {
+    const { options, onSelect } = setup()
+    fireEvent.click(options()[2])
+    expect(onSelect).toHaveBeenCalledWith('7C')
   })
 })

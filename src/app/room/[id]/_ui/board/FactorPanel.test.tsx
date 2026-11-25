@@ -177,3 +177,46 @@ describe('FactorPanel', () => {
     )
   })
 })
+
+describe('FactorPanel keyboard model (same as the hand and tray)', () => {
+  const factors: FactCardId[] = ['JH', '2S', '^', '4C', '*', '7D']
+  const options = () => within(screen.getByRole('listbox', { name: '因数' })).getAllByRole('option')
+
+  it('one tab stop, moved by ←/→/Home/End across cards and operator tokens', () => {
+    setup({ factCards: factors })
+    const tabIndexes = () => options().map((o) => o.getAttribute('tabindex'))
+    expect(tabIndexes()).toEqual(['0', '-1', '-1', '-1', '-1', '-1'])
+    options()[0].focus()
+    fireEvent.keyDown(options()[0], { key: 'ArrowRight' })
+    expect(options()[1]).toHaveFocus()
+    fireEvent.keyDown(options()[1], { key: 'End' })
+    expect(options()[5]).toHaveFocus()
+    expect(tabIndexes()[5]).toBe('0')
+    fireEvent.keyDown(options()[5], { key: 'Home' })
+    expect(options()[0]).toHaveFocus()
+  })
+
+  it('keeps focus in the list after a factor is removed', () => {
+    const { onRemove, rerender } = setup({ factCards: factors })
+    const op = options()[2]
+    op.focus()
+    fireEvent.click(op)
+    expect(onRemove).toHaveBeenCalledWith(2)
+    rerender(
+      <FactorPanel
+        open={true}
+        target={18}
+        factCards={['JH', '2S', '4C', '*', '7D']}
+        onAddOperator={vi.fn()}
+        onRemove={onRemove}
+        onClose={vi.fn()}
+      />,
+    )
+    expect(options()[2]).toHaveFocus()
+  })
+
+  it('the empty listbox is not a tab stop', () => {
+    setup({ factCards: [] })
+    expect(screen.getByRole('listbox', { name: '因数' })).toHaveAttribute('tabindex', '-1')
+  })
+})

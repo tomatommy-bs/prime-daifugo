@@ -11,8 +11,9 @@ import { IconQEq, IconRotate2 } from '@/design/icons'
 import { DUR, EASE, dampedShake, motionPreset, useMotionMode } from '@/design/motion'
 import { type CardId, MathCard } from '@/game-card/src'
 import { AnimatePresence, m, useAnimationControls } from 'framer-motion'
-import { type FocusEvent, type KeyboardEvent, useEffect, useRef, useState } from 'react'
-import { rovingIndex, trayChecks } from './card-tray-utils'
+import { useEffect, useRef, useState } from 'react'
+import { trayChecks } from './card-tray-utils'
+import { useRovingListbox } from './use-roving-listbox'
 
 export type SubmitTrayProps = {
   cardIds: CardId[]
@@ -24,6 +25,8 @@ export type SubmitTrayProps = {
   shakeKey?: number
   /** inline validation message (aria-live polite) */
   errorMessage?: string | null
+  /** factor cards are in play: リセット stays enabled to clear them (and leave factor mode) */
+  hasFactor?: boolean
 }
 
 function Check({ ok, label, kind }: { ok: boolean; label: string; kind: 'count' | 'greater' }) {
@@ -49,6 +52,7 @@ export function SubmitTray({
   onReset,
   shakeKey,
   errorMessage,
+  hasFactor = false,
 }: SubmitTrayProps) {
   const motionMode = useMotionMode()
   const reduced = motionMode === 'reduced'
@@ -93,28 +97,8 @@ export function SubmitTray({
     onReset()
   }
 
-  /* ---------------- roving tabindex ---------------- */
-  const listRef = useRef<HTMLDivElement>(null)
-  const [active, setActive] = useState(0)
-  const activeIndex = empty ? 0 : Math.min(active, n - 1)
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    const next = rovingIndex(e.key, activeIndex, n)
-    if (next === null) {
-      return
-    }
-    e.preventDefault()
-    setActive(next)
-    listRef.current
-      ?.querySelector<HTMLElement>(`[role="option"][data-card="${cardIds[next]}"]`)
-      ?.focus()
-  }
-  const onFocus = (e: FocusEvent<HTMLDivElement>) => {
-    const card = (e.target as HTMLElement).getAttribute('data-card') as CardId | null
-    const index = card ? cardIds.indexOf(card) : -1
-    if (index >= 0) {
-      setActive(index)
-    }
-  }
+  /* ---------------- roving tabindex (shared listbox model) ---------------- */
+  const roving = useRovingListbox(n, cardIds.join(','))
 
   const danger = Boolean(errorMessage) || shaking
   const borderColor = danger ? 'var(--danger)' : gold ? 'var(--gold)' : 'var(--line)'
@@ -162,7 +146,7 @@ export function SubmitTray({
           type="button"
           aria-label="リセット"
           onClick={reset}
-          disabled={empty}
+          disabled={empty && !hasFactor}
           className="inline-flex shrink-0 items-center justify-center rounded-[var(--r-2)] text-ink-muted transition-colors duration-[var(--t-sm)] enabled:hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)] enabled:hover:text-ink disabled:opacity-40"
           style={{ minWidth: 44, minHeight: 44 }}
         >
@@ -178,15 +162,13 @@ export function SubmitTray({
         </button>
 
         <div
-          ref={listRef}
+          {...roving.listboxProps}
+          tabIndex={-1}
           // biome-ignore lint/a11y/useSemanticElements: a card listbox, not a <select>
           role="listbox"
           aria-label="提出"
           aria-orientation="horizontal"
-          tabIndex={empty ? 0 : -1}
-          onKeyDown={onKeyDown}
-          onFocus={onFocus}
-          className="flex min-w-0 items-center gap-[var(--sp-1)] pt-[var(--sp-2)] outline-none"
+          className="flex min-w-0 items-center gap-[var(--sp-1)] rounded-[var(--r-2)] pt-[var(--sp-2)]"
         >
           {empty ? (
             <span
@@ -210,7 +192,7 @@ export function SubmitTray({
                 state="selected"
                 role="option"
                 aria-selected={true}
-                tabIndex={i === activeIndex ? 0 : -1}
+                tabIndex={roving.tabIndexFor(i)}
                 onActivate={() => onRemove(card)}
               />
             ))

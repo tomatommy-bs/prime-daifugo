@@ -15,6 +15,7 @@ import type { FactCardId } from '@/interface/common'
 import { evalFactCardIds, isValidFactCardIds } from '@/utils/play-card'
 import { AnimatePresence, m } from 'framer-motion'
 import type { ReactNode } from 'react'
+import { useRovingListbox } from './use-roving-listbox'
 
 export type FactorPanelProps = {
   open: boolean
@@ -150,6 +151,9 @@ export function FactorPanel({
   const readout = factorReadout(factCards, target)
   const last = factCards.at(-1)
   const canAddOperator = last !== undefined && isCardId(last)
+  // same keyboard model as the hand and the tray: one tab stop, ←/→/Home/End, and focus
+  // stays in the list when a factor is removed
+  const roving = useRovingListbox(factCards.length, factCards.join(','))
 
   const panelVariants = reduced
     ? preset.fadeUp
@@ -184,12 +188,13 @@ export function FactorPanel({
             </span>
 
             <div
+              {...roving.listboxProps}
+              tabIndex={-1}
               // biome-ignore lint/a11y/useSemanticElements: a card listbox, not a <select>
               role="listbox"
               aria-label="因数"
               aria-orientation="horizontal"
-              tabIndex={factCards.length === 0 ? 0 : -1}
-              className="flex min-h-[var(--card-tray)] min-w-0 grow basis-[12rem] flex-wrap items-center gap-[var(--sp-1)] outline-none"
+              className="flex min-h-[var(--card-tray)] min-w-0 grow basis-[12rem] flex-wrap items-center gap-[var(--sp-1)] rounded-[var(--r-2)]"
             >
               {factCards.length === 0 ? (
                 <span className="text-ink-muted" style={{ fontSize: 'var(--fs--1)' }}>
@@ -204,7 +209,7 @@ export function FactorPanel({
                       size="tray"
                       role="option"
                       aria-selected={true}
-                      tabIndex={0}
+                      tabIndex={roving.tabIndexFor(index)}
                       onActivate={() => onRemove(index)}
                     />
                   ) : (
@@ -216,6 +221,7 @@ export function FactorPanel({
                       role="option"
                       aria-selected={true}
                       aria-label={token === '*' ? '掛ける を削除' : '累乗 を削除'}
+                      tabIndex={roving.tabIndexFor(index)}
                       data-token={token}
                       onClick={() => onRemove(index)}
                       className="num inline-flex items-center justify-center rounded-[var(--r-1)] text-factor hover:bg-[color-mix(in_srgb,var(--factor)_10%,transparent)]"

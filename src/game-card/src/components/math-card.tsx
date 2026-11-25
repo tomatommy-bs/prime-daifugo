@@ -1,7 +1,7 @@
 'use client'
 
 import { DUR, EASE, dampedShake, motionPreset, useMotionMode } from '@/design/motion'
-import { AnimatePresence, type HTMLMotionProps, m } from 'framer-motion'
+import { AnimatePresence, type HTMLMotionProps, type MotionStyle, m } from 'framer-motion'
 import {
   type CSSProperties,
   type KeyboardEvent,
@@ -48,12 +48,17 @@ export interface MathCardProps {
   'aria-selected'?: boolean
   /** overrides the `cardLabel()` default */
   'aria-label'?: string
-  onActivate?: () => void
+  /**
+   * Called with this card on click / Enter / Space. Pass a stable function (it receives the
+   * card) rather than a per-card closure, so `memo` can skip unchanged cards.
+   */
+  onActivate?: (card: CardId | 'Back') => void
   motionProps?: MathCardMotionProps
   /** extra props for the inner `GameCard` svg (role and sizing are managed here) */
   cardProps?: Omit<GameCardProps, 'card' | 'role' | 'ref'>
   className?: string
-  style?: CSSProperties
+  /** a motion style: transform shorthands such as `rotate` take numbers (degrees) */
+  style?: MotionStyle
 }
 
 const SIZE_VAR: Record<string, string> = {
@@ -84,6 +89,10 @@ const RING: Partial<Record<MathCardState, string>> = {
  * - confirmed: `--prime` underline bar
  * - error: `--danger` outline for 610 ms and a damped shake
  * - fresh: `--gold` underline tick
+ *
+ * Travel between slots is a shared `layoutId` flight. Under reduced motion the projection
+ * would only teleport, so the layoutId is dropped and the card fades in (and out, inside the
+ * parent's `ReducedPresence`) over 89 ms instead (§9.4).
  */
 function MathCardImpl({
   card,
@@ -107,7 +116,12 @@ function MathCardImpl({
   const height = cardHeight(size)
   const disabled = state === 'disabled'
   const interactive = onActivate !== undefined
-  const resolvedLayoutId = layoutId ?? (card === 'Back' ? undefined : `card-${card}`)
+  const resolvedLayoutId = reduced
+    ? undefined
+    : (layoutId ?? (card === 'Back' ? undefined : `card-${card}`))
+  const reducedFade = reduced
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
+    : {}
   const badge = state === 'selected' ? rankBadge(card) : null
 
   // The danger outline is visible for 610 ms after entering the error state.
@@ -127,7 +141,7 @@ function MathCardImpl({
 
   const activate = () => {
     if (!disabled) {
-      onActivate?.()
+      onActivate?.(card)
     }
   }
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -170,6 +184,7 @@ function MathCardImpl({
       data-layout-id={resolvedLayoutId}
       layoutId={resolvedLayoutId}
       transition={preset.card}
+      {...reducedFade}
       {...motionProps}
       onClick={onClick}
       onKeyDown={onKeyDown}
@@ -285,7 +300,34 @@ function MathCardImpl({
   )
 }
 
-export const MathCard = memo(MathCardImpl)
+const shallowEqual = (a: object | undefined, b: object | undefined): boolean => {
+  if (a === b) {
+    return true
+  }
+  if (!a || !b) {
+    return false
+  }
+  const ka = Object.keys(a) as (keyof typeof a)[]
+  return ka.length === Object.keys(b).length && ka.every((k) => Object.is(a[k], b[k]))
+}
+
+/** The object props are compared one level deep, so inline `style` / `motionProps` are fine. */
+const NESTED = new Set(['style', 'motionProps', 'cardProps'])
+
+export function mathCardPropsEqual(prev: MathCardProps, next: MathCardProps): boolean {
+  const keys = new Set([...Object.keys(prev), ...Object.keys(next)]) as Set<keyof MathCardProps>
+  for (const k of keys) {
+    const equal = NESTED.has(k)
+      ? shallowEqual(prev[k] as object | undefined, next[k] as object | undefined)
+      : Object.is(prev[k], next[k])
+    if (!equal) {
+      return false
+    }
+  }
+  return true
+}
+
+export const MathCard = memo(MathCardImpl, mathCardPropsEqual)
 MathCard.displayName = 'MathCard'
 
 export default MathCard

@@ -4,17 +4,43 @@ import { type FanItem, fanLayout } from '@/design/math/geometry'
 import { DUR, EASE, SPRING, useMotionMode } from '@/design/motion'
 import { type CardId, MathCard, type MathCardMotionProps } from '@/game-card/src'
 import { useIsomorphicEffect } from '@mantine/hooks'
-import { m } from 'framer-motion'
-import {
-  type CSSProperties,
-  type FocusEvent,
-  type KeyboardEvent,
-  type ReactElement,
-  useEffect,
-  useRef,
-  useState,
-} from 'react'
-import { FRESH_MS, cardWidthFromHeight, rovingIndex } from './card-tray-utils'
+import { AnimatePresence, type MotionStyle, m } from 'framer-motion'
+import { type ReactElement, type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
+import { FRESH_MS, cardWidthFromHeight } from './card-tray-utils'
+import { useRovingListbox } from './use-roving-listbox'
+
+/**
+ * Under reduced motion cards fade in and out (89 ms) instead of flying, so lists of cards
+ * need an AnimatePresence for the exit; in full motion the layoutId flight handles travel.
+ */
+export function ReducedPresence({ reduced, children }: { reduced: boolean; children: ReactNode }) {
+  return reduced ? (
+    <AnimatePresence initial={false}>{children}</AnimatePresence>
+  ) : (
+    (children as ReactElement)
+  )
+}
+
+/**
+ * Static fan placement through left/top, so slot moves are layout position changes.
+ * `rotate` must be a number: framer composes it into the projected transform, and a
+ * "-7.5deg" string became "rotate(-7.5degdeg)", which the browser rejected, so fan cards
+ * teleported instead of flying between the hand and the tray.
+ */
+export function fanCardStyle(it: FanItem, index: number): MotionStyle {
+  return {
+    position: 'absolute',
+    left: it.x,
+    top: PAD_TOP + it.y,
+    rotate: it.rotate,
+    zIndex: index,
+    transformOrigin: '50% 100%',
+  }
+}
+
+const FAN_MOTION: MathCardMotionProps = { layout: 'position', transition: SPRING.card }
+const ROW_MOTION: MathCardMotionProps = { layout: 'position' }
+const STILL_MOTION: MathCardMotionProps = { layout: false }
 
 export type HandProps = {
   cardIds: CardId[]
@@ -203,50 +229,16 @@ export function Hand({
   const n = cardIds.length
   const resolved = resolveHandLayout({ layout, n, W, cardW })
 
-  /* ---------------- roving tabindex ---------------- */
-  const [active, setActive] = useState(0)
-  const hasFocus = useRef(false)
-  const activeIndex = n === 0 ? 0 : Math.min(active, n - 1)
-
-  const optionAt = (index: number) =>
-    ref.current?.querySelector<HTMLElement>(`[role="option"][data-card="${cardIds[index]}"]`) ??
-    null
-
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    const next = rovingIndex(e.key, activeIndex, n)
-    if (next === null) {
-      return
+  /* ---------------- roving tabindex (shared listbox model) ---------------- */
+  const roving = useRovingListbox(n, cardIds.join(','), ref)
+  // one stable activation handler for every card, so memo(MathCard) can skip unchanged cards
+  const onSelectRef = useRef(onSelect)
+  onSelectRef.current = onSelect
+  const select = useCallback((card: CardId | 'Back') => {
+    if (card !== 'Back') {
+      onSelectRef.current(card)
     }
-    e.preventDefault()
-    setActive(next)
-    optionAt(next)?.focus()
-  }
-  const onFocus = (e: FocusEvent<HTMLDivElement>) => {
-    hasFocus.current = true
-    const card = (e.target as HTMLElement).getAttribute('data-card') as CardId | null
-    const index = card ? cardIds.indexOf(card) : -1
-    if (index >= 0 && index !== activeIndex) {
-      setActive(index)
-    }
-  }
-  const onBlur = (e: FocusEvent<HTMLDivElement>) => {
-    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-      hasFocus.current = false
-    }
-  }
-
-  // A selected card leaves the hand: keep keyboard focus on the hand at the same slot.
-  const cardsKey = cardIds.join(',')
-  // biome-ignore lint/correctness/useExhaustiveDependencies: refocus only when the cards change
-  useEffect(() => {
-    if (!hasFocus.current || n === 0) {
-      return
-    }
-    const focused = document.activeElement
-    if (!focused || focused === document.body || !ref.current?.contains(focused)) {
-      optionAt(activeIndex)?.focus()
-    }
-  }, [cardsKey])
+  }, [])
 
   /* ---------------- turn feedback ---------------- */
   const [turnPulse, setTurnPulse] = useState(0)
@@ -267,7 +259,7 @@ export function Hand({
     card: CardId,
     index: number,
     motionProps?: MathCardMotionProps,
-    style?: CSSProperties,
+    style?: MotionStyle,
   ) => (
     <MathCard
       key={card}
@@ -275,10 +267,10 @@ export function Hand({
       size={`${h}px`}
       role="option"
       aria-selected={false}
-      tabIndex={index === activeIndex ? 0 : -1}
+      tabIndex={roving.tabIndexFor(index)}
       state={fresh.has(card) ? 'fresh' : 'rest'}
       showValue={showValues}
-      onActivate={() => onSelect(card)}
+      onActivate={select}
       motionProps={motionProps}
       style={style}
     />
@@ -288,25 +280,12 @@ export function Hand({
   if (resolved.mode === 'fan' && resolved.items.length === n && n > 0) {
     body = (
       <div className="relative w-full" style={{ height: fanHeight }} data-fan-step={resolved.step}>
-        {cardIds.map((card, i) => {
-          const it = resolved.items[i]
-          return option(
-            card,
-            i,
-            // Static placement through left/top and the CSS `rotate` property: framer's
-            // projection owns `transform` on layoutId cards (and dropped animate x/y), so
-            // slot moves are animated as layout position changes instead.
-            { layout: reduced ? false : 'position', transition: SPRING.card },
-            {
-              position: 'absolute',
-              left: it.x,
-              top: PAD_TOP + it.y,
-              rotate: `${it.rotate}deg`,
-              zIndex: i,
-              transformOrigin: '50% 100%',
-            },
-          )
-        })}
+        <ReducedPresence reduced={reduced}>
+          {cardIds.map((card, i) => {
+            const it = resolved.items[i]
+            return option(card, i, reduced ? STILL_MOTION : FAN_MOTION, fanCardStyle(it, i))
+          })}
+        </ReducedPresence>
       </div>
     )
   } else if (resolved.mode === 'wrap') {
@@ -315,7 +294,9 @@ export function Hand({
         className="flex w-full flex-wrap justify-center gap-x-[var(--sp-2)] gap-y-[var(--sp-3)]"
         style={{ paddingTop: PAD_TOP, paddingBottom: PAD_BOTTOM }}
       >
-        {cardIds.map((card, i) => option(card, i, { layout: reduced ? false : 'position' }))}
+        <ReducedPresence reduced={reduced}>
+          {cardIds.map((card, i) => option(card, i, reduced ? STILL_MOTION : ROW_MOTION))}
+        </ReducedPresence>
       </div>
     )
   } else {
@@ -334,18 +315,15 @@ export function Hand({
           WebkitMaskImage: SCROLL_MASK,
         }}
       >
-        {cardIds.map((card, i) =>
-          option(
-            card,
-            i,
-            { layout: reduced ? false : 'position' },
-            {
+        <ReducedPresence reduced={reduced}>
+          {cardIds.map((card, i) =>
+            option(card, i, reduced ? STILL_MOTION : ROW_MOTION, {
               scrollSnapAlign: 'start',
               marginInlineEnd: i === n - 1 ? 0 : overlap || 'var(--sp-2)',
               zIndex: i,
-            },
-          ),
-        )}
+            }),
+          )}
+        </ReducedPresence>
       </div>
     )
   }
@@ -385,7 +363,8 @@ export function Hand({
           }}
           initial={{ opacity: 0 }}
           animate={{ opacity: [0, 1, 0] }}
-          transition={{ duration: DUR.xl, times: [0, 0.236, 1], ease: 'easeOut' }}
+          // one 144 ms glow pulse (#8)
+          transition={{ duration: DUR.sm, times: [0, 0.382, 1], ease: 'easeOut' }}
         />
       ) : null}
 
@@ -397,18 +376,17 @@ export function Hand({
       />
 
       <div
-        ref={ref}
+        {...roving.listboxProps}
+        tabIndex={-1}
         // biome-ignore lint/a11y/useSemanticElements: a card listbox, not a <select>
         role="listbox"
         aria-label="手札"
         data-anchor="hand"
         aria-orientation="horizontal"
-        tabIndex={n === 0 ? 0 : -1}
         data-layout={resolved.mode}
-        onKeyDown={onKeyDown}
-        onFocus={onFocus}
-        onBlur={onBlur}
-        className="relative w-full outline-none transition-[filter] duration-[var(--t-md)]"
+        className="relative w-full rounded-[var(--r-2)]"
+        // Off turn only: the cards desaturate at once (filter is never animated, §9.1), and
+        // on my turn, when cards fly and lift, there is no filtered layer to repaint.
         style={{ filter: isMyTurn ? undefined : 'saturate(.618)' }}
       >
         {n === 0 ? (

@@ -170,4 +170,33 @@ describe('SubmitTray', () => {
     expect(btn.style.minWidth).toBe('44px')
     expect(btn.style.minHeight).toBe('44px')
   })
+
+  it('keeps keyboard focus in the tray when a card is removed (never drops to body)', () => {
+    const { rerenderWith } = setup()
+    const second = screen.getAllByRole('option')[1]
+    second.focus()
+    fireEvent.keyDown(second, { key: 'Enter' })
+    rerenderWith({ cardIds: ['AS'] }) // the parent removed 3H
+    expect(screen.getByRole('option')).toHaveFocus()
+    rerenderWith({ cardIds: [] })
+    expect(screen.getByRole('listbox', { name: '提出' })).toHaveFocus()
+  })
+
+  it('the empty listbox is not a tab stop', () => {
+    setup({ cardIds: [] })
+    expect(screen.getByRole('listbox', { name: '提出' })).toHaveAttribute('tabindex', '-1')
+  })
+
+  it('リセット stays enabled while factor cards remain, even with an empty tray', () => {
+    const { onReset } = setup({ cardIds: [], hasFactor: true })
+    const reset = screen.getByRole('button', { name: 'リセット' })
+    expect(reset).toBeEnabled()
+    fireEvent.click(reset)
+    expect(onReset).toHaveBeenCalledTimes(1)
+  })
+
+  it('リセット is disabled when there is nothing to clear', () => {
+    setup({ cardIds: [] })
+    expect(screen.getByRole('button', { name: 'リセット' })).toBeDisabled()
+  })
 })
