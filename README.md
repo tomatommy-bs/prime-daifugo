@@ -1,11 +1,28 @@
 # Getting Started
 
-- hosting サーバーと、websocket サーバーを立ち上げる
+フロントエンド（Next.js）とリアルタイムバックエンド（Cloudflare Worker をローカルの `wrangler dev` で実行）を、コマンド 1 つでまとめて起動します。Cloudflare アカウントもネットワーク接続も不要です。
 
 ```bash
-npm run dev
-npm run dev:pk
+npm install
+npm run dev          # next dev（:3000）+ wrangler dev（:8787）を並行起動
 ```
+
+- 個別に起動する場合は `npm run dev:web`（Next.js のみ）と `npm run dev:server`（Worker のみ、`:8787`）を別々のターミナルで実行します。
+- `next dev` だけでも `/labo/gallery` や静的ページは表示できます。その場合ホームのロビー接続は失敗し、カウンターは「—」のままです。
+- ブラウザを 2 つ（または通常ウィンドウとシークレットウィンドウ）開き、それぞれ別の名前でログインすると 1 台で対戦を試せます。
+- Worker の部屋の状態は `.wrangler/state`（git 管理外）に保存されます。消すと空の状態から始まります。
+
+## 環境変数
+
+| 変数 | 使う場所 | 既定値・説明 |
+|---|---|---|
+| `NEXT_PUBLIC_REALTIME_URL` | Next.js | バックエンドの URL。コミット済みの `.env.development` に `http://127.0.0.1:8787` が入っています。本番ビルド（`VERCEL_ENV=production`）では未設定や localhost を指す値だとビルドが失敗します |
+| `ALLOWED_ORIGINS` | Worker | WebSocket 接続を許可する Origin（カンマ区切り）。開発用の値は `worker/wrangler.jsonc` の `vars` にあります |
+| `GRACE_PLAYING_MS` / `GRACE_IDLE_MS` | Worker | 切断後に席を保持する猶予（対局中 120 秒 / 待機中 60 秒） |
+| `AWAY_TURN_CAP_MS` | Worker | 切断中のプレイヤーの手番の上限（20 秒） |
+| `ROOM_TTL_IDLE_MS` / `ROOM_TTL_ACTIVE_MS` | Worker | 誰も接続していない部屋を削除するまでの時間（10 分 / 30 分） |
+
+Worker の値は `worker/.dev.vars`（git 管理外）や `npm run dev:server -- --var GRACE_PLAYING_MS:5000` で上書きできます。秘密情報はコミットしないでください（`.env.development` には秘密でないローカル既定値だけを置きます）。
 
 # 素数大富豪のルール
 
@@ -53,7 +70,14 @@ https://primeqk.themedia.jp/pages/4500251/rules
 
 ## 概要
 
-このプロジェクトは Next.js ベースのフロントエンドと PartyKit による WebSocket サーバーを組み合わせたリアルタイムマルチプレイヤーゲームアプリケーションです。
+このプロジェクトは Next.js ベースのフロントエンド（Vercel）と、Cloudflare Workers + Durable Objects によるリアルタイムバックエンドを組み合わせたマルチプレイヤーゲームアプリケーションです。設計の詳細は [`docs/realtime/rebuild-spec.md`](docs/realtime/rebuild-spec.md) を参照してください。
+
+```
+ブラウザ（Next.js / Vercel）
+  /            ── WS   {RT}/lobby        ─▶ Worker ─▶ LobbyDO（ホームのカウンター）
+  /room/new    ── POST {RT}/rooms        ─▶ Worker ─▶ LobbyDO（素数の部屋 ID を払い出し）
+  /room/[id]   ── WS   {RT}/rooms/:id/ws ─▶ Worker ─▶ RoomDO（部屋ごとのセッションと対局）
+```
 
 ## 技術スタック
 
@@ -69,8 +93,13 @@ https://primeqk.themedia.jp/pages/4500251/rules
 
 ### バックエンド
 
-- **PartyKit**: リアルタイム WebSocket サーバー
-- **primes-and-factors**: 素数計算ライブラリ
+- **Cloudflare Workers + Durable Objects**（`worker/`）: Worker `prime-daifugo-rt` に SQLite ストレージ付きの Durable Object を 2 つ持ちます。`RoomDO` は部屋ごとのセッション・対局・タイマー、`LobbyDO` はロビーの集計と部屋 ID の払い出しを担当します。WebSocket Hibernation API を直接使うので、接続が待機中の部屋には費用がかかりません。
+- **純粋な TypeScript の共有層**（Worker と Next.js の両方から import）:
+  - `src/shared`: プロトコル（zod スキーマ）・ルール設定・ID・乱数・名前の検証
+  - `src/game`: ルールエンジン（BigInt で決定的に動作）
+  - `src/session`: 部屋のリデューサ・プレイヤーごとの表示用ビュー・シミュレータ
+- **セッション管理**: プレイヤーはブラウザが持つ `pd_sid` から導いた安定した ID で識別されます。リロード・回線の瞬断・スマホのタブの休止があっても、猶予期間内なら同じ席と手札に戻れます。手番の締め切りはサーバーが持ち、切断中のプレイヤーは自動でパスされます。
+- **ルーティングの代替案**: Worker のルーティングは手書きです（固定ルートは 2 本だけ）。保守が負担になった場合は、Cloudflare の `partyserver`（npm パッケージ）に置き換えられるよう、仕様書 §2.3 に代替案として記録しています。
 
 ### 開発・テスト環境
 
@@ -95,7 +124,7 @@ UI は「ふるい（Sieve Table）」という数学モチーフのデザイン
 
 - **数学プリミティブ**（`src/design/`）: `SieveGrid`（エラトステネスの篩）, `UlamField`（ウラムの螺旋）, `NumberGlyph`, `Expr`（素因数分解の式）, `FactorTree`, `ModRing`（ℤ/nℤ の目盛り）。ホーム・ローディング・カード裏面・結果表示で共通して使います。
 - **対局画面**（`src/app/room/[id]/_ui/board/`）: `game-board.tsx` は薄いコンテナで、サーバー状態を `board-state.ts` / `seat-model.ts` で表示用モデルに変換し、`use-board-director.ts` が状態遷移（`classify-transition.ts`）から演出イベント（カードの飛行・結果プレート・57 切り・GAME SET）を一度ずつ発火します。`BoardLayout` がレイアウトモードごとに席（`SeatLine` / `SeatRing`）・場（`FieldStack`）・山札・提出トレイ・素因数分解パネル・手札・操作ボタンを配置します。
-- **通信・ルールは変更していません**: `src/partykit`, `src/interface`, `src/utils/play-card.ts`, `hooks.ts`, `client-messenger.ts` は従来どおりで、デザインは表示層だけで完結しています。
+- **通信層**: UI がバックエンドとやり取りする窓口は `useRoomSession(roomId)`（`src/app/room/[id]/session/`）だけです。再接続付きの WebSocket トランスポート・クライアント側リデューサ・サーバー時刻に合わせた手番タイマーをまとめ、ボードの各コンポーネントには表示用の状態と操作だけを渡します。
 
 ### デザインギャラリー
 
@@ -127,25 +156,26 @@ src/
 │       ├── components/    # カードコンポーネント（MathCard ラッパー）
 │       └── icons/         # 全54枚のカードアイコン（裏面はウラムの螺旋）
 ├── hooks/                 # カスタムReactフック
-├── interface/             # 型定義・通信インターフェース
-│   ├── client-to-server.ts
-│   ├── server-to-client.ts
-│   └── common.ts
-├── partykit/              # WebSocketサーバーロジック
-│   ├── lobby/             # ロビー管理
-│   ├── room/              # ゲームルーム管理
-│   │   └── logic/         # ゲームルール・状態管理
-│   └── main.ts            # PartyKitエントリーポイント
+├── shared/                # プロトコル・ルール設定・ID・乱数（Worker と共有、純粋 TS）
+├── game/                  # ルールエンジン（純粋 TS）
+├── session/               # 部屋のリデューサ・ビュー・シミュレータ（純粋 TS）
+├── lib/                   # セッション ID、バックエンドへの HTTP、ロビー購読
 └── utils/                 # ユーティリティ関数
+worker/
+├── src/                   # Worker のルーター、RoomDO / LobbyDO とその純粋なホスト層
+├── test/                  # ホスト層のユニットテスト（integration/ は workerd での結合テスト）
+└── wrangler.jsonc         # Worker の設定（Durable Object、vars、本番環境）
+e2e/                       # Playwright E2E（2 ブラウザでの対戦シナリオ）
+docs/realtime/             # リアルタイム基盤の仕様書・実装計画・運用手順書
 ```
 
 ## 開発上の利点
 
 ### 1. モジュラー設計
 
-- **分離された関心事**: フロントエンド（Next.js）とリアルタイム通信（PartyKit）の明確な分離
+- **分離された関心事**: フロントエンド（Next.js）とリアルタイム通信（Cloudflare Worker）の明確な分離。ゲームとセッションのロジックは純粋な TypeScript で、どちらからも使えます
 - **再利用可能なコンポーネント**: `game-card/` パッケージによる独立したカードシステム
-- **型安全な通信**: `interface/` による厳密な型定義
+- **型安全な通信**: `src/shared/protocol.ts` の zod スキーマをクライアントとサーバーが共有
 
 ### 2. スケーラブルな開発環境
 
@@ -156,33 +186,36 @@ src/
 
 ### 3. リアルタイム機能
 
-- **PartyKit**: 簡単な WebSocket サーバー構築
-- **状態同期**: サーバー・クライアント間の自動的な状態同期
-- **ルーム管理**: 動的なゲームルーム作成・管理
+- **Durable Objects**: 部屋ごとに 1 つのオブジェクトが手を 1 つずつ順に処理し、状態を永続化してから配信します
+- **状態同期**: 各イベントに連番が付き、再接続時は取りこぼした分を再送（多すぎる場合はスナップショット）します
+- **ルーム管理**: 素数の部屋 ID の払い出し、空き部屋の自動削除、デプロイ後も席と手番を維持
 
 ### 4. ゲーム特化機能
 
 - **素数計算**: `primes-and-factors` による高速な素数判定
 - **カードシステム**: 全54枚のカードを網羅した型安全なシステム
-- **ゲームルール**: モジュール化されたゲームロジック（`src/partykit/room/logic/`）
+- **ゲームルール**: 純粋で決定的なルールエンジン（`src/game/`）。不正な手はサーバーが拒否します
 
 ### 5. 開発効率化
 
 ```bash
-# 開発サーバー起動（並行実行）
-npm run dev      # Next.js開発サーバー
-npm run dev:pk   # PartyKit開発サーバー
+# 開発サーバー起動
+npm run dev            # Next.js（:3000）+ Worker（:8787）を並行起動
+npm run dev:web        # Next.js のみ
+npm run dev:server     # Worker のみ（wrangler dev、オフラインで動作）
 
 # コード品質管理
-npm run biome          # リンティング・フォーマット（自動修正あり）
-npx biome ci src       # CI と同じチェック（修正なし）
-npx tsc --noEmit       # 型チェック
+npm run biome          # リンティング・フォーマット（自動修正あり、src のみ）
+npm run biome:ci       # CI と同じチェック（biome ci src worker e2e、修正なし）
+npm run typecheck      # 型チェック（アプリと Worker）
 
 # テスト
-npm test               # ユニットテスト（Vitest `unit` プロジェクト、jsdom）
+npm test               # ユニットテスト（Vitest `unit` プロジェクト。ネットワーク・ブラウザ不要）
 npm run test:watch     # ユニットテストの watch モード
 npm run test:coverage  # カバレッジ付きユニットテスト（coverage/ に出力）
 npm run test:storybook # 全ストーリーをブラウザ（Chromium）で描画して検証
+INTEGRATION=1 npm run test:integration  # Worker の結合テスト（ローカルの workerd、実時間で待つので任意）
+E2E=1 npm run test:e2e                  # Playwright E2E（wrangler dev + next dev -p 3124 を自動起動）
 
 # ストーリーブック
 npm run storybook       # コンポーネント開発環境（:6006）
@@ -200,10 +233,26 @@ npm run flights   # カード飛行アニメーションのフレーム連番と
 - `BASE_URL` に何も応答しなければ `next dev -p 3123` を自動で起動・終了します。既存のサーバーを使う場合は `BASE_URL=http://localhost:3000`、一部だけ撮る場合は `SCENES=factor,cut57` を指定します。
 - Playwright 同梱の Chromium が無い環境では `PW_CHROMIUM_PATH` に既存の `chrome-headless-shell` のパスを指定します（例: `~/Library/Caches/ms-playwright/chromium_headless_shell-<rev>/chrome-headless-shell-mac-arm64/chrome-headless-shell`）。`npm run test:storybook` も同じブラウザを使います。
 - `npm run flights` は `STEPS`, `VIEWPORTS`, `FRAME_MS` で対象と間隔を絞れます。出力先は `docs/design/screens/flights/` です。
+- `npm run screens` / `npm run flights` は `next dev` だけで動きます。Worker（`:8787`）への接続エラー（ホームのロビー接続など）は想定内として無視し、それ以外のコンソールエラーでは失敗します。
 - `next dev` / `next build` は `package-lock.json` を書き換えることがあります。その差分はコミットせずに戻してください。
+
+#### E2E テスト
+
+```bash
+E2E=1 npm run test:e2e
+E2E=1 E2E_RT_PORT=8799 npm run test:e2e   # :8787 が使用中のとき
+```
+
+- `alice` と `bob` の 2 つのブラウザコンテキストで、部屋の作成・参加・開始、リロード、回線断、切断中の自動パス、猶予切れの棄権、二重タブ、退出、ロビーのカウンターを検証します（仕様書 §12.2）。
+- Worker は短い猶予（`GRACE_PLAYING_MS=5000` など）で、Next.js は `next dev -p 3124` で自動起動します。どちらも既存のサーバーは再利用しません。
+- `E2E=1` を付けないと全テストがスキップされます。Chromium は `PW_CHROMIUM_PATH` で差し替えられます。
 
 ### 6. デプロイメント
 
-- **Vercel**: フロントエンドの自動デプロイ
-- **PartyKit Cloud**: WebSocketサーバーの管理デプロイ
-- **一括デプロイ**: `npm run deploy` による統合デプロイ
+手順の詳細・環境ごとの設定・ロールバック・動作確認チェックリストは [`docs/realtime/runbook.md`](docs/realtime/runbook.md) にまとめています。
+
+- **順番は Worker が先、Vercel が後**: Worker は 1 つ前のプロトコルバージョンも受け付けるので、先に Worker を出してからフロントエンドを出します。Worker のデプロイで全接続がいったん切れますが、クライアントは約 1 秒で再接続し、席・手札・手番はそのまま残ります。
+- **Cloudflare（Worker）**: 推奨は Workers Builds（Git 連携）で `main` から `npx wrangler deploy -c worker/wrangler.jsonc` を実行する方法です。手動なら `npm run deploy:server`（`--env production`）。本番の `ALLOWED_ORIGINS` は `worker/wrangler.jsonc` の `env.production` に設定し、`workers.dev` ではなくカスタムドメイン（`rt.<domain>`）を推奨します。
+- **Vercel（フロントエンド）**: 既存の Git 連携のまま、Production と Preview に `NEXT_PUBLIC_REALTIME_URL` を設定します。
+- **費用**: Workers Free + Vercel Hobby で趣味の規模なら $0 です。無料枠の上限に達すると UTC 0 時までエラーになるため、Cloudflare の使用量通知を設定します。足りなくなったら Workers Paid（月 $5）に切り替えるのが逃げ道です。
+- CI（`.github/workflows/ci.yml`）はビルドと Worker のバンドル確認（dry run）までで、デプロイは行いません。
