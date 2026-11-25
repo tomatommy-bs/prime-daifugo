@@ -1,8 +1,8 @@
 import assert from 'assert'
 import { type CardId, type CardSuit, getCardNum, getCardSuit, isCardId } from '@/game-card/src'
+import { allBasesPrime, isWellFormedFact, parseFact } from '@/game/factor'
 import type { FactCardId } from '@/interface/common'
 import _ from 'lodash'
-import pf from 'primes-and-factors'
 
 /**
  * @example
@@ -26,6 +26,8 @@ export const getCardNumber = (card: CardId): number => {
 }
 
 /**
+ * Display-only: returns a JS `number`, which is inexact for numbers of 16+ digits. The rules engine
+ * uses the exact BigInt `concatValue` (`src/game/numbers.ts`).
  * @example
  * ['2C', '3C'] => 23
  * ['2C', '3C', '4C'] => 234
@@ -57,89 +59,49 @@ const translateAsEvalString = (cards: FactCardId[]): string => {
 }
 
 const evalRegex = /^[1-9]\d*(?:\s*\*{1,2}\s*[1-9]\d*)+$/
-const isEvaluable = (evalString: string): boolean => {
-  return evalRegex.test(evalString)
+/**
+ * Loose syntax check used only by the display helper `evalFactCardIds`: alternating numbers and
+ * operators, no operand equal to 1. Unlike the rules it accepts `^` towers.
+ */
+const isEvaluableFactCardIds = (cards: FactCardId[]): boolean => {
+  if (cards.length < 2) {
+    return false
+  }
+  const evalString = translateAsEvalString(cards)
+  return evalRegex.test(evalString) && !evalString.split('*').includes('1')
 }
 
 /**
- * 素因数分解のためのカード配列として有効かどうかを判定する
- * - 1 を素因数には含められない
- * - * または ^ は1つ以上含まれる
- * - 1つ以上の数字が含まれる
+ * 素因数分解のためのカード配列として有効かどうかを判定する (spec RQ-R16)
+ * - カードと * / ^ が交互に並ぶ（隣接するカードは1つの数になる）
+ * - 1 を因数・指数に含められない
+ * - * または ^ は1つ以上含まれ、両端には置けない
+ * - ^ は1段まで（2^3^4 のようなタワーは不可）
+ *
+ * Delegates to the rules engine (`src/game/factor.ts`), so the UI's pre-validation matches the
+ * server exactly.
  */
 export const isValidFactCardIds = (cards: FactCardId[]): boolean => {
-  const evalString = translateAsEvalString(cards)
-  if (cards.length === 0 || cards.length === 1) {
-    return false
-  }
-  if (!isEvaluable(evalString)) {
-    return false
-  }
-  // 1 を素因数には含められない
-  if (evalString.split('*').includes('1')) {
-    return false
-  }
-  // * が1つもない
-  if (!evalString.includes('*')) {
-    return false
-  }
-
-  return true
+  return isWellFormedFact(cards)
 }
 
-const regExAsterisk = /(\*|\^)/
-
 /**
- * isValidFactCardIds に加えて、因数が素数であるかどうかも判定に含める
+ * isValidFactCardIds に加えて、因数（^ の底を含む）が素数であるかどうかも判定に含める。
+ * 指数は素数でなくてもよい。Delegates to `src/game/factor.ts`.
  */
 export const isValidFactCardIdsStrict = (cards: FactCardId[]): boolean => {
-  if (!isValidFactCardIds(cards)) {
-    return false
-  }
-
-  const facts = _.flatten(concatFactCardIds(cards).split(regExAsterisk))
-  for (let idx = 0; idx < facts.length; idx += 2) {
-    const target = _.parseInt(facts[idx])
-    const former = facts[idx - 1] ?? '*' // 0番目の場合は * とする
-    const latter = facts[idx + 1] ?? '*' // 最後の場合は * とする
-
-    if (_.isNaN(target)) {
-      throw new Error(`invalid number: ${target}`)
-    }
-
-    if (former === '*' && latter === '*') {
-      if (!pf.isPrime(target)) {
-        return false
-      }
-    }
-
-    // 指数の基底が素数でない場合は false
-    if (former === '*' && latter === '^') {
-      if (!pf.isPrime(target)) {
-        return false
-      }
-    }
-
-    // 指数は素数でなくてもよい
-    if (former === '^' && latter === '*') {
-      null
-    }
-
-    if (former === '^' && latter === '^') {
-      if (!pf.isPrime(target)) {
-        return false
-      }
-    }
-  }
-
-  return true
+  const parsed = parseFact(cards)
+  return parsed.ok && allBasesPrime(parsed.terms)
 }
 
 /**
- * cloudflare では eval が使えないので、自前で実装する
+ * Display-only evaluation of a factor expression for the UI preview (cloudflare では eval が
+ * 使えないので、自前で実装する). Returns a JS `number`, so it is inexact above 2^53 and may be
+ * `Infinity`; `^` is evaluated right-associatively and towers are accepted. The rules engine never
+ * uses it: judging is done with BigInt in `src/game/factor.ts`.
  */
 export const evalFactCardIds = (cards: FactCardId[]): number => {
-  if (!isValidFactCardIds(cards)) {
+  if (!isEvaluableFactCardIds(cards)) {
     throw new Error('invalid fact card ids')
   }
 
