@@ -5,6 +5,7 @@
 import type { LayoutMode } from '@/design/use-layout-mode'
 import type { CardId } from '@/game-card/src'
 import type { FactCardId } from '@/interface/common'
+import type { SubmissionResult } from '@/interface/server-to-client'
 import type { ReactNode } from 'react'
 
 export type { LayoutMode }
@@ -36,12 +37,8 @@ export type SeatModel = {
   penalty?: number
 }
 
-/** Server result codes for a submission (`SubmissionResult['result']`, non-null). */
-export type SubmitResultCode =
-  | 'BASE_IS_NOT_PRIME'
-  | 'INVALID_FACT'
-  | 'FACT_CONTAIN_NOT_PRIME'
-  | 'INCORRECT_ANSWER'
+/** Server result codes for a submission, derived from the protocol so new codes surface here. */
+export type SubmitResultCode = NonNullable<SubmissionResult['result']>
 
 /** What `ResultOverlay` visualises after the server has judged a submission. */
 export type SubmitResultView = {

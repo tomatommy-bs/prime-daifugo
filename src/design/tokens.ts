@@ -67,25 +67,11 @@ export const SEAT_HUES: Record<Scheme, readonly [string, string, string, string]
   dark: ['#64D1D7', '#E8A5D5', '#BBC679', '#8FC2FD'],
 }
 
-export const SHADOWS: Record<Scheme, { 'shadow-1': string; 'shadow-2': string }> = {
-  light: {
-    'shadow-1': '0 1px 0 rgb(21 23 28 / .08)',
-    'shadow-2': '0 1px 2px rgb(21 23 28 / .10), 0 5px 13px rgb(21 23 28 / .08)',
-  },
-  dark: {
-    'shadow-1': '0 1px 0 rgb(0 0 0 / .4)',
-    'shadow-2': '0 1px 2px rgb(0 0 0 / .5), 0 5px 13px rgb(0 0 0 / .35)',
-  },
-}
-
 /** Tokens used as text: each must reach 4.5:1 on bg, surface and surface-raised. */
 export const TEXT_TOKENS = ['ink', 'ink-muted', 'prime', 'factor', 'mod', 'gold', 'danger'] as const
 
 /** Non-text UI tokens (interactive borders): each must reach 3:1. */
 export const UI_TOKENS = ['border-strong'] as const
-
-/** Decorative tokens (always `aria-hidden`), exempt from contrast rules. */
-export const DECOR_TOKENS = ['line', 'composite'] as const
 
 /** CSS custom property reference, e.g. `cssVar('prime')` → `var(--prime)`. */
 export const cssVar = (name: TokenName | `seat-${0 | 1 | 2 | 3}`) => `var(--${name})`

@@ -14,6 +14,7 @@ import type { FactCardId } from '@/interface/common'
 import { concatCardNumbers } from '@/utils/play-card'
 import type React from 'react'
 import { type ReactNode, isValidElement } from 'react'
+import type { LogEntry, SubmitResultCode } from './board/types'
 
 const GROTHENDIECK_PRIME: number = WORLD_CONFIG.GROTHENDIECK_PRIME
 
@@ -167,8 +168,8 @@ const Notice: React.FC<{ kind: LogKind; children: ReactNode; className?: string 
   </span>
 )
 
-/** Proof-log line kinds (mirrors `LogEntry['kind']`). */
-export type LogKind = 'system' | 'play' | 'fail' | 'pass' | 'end'
+/** Proof-log line kinds. */
+export type LogKind = NonNullable<LogEntry['kind']>
 
 export const DrawNotice: React.FC<{ sender?: string }> = ({ sender }) => (
   <Notice kind="system">
@@ -191,12 +192,6 @@ export const SystemNotice: React.FC<{ children: ReactNode }> = ({ children }) =>
     {children}
   </Notice>
 )
-
-type SubmitResultCode =
-  | 'BASE_IS_NOT_PRIME'
-  | 'INVALID_FACT'
-  | 'FACT_CONTAIN_NOT_PRIME'
-  | 'INCORRECT_ANSWER'
 
 /**
  * The toasts for one judged submission, in order: the success line (with the factor

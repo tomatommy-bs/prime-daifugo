@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { cardLabel, cardValue, rankBadge } from './card-label'
+import { cardLabel, rankBadge } from './card-label'
+import { getCardInteger } from './suit-num'
 import { cardIds } from './suit-num'
 
 describe('cardLabel', () => {
@@ -23,7 +24,7 @@ describe('cardLabel', () => {
   })
 })
 
-describe('cardValue', () => {
+describe('getCardInteger (the value in labels and chips)', () => {
   it.each([
     ['AH', 1],
     ['2C', 2],
@@ -32,7 +33,7 @@ describe('cardValue', () => {
     ['QS', 12],
     ['KC', 13],
   ] as const)('%s = %i', (card, value) => {
-    expect(cardValue(card)).toBe(value)
+    expect(getCardInteger(card)).toBe(value)
   })
 })
 

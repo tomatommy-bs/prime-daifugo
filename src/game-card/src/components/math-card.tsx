@@ -10,8 +10,8 @@ import {
   useEffect,
   useState,
 } from 'react'
-import { cardLabel, cardValue, rankBadge } from '../tools/card-label'
-import type { CardId } from '../tools/suit-num'
+import { cardLabel, rankBadge } from '../tools/card-label'
+import { type CardId, getCardInteger } from '../tools/suit-num'
 import { GameCard, type GameCardProps } from './game-card'
 
 export type MathCardState = 'rest' | 'selected' | 'disabled' | 'confirmed' | 'error' | 'fresh'
@@ -293,7 +293,7 @@ function MathCardImpl({
           className="num mt-[10px] text-ink-muted tabular-nums leading-none"
           style={{ fontSize: 'var(--fs--1)' }}
         >
-          {cardValue(card)}
+          {getCardInteger(card)}
         </span>
       ) : null}
     </m.div>

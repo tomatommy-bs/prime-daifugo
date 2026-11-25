@@ -11,11 +11,6 @@ export const SUIT_LABEL_JA: Record<CardSuit, string> = {
 /** Accessible name of the card back (the deck). */
 export const BACK_LABEL = '山札'
 
-/** Numeric value of a card: A = 1, 2 … 10, J = 11, Q = 12, K = 13. */
-export function cardValue(card: CardId): number {
-  return getCardInteger(card)
-}
-
 /**
  * Accessible label for a card: rank as printed, then its value.
  *
@@ -28,7 +23,7 @@ export function cardLabel(card: CardId | 'Back'): string {
   if (card === 'Back') {
     return BACK_LABEL
   }
-  return `${SUIT_LABEL_JA[getCardSuit(card)]}の${getCardNum(card)}, ${cardValue(card)}`
+  return `${SUIT_LABEL_JA[getCardSuit(card)]}の${getCardNum(card)}, ${getCardInteger(card)}`
 }
 
 /** Rank badge for court cards and aces (`J = 11`); `null` for 2–10, where rank = value. */
@@ -38,7 +33,7 @@ export function rankBadge(card: CardId | 'Back'): string | null {
   }
   const num = getCardNum(card)
   if (num === 'A' || num === 'J' || num === 'Q' || num === 'K') {
-    return `${num} = ${cardValue(card)}`
+    return `${num} = ${getCardInteger(card)}`
   }
   return null
 }

@@ -51,14 +51,6 @@ export const IconTimes = (p: GlyphProps) => (
   </Glyph>
 )
 
-/** `xʸ` power */
-export const IconPow = (p: GlyphProps) => (
-  <Glyph {...p}>
-    <path d="M4 10l7 9M11 10l-7 9" />
-    <path d="M14 4l2.5 3.5M19 4l-4.5 7" />
-  </Glyph>
-)
-
 /** `∴` therefore (log) */
 export const IconTherefore = (p: GlyphProps) => (
   <Glyph {...p}>
@@ -72,13 +64,6 @@ export const IconTherefore = (p: GlyphProps) => (
 export const IconQed = (p: GlyphProps) => (
   <Glyph {...p}>
     <rect x="6" y="5" width="12" height="14" rx="0.5" fill="currentColor" />
-  </Glyph>
-)
-
-/** `≠` */
-export const IconNeq = (p: GlyphProps) => (
-  <Glyph {...p}>
-    <path d="M5 9h14M5 15h14M16 4L8 20" />
   </Glyph>
 )
 
@@ -118,22 +103,6 @@ export const IconModRing = ({ n = 4, ...p }: GlyphProps & { n?: number }) => {
   )
 }
 
-/** 3×3 sieve grid with one struck-out cell */
-export const IconSieve = (p: GlyphProps) => (
-  <Glyph {...p}>
-    <rect x="4" y="4" width="16" height="16" rx="1.5" />
-    <path d="M9.33 4v16M14.67 4v16M4 9.33h16M4 14.67h16" />
-    <path d="M10.5 15.8l3-2.3" />
-  </Glyph>
-)
-
-/** Square spiral (Ulam) */
-export const IconSpiral = (p: GlyphProps) => (
-  <Glyph {...p}>
-    <path d="M12 12h2v-2h-4v4h6v-6h-8v8h10V6H6" />
-  </Glyph>
-)
-
 /** Binary split (factor tree) */
 export const IconTree = (p: GlyphProps) => (
   <Glyph {...p}>
@@ -141,13 +110,6 @@ export const IconTree = (p: GlyphProps) => (
     <circle cx="6" cy="18" r="2" />
     <circle cx="18" cy="18" r="2" />
     <path d="M11 6.8L7 16.2M13 6.8l4 9.4" />
-  </Glyph>
-)
-
-/** `▲` lead marker */
-export const IconLead = (p: GlyphProps) => (
-  <Glyph {...p}>
-    <path d="M12 6l7 12H5z" fill="currentColor" />
   </Glyph>
 )
 

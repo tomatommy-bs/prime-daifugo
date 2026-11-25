@@ -11,6 +11,7 @@ import { IconArrowRight, IconCheck, IconX } from '@tabler/icons-react'
 import { AnimatePresence, m } from 'framer-motion'
 import { type FC, type ReactNode, useEffect, useRef, useState } from 'react'
 import ClientRoomManager from '../room-manager'
+import { RULE_ORDER, formatRuleValue } from './board/rule-diff'
 
 interface Props {
   rule: PrimeDaifugoSetupData
@@ -38,21 +39,6 @@ export const waitingSeatAngle = (k: number, n: number) =>
 /** Ring radius as a fraction of the ring box (R = side · 0.36). */
 const RING_R = 0.36
 
-const formatRule = (key: RuleKey, value: PrimeDaifugoSetupData[RuleKey] | undefined): string => {
-  switch (key) {
-    case 'timeLimit':
-      return `${value} s`
-    case 'maxSubmitNumCards':
-      return value === 52 ? '∞' : String(value)
-    case 'halfEvenNumbers':
-      return value ? 'ON' : 'OFF'
-    default:
-      return String(value)
-  }
-}
-
-const RULE_KEYS: RuleKey[] = ['timeLimit', 'initNumCards', 'maxSubmitNumCards', 'halfEvenNumbers']
-
 type Flash = { n: number; from: string; to: string }
 
 export const FLASH_HOLD_MS = 1600
@@ -66,7 +52,7 @@ function useRuleFlashes(rule: PrimeDaifugoSetupData) {
   useEffect(() => {
     const before = prev.current
     prev.current = rule
-    const changed = RULE_KEYS.filter((k) => before[k] !== rule[k])
+    const changed = RULE_ORDER.filter((k) => before[k] !== rule[k])
     if (changed.length === 0) {
       return
     }
@@ -75,8 +61,8 @@ function useRuleFlashes(rule: PrimeDaifugoSetupData) {
       for (const k of changed) {
         next[k] = {
           n: (f[k]?.n ?? 0) + 1,
-          from: formatRule(k, before[k]),
-          to: formatRule(k, rule[k]),
+          from: formatRuleValue(k, before[k]),
+          to: formatRuleValue(k, rule[k]),
         }
       }
       return next

@@ -4,8 +4,8 @@
  * mock state (`fixtures.ts`), with no socket. `?scene=<id>&scheme=light|dark` selects a
  * frame; without `scene` an index of scenes is shown. Not linked from home.
  *
- * Board components come only through the board barrel, so the gallery compiles against
- * Foundation's stubs and fills in as the cards / table / board tasks land.
+ * Board scenes are wired like GameBoard: the board barrel's components, the production
+ * `buildSeats`, the same top bar and, in wide, the room page's header row and log column.
  */
 import {
   ActionBar,

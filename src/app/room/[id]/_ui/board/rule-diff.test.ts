@@ -1,6 +1,6 @@
 import { DEFAULT_RULE } from '@/test-utils'
 import { describe, expect, it } from 'vitest'
-import { ruleDiff } from './rule-diff'
+import { RULE_ORDER, formatRuleValue, ruleDiff } from './rule-diff'
 
 describe('ruleDiff', () => {
   it.each([
@@ -29,5 +29,24 @@ describe('ruleDiff', () => {
 
   it('shows a dash when the previous value is unknown', () => {
     expect(ruleDiff(null, { initNumCards: 4 })).toEqual(['|H₀|: — → 4'])
+  })
+})
+
+describe('formatRuleValue (shared with the waiting room)', () => {
+  it('formats each rule the same way the axioms and the log do', () => {
+    expect(formatRuleValue('timeLimit', 60)).toBe('60 s')
+    expect(formatRuleValue('timeLimit', 60, { withUnit: false })).toBe('60')
+    expect(formatRuleValue('maxSubmitNumCards', 52)).toBe('∞')
+    expect(formatRuleValue('maxSubmitNumCards', 4)).toBe('4')
+    expect(formatRuleValue('halfEvenNumbers', true)).toBe('ON')
+    expect(formatRuleValue('initNumCards', undefined)).toBe('—')
+  })
+  it('RULE_ORDER lists every rule once', () => {
+    expect(RULE_ORDER).toEqual([
+      'timeLimit',
+      'initNumCards',
+      'maxSubmitNumCards',
+      'halfEvenNumbers',
+    ])
   })
 })
