@@ -7,8 +7,11 @@ import { IconDeviceMobileRotated } from '@tabler/icons-react'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
-/** Text pages read top to bottom on a phone; the landscape hint would only cover them. */
-export const READING_PATHS = ['/rules'] as const
+/**
+ * Pages built for portrait phones: the rules read top to bottom, and the lab stacks its readout
+ * over the keypad. The landscape hint would only cover them.
+ */
+export const READING_PATHS = ['/rules', '/labo/calc'] as const
 
 const isReadingPath = (pathname: string | null): boolean =>
   READING_PATHS.some((p) => pathname === p || pathname?.startsWith(`${p}/`))

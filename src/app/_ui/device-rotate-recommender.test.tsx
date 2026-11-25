@@ -21,8 +21,8 @@ describe('DeviceRotateRecommender', () => {
     nav.pathname = '/'
   })
 
-  it('stays hidden on the rules page, which reads best in portrait', () => {
-    nav.pathname = '/rules'
+  it.each(['/rules', '/labo/calc'])('stays hidden on %s, which works in portrait', (path) => {
+    nav.pathname = path
     renderWithProviders(<DeviceRotateRecommender />)
     expect(screen.queryByRole('region', DIALOG)).not.toBeInTheDocument()
   })
