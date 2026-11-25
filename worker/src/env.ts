@@ -11,6 +11,8 @@ export interface Env {
   AWAY_TURN_CAP_MS: string
   ROOM_TTL_IDLE_MS: string
   ROOM_TTL_ACTIVE_MS: string
+  /** Worker secret (`wrangler secret put ROOMS_SECRET`); required on `POST /rooms` when set */
+  ROOMS_SECRET?: string
 }
 
 /** Durable Objects are created near the expected players (spec §8.1). */

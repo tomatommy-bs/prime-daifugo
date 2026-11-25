@@ -96,10 +96,36 @@ export type RoomInfo = {
   capacity: number
 }
 
+/** `POST /rooms` was refused by the lobby: no free id, too many pending, or rate limited. */
+export class CreateRoomRefusedError extends Error {
+  constructor(readonly reason: 'full' | 'busy' | 'rate-limited') {
+    super(`room creation refused: ${reason}`)
+  }
+}
+
+/** Header carrying the shared secret for `POST /rooms` (Worker secret `ROOMS_SECRET`). */
+export const ROOMS_SECRET_HEADER = 'x-rooms-secret'
+/** The end user's IP, forwarded by the Next server; trusted only with a valid secret. */
+export const CLIENT_IP_HEADER = 'x-client-ip'
+
+/** Constant-time string comparison (the secret must not leak through timing). */
+function safeEqual(a: string, b: string): boolean {
+  let diff = a.length ^ b.length
+  for (let i = 0; i < Math.max(a.length, b.length); i += 1) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0)
+  }
+  return diff === 0
+}
+
 export type RouterDeps = {
   allowedOrigins: readonly string[]
-  /** `LobbyDO.allocate()` */
-  createRoom(): Promise<string>
+  /**
+   * When set, `POST /rooms` requires it in `x-rooms-secret` (403 otherwise); only the Next
+   * server knows it. Unset (local dev), room creation stays open.
+   */
+  roomsSecret?: string | null
+  /** `LobbyDO.allocate(client)`; throws `CreateRoomRefusedError` when the lobby refuses */
+  createRoom(client: string | null): Promise<string>
   /** `RoomDO.info()` */
   roomInfo(id: string): Promise<RoomInfo>
   /** forward the upgrade request to the room's Durable Object */
@@ -166,12 +192,32 @@ export async function handleRequest(request: Request, deps: RouterDeps): Promise
   const cors = corsHeaders(origin, deps.allowedOrigins)
   try {
     if (route.kind === 'create-room') {
-      const roomId = await deps.createRoom()
+      const secret = deps.roomsSecret
+      const authed =
+        typeof secret === 'string' &&
+        secret !== '' &&
+        safeEqual(request.headers.get(ROOMS_SECRET_HEADER) ?? '', secret)
+      if (secret && !authed) {
+        return text(403, 'forbidden', cors)
+      }
+      // Rate-limit key: the forwarded end-user IP from the authenticated Next server, else the
+      // connecting IP (with no secret configured that may be the Next server's own egress IP).
+      const client = authed
+        ? request.headers.get(CLIENT_IP_HEADER) || null
+        : request.headers.get('cf-connecting-ip')
+      const roomId = await deps.createRoom(client)
       return json(200, { roomId }, cors)
     }
     const info = await deps.roomInfo(route.id)
     return json(200, info, cors)
-  } catch {
+  } catch (e) {
+    if (e instanceof CreateRoomRefusedError) {
+      const headers = new Headers(cors)
+      headers.set('retry-after', '60')
+      return e.reason === 'rate-limited'
+        ? text(429, 'too many rooms created; try again later', headers)
+        : text(503, 'no room id available; try again later', headers)
+    }
     return text(500, 'internal error', cors)
   }
 }

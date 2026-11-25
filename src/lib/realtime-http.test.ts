@@ -37,6 +37,17 @@ describe('createRoom', () => {
     expect(REALTIME_HTTP_TIMEOUT_MS).toBe(10_000)
   })
 
+  it('sends the shared secret and the end user IP only when a secret is configured', async () => {
+    const f = fakeFetch(() => json({ roomId: '1009' }))
+    await createRoom({ base: BASE, fetch: f, secret: 's3cret', clientIp: '203.0.113.7' })
+    expect((f.mock.calls[0] as [string, RequestInit])[1].headers).toEqual({
+      'x-rooms-secret': 's3cret',
+      'x-client-ip': '203.0.113.7',
+    })
+    await createRoom({ base: BASE, fetch: f, secret: null, clientIp: '203.0.113.7' })
+    expect((f.mock.calls[1] as [string, RequestInit])[1].headers).toEqual({})
+  })
+
   it('throws on an HTTP error status', async () => {
     const f = fakeFetch(() => json({ error: 'nope' }, 503))
     const err = await createRoom({ base: BASE, fetch: f }).catch((e: unknown) => e)

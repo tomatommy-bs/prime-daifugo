@@ -4,7 +4,7 @@
  * binds it to Cloudflare.
  */
 import type { LobbyStats } from '../../src/shared/protocol'
-import type { LobbyStorage } from './storage'
+import type { LobbyRow, LobbyStorage } from './storage'
 
 /** Allocated ids are primes below this (spec §8.2). */
 export const PRIME_LIMIT = 1_000_000
@@ -20,6 +20,16 @@ export const STALE_ROW_MS = 12 * 60_000
 export const EMPTY_ROOM_HOLD_MS = 31 * 60_000
 /** At most one stats broadcast per this interval. */
 export const BROADCAST_INTERVAL_MS = 1_000
+/**
+ * At most this many fresh reservations (allocated, never reported) at once. Without it an
+ * unauthenticated flood of `POST /rooms` could hold every prime id for 10 minutes at a time.
+ */
+export const MAX_FRESH_RESERVATIONS = 500
+/** Per client key: at most `ALLOCATE_PER_CLIENT` allocations per `ALLOCATE_WINDOW_MS`. */
+export const ALLOCATE_WINDOW_MS = 60_000
+export const ALLOCATE_PER_CLIENT = 20
+/** Above this many tracked client keys, keys with no allocation in the window are dropped. */
+const MAX_TRACKED_CLIENTS = 10_000
 
 export type LobbySocket = { send(text: string): void }
 
@@ -51,9 +61,41 @@ export class LobbyFullError extends Error {
   }
 }
 
+/** Too many fresh reservations are outstanding (`MAX_FRESH_RESERVATIONS`). */
+export class LobbyBusyError extends Error {
+  constructor() {
+    super('too many pending room reservations')
+  }
+}
+
+/** This client allocated `ALLOCATE_PER_CLIENT` ids within the window. */
+export class LobbyRateLimitedError extends Error {
+  constructor() {
+    super('room creation rate limited')
+  }
+}
+
+export type AllocateRefusal = 'full' | 'busy' | 'rate-limited'
+
+/** The refusal reason for an error thrown by `allocate`, or null for anything else. */
+export function allocateRefusal(e: unknown): AllocateRefusal | null {
+  if (e instanceof LobbyFullError) {
+    return 'full'
+  }
+  if (e instanceof LobbyBusyError) {
+    return 'busy'
+  }
+  if (e instanceof LobbyRateLimitedError) {
+    return 'rate-limited'
+  }
+  return null
+}
+
 export class LobbyCore {
   private lastBroadcastAt = Number.NEGATIVE_INFINITY
   private broadcastPending = false
+  /** recent allocation times per client key (in memory: an eviction only resets the window) */
+  private readonly recentByClient = new Map<string, number[]>()
 
   constructor(
     private readonly storage: LobbyStorage,
@@ -61,15 +103,27 @@ export class LobbyCore {
     private readonly clock: LobbyClock,
   ) {}
 
-  /** Smallest prime below 10^6 that is neither in use nor reserved, reserved for 10 min. */
-  allocate(): string {
+  /**
+   * Smallest prime below 10^6 that is neither in use nor reserved, reserved for 10 min.
+   * `client` (the caller's IP when known) is limited to `ALLOCATE_PER_CLIENT` per minute, and
+   * no more than `MAX_FRESH_RESERVATIONS` unclaimed reservations exist at once.
+   */
+  allocate(client: string | null = null): string {
     const now = this.clock.now()
-    this.purge(now)
+    this.takeClientSlot(client, now)
+    const rows = this.purge(now)
     const busy = new Set<string>()
-    for (const row of this.storage.listRows()) {
+    let fresh = 0
+    for (const row of rows) {
       if (row.count > 0 || (row.reservedUntil !== null && row.reservedUntil > now)) {
         busy.add(row.id)
       }
+      if (row.count <= 0 && row.status === null && row.reservedUntil !== null) {
+        fresh += 1
+      }
+    }
+    if (fresh >= MAX_FRESH_RESERVATIONS) {
+      throw new LobbyBusyError()
     }
     const composite = compositeTable()
     for (let n = 2; n < PRIME_LIMIT; n += 1) {
@@ -124,9 +178,8 @@ export class LobbyCore {
   /** Current counters (stale rows dropped first). */
   stats(): LobbyStats {
     const now = this.clock.now()
-    this.purge(now)
     const room: Record<string, number> = {}
-    for (const row of this.storage.listRows()) {
+    for (const row of this.purge(now)) {
       if (row.count > 0) {
         room[row.id] = row.count
       }
@@ -147,8 +200,9 @@ export class LobbyCore {
   onAlarm(): void {
     this.storage.alarmFired()
     const now = this.clock.now()
-    const dropped = this.purge(now)
-    if (dropped) {
+    const before = this.storage.listRows().filter((r) => r.count > 0).length
+    const after = this.purge(now).filter((r) => r.count > 0).length
+    if (after !== before) {
       this.broadcastPending = true
     }
     if (this.broadcastPending && now - this.lastBroadcastAt >= BROADCAST_INTERVAL_MS) {
@@ -158,6 +212,27 @@ export class LobbyCore {
   }
 
   /* ---------------------------------------------------------------- */
+
+  private takeClientSlot(client: string | null, now: number): void {
+    if (client === null) {
+      return
+    }
+    const since = now - ALLOCATE_WINDOW_MS
+    const recent = (this.recentByClient.get(client) ?? []).filter((t) => t > since)
+    if (recent.length >= ALLOCATE_PER_CLIENT) {
+      this.recentByClient.set(client, recent)
+      throw new LobbyRateLimitedError()
+    }
+    recent.push(now)
+    this.recentByClient.set(client, recent)
+    if (this.recentByClient.size > MAX_TRACKED_CLIENTS) {
+      for (const [key, times] of this.recentByClient) {
+        if (times.every((t) => t <= since)) {
+          this.recentByClient.delete(key)
+        }
+      }
+    }
+  }
 
   private markDirty(now: number): void {
     if (now - this.lastBroadcastAt >= BROADCAST_INTERVAL_MS) {
@@ -183,24 +258,27 @@ export class LobbyCore {
 
   /**
    * Hide rooms that stopped reporting and drop rows whose reservation or hold lapsed.
-   * Returns whether a visible count changed.
+   * Returns the rows that remain (one storage read).
    */
-  private purge(now: number): boolean {
-    let changed = false
+  private purge(now: number): LobbyRow[] {
+    const kept: LobbyRow[] = []
     for (const row of this.storage.listRows()) {
       if (row.count > 0 && row.updatedAt + STALE_ROW_MS <= now) {
         // gone from the counters, but its id stays held in case the room still has state
-        this.storage.upsertRow({
+        const held = {
           ...row,
           count: 0,
           reservedUntil: Math.max(row.reservedUntil ?? 0, now + EMPTY_ROOM_HOLD_MS),
-        })
-        changed = true
+        }
+        this.storage.upsertRow(held)
+        kept.push(held)
       } else if (row.count <= 0 && (row.reservedUntil === null || row.reservedUntil <= now)) {
         this.storage.deleteRow(row.id)
+      } else {
+        kept.push(row)
       }
     }
-    return changed
+    return kept
   }
 
   /** Alarm at the next pending broadcast or stale cutoff. */

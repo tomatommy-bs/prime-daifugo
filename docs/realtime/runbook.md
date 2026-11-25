@@ -20,6 +20,7 @@ Operations guide for the Cloudflare Worker `prime-daifugo-rt` (two SQLite-backed
 | `GRACE_PLAYING_MS` / `GRACE_IDLE_MS` | 120000 / 60000 (override in `worker/.dev.vars` or `--var KEY:VALUE`) | defaults | defaults |
 | `AWAY_TURN_CAP_MS` | 20000 | defaults | defaults |
 | `ROOM_TTL_IDLE_MS` / `ROOM_TTL_ACTIVE_MS` | 600000 / 1800000 | defaults | defaults |
+| `ROOMS_SECRET` (Worker secret + Vercel server env) | unset: `POST /rooms` stays open | the production value (Vercel env, Preview scope) | Worker secret and Vercel env (Production scope), same value |
 | E2E | `E2E=1 npm run test:e2e` starts its own Worker with 5 s grace and a 3 s away cap, plus `next dev -p 3124` | — | — |
 
 Notes:
@@ -28,7 +29,13 @@ Notes:
   value by hand.
 - Named wrangler environments do not inherit `vars` or bindings. `env.production` repeats the
   Durable Object bindings and every var; change both blocks together.
-- No secrets are needed by the Worker. Never commit any; `worker/.dev.vars` is gitignored.
+- The Worker has one optional secret, `ROOMS_SECRET`. When set, `POST /rooms` must carry it in
+  `x-rooms-secret` (403 otherwise). The Next server sends it from its own `ROOMS_SECRET` env var
+  (server-only; never a `NEXT_PUBLIC_*` name) along with the visitor's IP (`x-client-ip`), which
+  the lobby then rate-limits (20 rooms per minute per visitor, and at most 500 unclaimed
+  reservations overall; 429 / 503 beyond that). Without the secret the limit is keyed on the
+  connecting IP, which for `/room/new` is Vercel's egress IP. Never commit the value;
+  `worker/.dev.vars` is gitignored.
 
 ---
 
@@ -45,6 +52,10 @@ with `bye{upgrade-required}`).
 2. Check the migration block: tag `v1` declares `new_sqlite_classes: ["RoomDO", "LobbyDO"]`. The Free
    plan requires SQLite-backed classes. Never edit a migration that has been deployed; add a new tag.
 3. Set up the custom domain (§3) and the usage notification (§4).
+4. Generate a random value (for example `openssl rand -base64 32`) and set it on both sides:
+   `npx wrangler secret put ROOMS_SECRET -c worker/wrangler.jsonc --env production`, and the Vercel
+   env var `ROOMS_SECRET` for **Production** and **Preview**. Set the Vercel one first (the Worker
+   ignores the header while it has no secret), then the Worker secret.
 
 ### 2.2 Worker
 
@@ -169,6 +180,8 @@ Run `npm run dev` with `ALLOWED_ORIGINS` including the laptop's LAN origin (for 
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | Every WebSocket gets 403 | Origin not in `ALLOWED_ORIGINS` | Add the origin to `env.production.vars` and redeploy the Worker |
+| `/room/new` shows the error screen; Worker logs 403 on `POST /rooms` | `ROOMS_SECRET` differs between the Worker and Vercel, or is missing on Vercel | Set the same value on both sides (§2.1) and redeploy Vercel |
+| `/room/new` errors with 429 / 503 | Room creation rate limit or the 500 pending-reservation cap | Expected under abuse; reservations lapse after 10 min |
 | Production build fails with a realtime URL error | `NEXT_PUBLIC_REALTIME_URL` missing or local in Vercel Production | Set it (§2.3) and redeploy |
 | Clients reload once after a deploy | Protocol skew (`bye{upgrade-required}`) | Expected once; make sure the Worker was deployed first |
 | Errors until 00:00 UTC | Free-tier limit reached | Check usage (§4); move to Workers Paid if it recurs |

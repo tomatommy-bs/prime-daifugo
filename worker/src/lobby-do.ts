@@ -5,7 +5,7 @@
 import { DurableObject } from 'cloudflare:workers'
 import { PING, PONG } from '../../src/shared/protocol'
 import type { Env } from './env'
-import { LobbyCore } from './lobby-core'
+import { type AllocateRefusal, LobbyCore, allocateRefusal } from './lobby-core'
 import { SqlLobbyStorage } from './storage'
 
 const WS_OPEN = 1
@@ -65,9 +65,20 @@ export class LobbyDO extends DurableObject<Env> {
     this.lobby.onAlarm()
   }
 
-  /** RPC: a fresh prime room id with a 10-minute reservation (RQ-L3). */
-  allocate(): string {
-    return this.lobby.allocate()
+  /**
+   * RPC: a fresh prime room id with a 10-minute reservation (RQ-L3), or why none was given.
+   * Refusals are returned, not thrown: error classes do not survive the RPC boundary.
+   */
+  allocate(client: string | null = null): string | { refused: AllocateRefusal } {
+    try {
+      return this.lobby.allocate(client)
+    } catch (e) {
+      const refused = allocateRefusal(e)
+      if (refused === null) {
+        throw e
+      }
+      return { refused }
+    }
   }
 
   /** RPC from `RoomDO` whenever its connected count changes, and every 5 min while > 0. */

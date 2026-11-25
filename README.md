@@ -21,6 +21,7 @@ npm run dev          # next dev（:3000）+ wrangler dev（:8787）を並行起�
 | `GRACE_PLAYING_MS` / `GRACE_IDLE_MS` | Worker | 切断後に席を保持する猶予（対局中 120 秒 / 待機中 60 秒） |
 | `AWAY_TURN_CAP_MS` | Worker | 切断中のプレイヤーの手番の上限（20 秒） |
 | `ROOM_TTL_IDLE_MS` / `ROOM_TTL_ACTIVE_MS` | Worker | 誰も接続していない部屋を削除するまでの時間（10 分 / 30 分） |
+| `ROOMS_SECRET` | Worker（secret）と Next.js（サーバー側のみ） | 設定すると `POST /rooms`（部屋の作成）にこの値が必要になります。両方に同じ値を設定します。開発では未設定で構いません。`NEXT_PUBLIC_` は付けません |
 
 Worker の値は `worker/.dev.vars`（git 管理外）や `npm run dev:server -- --var GRACE_PLAYING_MS:5000` で上書きできます。秘密情報はコミットしないでください（`.env.development` には秘密でないローカル既定値だけを置きます）。
 
@@ -255,6 +256,6 @@ E2E=1 E2E_RT_PORT=8799 npm run test:e2e   # :8787 が使用中のとき
 
 - **順番は Worker が先、Vercel が後**: Worker は 1 つ前のプロトコルバージョンも受け付けるので、先に Worker を出してからフロントエンドを出します。Worker のデプロイで全接続がいったん切れますが、クライアントは約 1 秒で再接続し、席・手札・手番はそのまま残ります。
 - **Cloudflare（Worker）**: 推奨は Workers Builds（Git 連携）で `main` から `npx wrangler deploy -c worker/wrangler.jsonc` を実行する方法です。手動なら `npm run deploy:server`（`--env production`）。本番の `ALLOWED_ORIGINS` は `worker/wrangler.jsonc` の `env.production` に設定し、`workers.dev` ではなくカスタムドメイン（`rt.<domain>`）を推奨します。
-- **Vercel（フロントエンド）**: 既存の Git 連携のまま、Production と Preview に `NEXT_PUBLIC_REALTIME_URL` を設定します。
+- **Vercel（フロントエンド）**: 既存の Git 連携のまま、Production と Preview に `NEXT_PUBLIC_REALTIME_URL` と `ROOMS_SECRET`（Worker の secret と同じ値）を設定します。
 - **費用**: Workers Free + Vercel Hobby で趣味の規模なら $0 です。無料枠の上限に達すると UTC 0 時までエラーになるため、Cloudflare の使用量通知を設定します。足りなくなったら Workers Paid（月 $5）に切り替えるのが逃げ道です。
 - CI（`.github/workflows/ci.yml`）はビルドと Worker のバンドル確認（dry run）までで、デプロイは行いません。

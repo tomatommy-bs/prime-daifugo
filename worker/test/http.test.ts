@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  CreateRoomRefusedError,
   type RouterDeps,
   corsHeaders,
   handleRequest,
@@ -164,6 +165,45 @@ describe('handleRequest', () => {
     const res = await handleRequest(req('POST', '/rooms', { origin: 'http://evil.test' }), d)
     expect(res.status).toBe(403)
     expect(d.createRoom).not.toHaveBeenCalled()
+  })
+
+  it('POST /rooms requires the shared secret when one is configured', async () => {
+    const d = deps({ roomsSecret: 's3cret' })
+    const none = await handleRequest(req('POST', '/rooms'), d)
+    expect(none.status).toBe(403)
+    const wrong = await handleRequest(req('POST', '/rooms', { 'x-rooms-secret': 's3creT' }), d)
+    expect(wrong.status).toBe(403)
+    expect(d.createRoom).not.toHaveBeenCalled()
+    const ok = await handleRequest(
+      req('POST', '/rooms', {
+        'x-rooms-secret': 's3cret',
+        'x-client-ip': '203.0.113.7',
+        'cf-connecting-ip': '198.51.100.1',
+      }),
+      d,
+    )
+    expect(ok.status).toBe(200)
+    // the forwarded end-user IP is the rate-limit key, not the Next server's egress IP
+    expect(d.createRoom).toHaveBeenCalledWith('203.0.113.7')
+  })
+
+  it('without a secret, rate-limits by the connecting IP and ignores x-client-ip', async () => {
+    const d = deps()
+    await handleRequest(
+      req('POST', '/rooms', { 'x-client-ip': '203.0.113.7', 'cf-connecting-ip': '198.51.100.1' }),
+      d,
+    )
+    expect(d.createRoom).toHaveBeenCalledWith('198.51.100.1')
+  })
+
+  it('maps lobby refusals to 429 (rate limited) and 503 (busy or full)', async () => {
+    const refuse = (reason: 'full' | 'busy' | 'rate-limited') =>
+      deps({ createRoom: () => Promise.reject(new CreateRoomRefusedError(reason)) })
+    const limited = await handleRequest(req('POST', '/rooms'), refuse('rate-limited'))
+    expect(limited.status).toBe(429)
+    expect(limited.headers.get('retry-after')).toBe('60')
+    expect((await handleRequest(req('POST', '/rooms'), refuse('busy'))).status).toBe(503)
+    expect((await handleRequest(req('POST', '/rooms'), refuse('full'))).status).toBe(503)
   })
 
   it('GET /rooms/:id returns the room info', async () => {

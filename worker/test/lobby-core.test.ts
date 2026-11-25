@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ALLOCATE_PER_CLIENT,
+  ALLOCATE_WINDOW_MS,
   BROADCAST_INTERVAL_MS,
   EMPTY_ROOM_HOLD_MS,
+  LobbyBusyError,
   LobbyCore,
+  LobbyRateLimitedError,
+  MAX_FRESH_RESERVATIONS,
   RESERVATION_MS,
   STALE_ROW_MS,
 } from '../src/lobby-core'
@@ -47,6 +52,31 @@ const isPrime = (n: number) => {
 }
 
 describe('LobbyCore.allocate', () => {
+  it('limits each client key per minute; other clients are unaffected', () => {
+    const t = setup()
+    for (let i = 0; i < ALLOCATE_PER_CLIENT; i += 1) {
+      t.core.allocate('203.0.113.7')
+    }
+    expect(() => t.core.allocate('203.0.113.7')).toThrow(LobbyRateLimitedError)
+    expect(t.core.allocate('198.51.100.1')).toMatch(/^\d+$/)
+    t.clock.advance(ALLOCATE_WINDOW_MS)
+    expect(t.core.allocate('203.0.113.7')).toMatch(/^\d+$/)
+  })
+
+  it('caps unclaimed reservations so a flood cannot hold every prime id', () => {
+    const t = setup()
+    for (let i = 0; i < MAX_FRESH_RESERVATIONS; i += 1) {
+      t.core.allocate()
+    }
+    expect(() => t.core.allocate()).toThrow(LobbyBusyError)
+    // a reservation that its room claimed (reported) no longer counts
+    t.core.report('2', 1, 'waiting')
+    expect(t.core.allocate()).toMatch(/^\d+$/)
+    // and lapsed reservations free the cap again
+    t.clock.advance(RESERVATION_MS)
+    expect(t.core.allocate()).toBe('3')
+  })
+
   it('hands out the smallest free primes, each reserved for 10 minutes', () => {
     const t = setup()
     expect(t.core.allocate()).toBe('2')

@@ -85,9 +85,27 @@ async function requestJson(
   }
 }
 
-/** `POST /rooms`: reserve a fresh prime room id (RQ-L3). */
-export async function createRoom(options: RealtimeHttpOptions = {}): Promise<{ roomId: string }> {
-  const body = await requestJson('/rooms', { method: 'POST' }, options)
+export type CreateRoomOptions = RealtimeHttpOptions & {
+  /**
+   * Shared secret the Worker checks on `POST /rooms` (its `ROOMS_SECRET`). Defaults to the
+   * server-only env var `ROOMS_SECRET`; never a `NEXT_PUBLIC_*` value.
+   */
+  secret?: string | null
+  /** The end user's IP, so the Worker rate-limits per user rather than per Vercel egress IP. */
+  clientIp?: string | null
+}
+
+/** `POST /rooms`: reserve a fresh prime room id (RQ-L3). Call from the server only. */
+export async function createRoom(options: CreateRoomOptions = {}): Promise<{ roomId: string }> {
+  const secret = options.secret !== undefined ? options.secret : (process.env.ROOMS_SECRET ?? null)
+  const headers: Record<string, string> = {}
+  if (secret) {
+    headers['x-rooms-secret'] = secret
+    if (options.clientIp) {
+      headers['x-client-ip'] = options.clientIp
+    }
+  }
+  const body = await requestJson('/rooms', { method: 'POST', headers }, options)
   const roomId = (body as { roomId?: unknown } | null)?.roomId
   if (!isValidRoomId(roomId)) {
     throw new RealtimeHttpError('POST /rooms returned an invalid room id')
