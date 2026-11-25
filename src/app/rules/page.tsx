@@ -96,12 +96,14 @@ export default function RulesPage() {
               <span className="inline-block">素数大富豪の</span>
               <span className="inline-block">ルールと遊び方</span>
             </h1>
-            <p className="m-0 text-[length:var(--fs-1)] leading-[1.618] text-ink-muted portrait-phone:text-[length:var(--fs-0)] portrait-phone:leading-[1.75]">
+            <p
+              className={`m-0 text-[length:var(--fs-1)] leading-[1.618] text-ink-muted portrait-phone:text-[length:var(--fs-0)] portrait-phone:leading-[1.75] ${PROSE}`}
+            >
               素数大富豪は、トランプのカードを並べて数をつくり、場より大きな
               <strong className="font-bold text-prime">素数</strong>
               を出し合うカードゲームです。このページでは、このサイトで遊べるオンライン版のルールを、はじめての人にもわかるようにまとめました。
             </p>
-            <p className="m-0 text-[length:var(--fs--1)] text-ink-muted">
+            <p className={`m-0 text-[length:var(--fs--1)] text-ink-muted ${PROSE}`}>
               もとになっているのは、素数大富豪の
               <a
                 href={EXTERNAL_URLS.officialRules}
@@ -549,9 +551,10 @@ function Toc() {
       <h2 id="toc-title" className="m-0 mb-fib-2 text-[length:var(--fs-0)] font-bold">
         目次
       </h2>
-      <ol className="m-0 grid list-none gap-x-fib-5 gap-y-fib-1 p-0 sm:grid-cols-2">
+      {/* multi-column, so the numbers read down each column (1, 2, 3 … then 9, 10 …) */}
+      <ol className="m-0 list-none gap-x-fib-5 p-0 sm:columns-2">
         {SECTIONS.map((s, i) => (
-          <li key={s.id}>
+          <li key={s.id} className="break-inside-avoid py-[1px]">
             <a
               href={`#${s.id}`}
               className="inline-flex min-h-[32px] items-baseline gap-fib-2 text-ink no-underline hover:text-prime"
@@ -593,13 +596,18 @@ function Section({ id, children }: { id: SectionId; children: ReactNode }) {
   )
 }
 
+/** Japanese prose: break between phrases where supported, and avoid a lone last word. */
+const PROSE = '[text-wrap:pretty] [word-break:auto-phrase]'
+
 function P({ children }: { children: ReactNode }) {
-  return <p className="m-0 leading-[1.75]">{children}</p>
+  return <p className={`m-0 leading-[1.75] ${PROSE}`}>{children}</p>
 }
 
 function Note({ children }: { children: ReactNode }) {
   return (
-    <p className="m-0 border-line border-l-2 pl-fib-3 text-[length:var(--fs--1)] leading-[1.75] text-ink-muted">
+    <p
+      className={`m-0 border-line border-l-2 pl-fib-3 text-[length:var(--fs--1)] leading-[1.75] text-ink-muted ${PROSE}`}
+    >
       {children}
     </p>
   )
@@ -621,14 +629,25 @@ function Ol({ children }: { children: ReactNode }) {
   )
 }
 
-/** Term / description pairs set like the waiting room's axioms. */
+/**
+ * Term / description pairs set like the waiting room's axioms. Two columns where there is
+ * room; on portrait phones the term sits above its description, so the text keeps the width.
+ */
 function Dl({ items }: { items: readonly (readonly [string, string])[] }) {
   return (
-    <dl className="m-0 grid grid-cols-[minmax(5.5rem,auto)_1fr] overflow-hidden rounded-[var(--r-2)] border border-line bg-surface">
+    <dl className="m-0 grid grid-cols-[minmax(5.5rem,auto)_1fr] overflow-hidden rounded-[var(--r-2)] border border-line bg-surface portrait-phone:grid-cols-1">
       {items.map(([term, desc], i) => (
-        <div key={term} className={`contents ${i > 0 ? '[&>*]:border-line [&>*]:border-t' : ''}`}>
-          <dt className="px-fib-3 py-fib-2 font-bold">{term}</dt>
-          <dd className="m-0 px-fib-3 py-fib-2 leading-[1.75] text-ink-muted">{desc}</dd>
+        <div key={term} className="contents">
+          <dt
+            className={`px-fib-3 py-fib-2 font-bold portrait-phone:pb-0 ${i > 0 ? 'border-line border-t' : ''}`}
+          >
+            {term}
+          </dt>
+          <dd
+            className={`m-0 px-fib-3 py-fib-2 leading-[1.75] text-ink-muted portrait-phone:pt-fib-1 ${i > 0 ? 'border-line border-t portrait-phone:border-t-0' : ''}`}
+          >
+            {desc}
+          </dd>
         </div>
       ))}
     </dl>
