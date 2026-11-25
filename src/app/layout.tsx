@@ -4,7 +4,15 @@ import './globals.css'
 import { geistMono, geistSans } from '@/design/fonts'
 import { MotionProvider } from '@/design/motion-provider'
 import { ThemeProvider } from '@/design/theme-provider'
-import { SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_TITLE, SITE_URL } from '@/lib/site'
+import {
+  OG_IMAGE,
+  SITE_DESCRIPTION,
+  SITE_KEYWORDS,
+  SITE_NAME,
+  SITE_TITLE,
+  SITE_URL,
+  TWITTER_ACCOUNT,
+} from '@/lib/site'
 import { ColorSchemeScript, mantineHtmlProps } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
 import type { ReactNode } from 'react'
@@ -34,8 +42,11 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
+    ...TWITTER_ACCOUNT,
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
+    // the Open Graph card (`opengraph-image.tsx`); X falls back to nothing else
+    images: [OG_IMAGE],
   },
 }
 

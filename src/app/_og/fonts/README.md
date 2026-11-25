@@ -1,6 +1,6 @@
 # Fonts for generated images
 
-Static subsets used only by `next/og` (`opengraph-image`, `twitter-image`). They are never
+Static subsets used only by `next/og` (`opengraph-image`). They are never
 served to browsers.
 
 | File | Family | Glyphs | License |

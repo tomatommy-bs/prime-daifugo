@@ -3,6 +3,7 @@ import {
   breadcrumbJsonLd,
   faqJsonLd,
   howToJsonLd,
+  publisherJsonLd,
   serializeJsonLd,
   videoGameJsonLd,
   websiteJsonLd,
@@ -30,7 +31,17 @@ describe('structured data', () => {
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'JPY' },
       applicationCategory: 'GameApplication',
     })
-    expect(game.image).toBe('https://www.prime-daifugo.jp/opengraph-image')
+    expect(game.image).toBe('https://www.prime-daifugo.jp/opengraph-image?v=1')
+    expect(game.author).toEqual({ '@id': 'https://www.prime-daifugo.jp/#publisher' })
+  })
+
+  it('names the publisher and links its X profile', () => {
+    expect(websiteJsonLd().publisher).toEqual({ '@id': 'https://www.prime-daifugo.jp/#publisher' })
+    expect(publisherJsonLd()).toMatchObject({
+      '@type': 'Person',
+      '@id': 'https://www.prime-daifugo.jp/#publisher',
+      sameAs: ['https://x.com/TomaTommy123'],
+    })
   })
 
   it('numbers breadcrumb items from 1 with absolute URLs', () => {

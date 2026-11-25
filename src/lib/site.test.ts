@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   NOINDEX,
+  OG_IMAGE_PATH,
   PUBLIC_PATHS,
   SITE_URL,
   absoluteUrl,
@@ -60,10 +61,30 @@ describe('site', () => {
       locale: 'ja_JP',
     })
     expect(meta.openGraph?.images).toEqual([
-      expect.objectContaining({ url: '/opengraph-image', width: 1200, height: 630 }),
+      expect.objectContaining({ url: '/opengraph-image?v=1', width: 1200, height: 630 }),
     ])
-    expect(meta.twitter).toMatchObject({ card: 'summary_large_image' })
-    expect(meta.twitter?.images).toEqual([expect.objectContaining({ url: '/twitter-image' })])
+    expect(meta.twitter).toMatchObject({
+      card: 'summary_large_image',
+      site: '@TomaTommy123',
+      creator: '@TomaTommy123',
+    })
+    expect(meta.twitter?.images).toEqual([expect.objectContaining({ url: '/opengraph-image?v=1' })])
+  })
+
+  it('versions the share card URL, since it is served immutable', () => {
+    expect(OG_IMAGE_PATH).toMatch(/^\/opengraph-image\?v=\d+$/)
+  })
+
+  it('drops the site-name suffix for titles that already start with it', () => {
+    const meta = pageMetadata({
+      title: '素数大富豪のT',
+      absoluteTitle: true,
+      description: 'D',
+      path: '/rules',
+    })
+    expect(meta.title).toEqual({ absolute: '素数大富豪のT' })
+    expect(meta.openGraph?.title).toBe('素数大富豪のT')
+    expect(meta.twitter?.title).toBe('素数大富豪のT')
   })
 
   it('builds noindex metadata whose preview has no og:url', () => {

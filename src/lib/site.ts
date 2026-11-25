@@ -76,11 +76,25 @@ export const isProductionHost = (host: string | null | undefined): boolean => {
   return PRODUCTION_HOSTS.includes(name)
 }
 
-/** The generated share card (`app/opengraph-image.tsx`, `app/twitter-image.tsx`). */
+/** The generated share card (`app/opengraph-image.tsx`), used for Open Graph and X alike. */
 export const OG_SIZE = { width: 1200, height: 630 } as const
 export const OG_ALT = '素数大富豪 - 素数を出し合うオンライン対戦カードゲーム'
-const OG_IMAGE = { url: '/opengraph-image', ...OG_SIZE, alt: OG_ALT, type: 'image/png' }
-const TWITTER_IMAGE = { url: '/twitter-image', ...OG_SIZE, alt: OG_ALT, type: 'image/png' }
+/**
+ * Bump whenever the card's design changes. The image is served `immutable` for a year and
+ * unfurlers (X, Facebook, LINE) cache by URL, so a new version needs a new URL.
+ */
+export const OG_IMAGE_VERSION = 1
+export const OG_IMAGE_PATH = `/opengraph-image?v=${OG_IMAGE_VERSION}`
+export const OG_IMAGE = {
+  url: OG_IMAGE_PATH,
+  ...OG_SIZE,
+  alt: OG_ALT,
+  type: 'image/png',
+} as const
+
+/** The site's X account (`twitter:site` / `twitter:creator`). */
+export const X_HANDLE = '@TomaTommy123'
+export const TWITTER_ACCOUNT = { site: X_HANDLE, creator: X_HANDLE } as const
 
 /** Robots metadata for pages that must never appear in search results. */
 export const NOINDEX: NonNullable<Metadata['robots']> = {
@@ -90,8 +104,12 @@ export const NOINDEX: NonNullable<Metadata['robots']> = {
 }
 
 type PageMetadataInput = {
-  /** the page title; the root layout's template appends ` | 素数大富豪` */
+  /**
+   * the page title; the root layout's template appends ` | 素数大富豪` unless `absoluteTitle`
+   * is set (for titles that already start with the site name)
+   */
   title: string
+  absoluteTitle?: boolean
   description: string
   path: PublicPath
 }
@@ -101,13 +119,19 @@ type PageMetadataInput = {
  * Twitter fields for that URL. A page that sets `openGraph` replaces the root's, including
  * the images Next.js derives from the root image files, so the card is restated here.
  */
-export function pageMetadata({ title, description, path }: PageMetadataInput): Metadata {
+export function pageMetadata({
+  title,
+  absoluteTitle = false,
+  description,
+  path,
+}: PageMetadataInput): Metadata {
+  const fullTitle = absoluteTitle ? title : `${title} | ${SITE_NAME}`
   return {
-    title,
+    title: absoluteTitle ? { absolute: title } : title,
     description,
     alternates: { canonical: path },
     openGraph: {
-      title: `${title} | ${SITE_NAME}`,
+      title: fullTitle,
       description,
       url: path,
       type: 'article',
@@ -117,9 +141,10 @@ export function pageMetadata({ title, description, path }: PageMetadataInput): M
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${title} | ${SITE_NAME}`,
+      ...TWITTER_ACCOUNT,
+      title: fullTitle,
       description,
-      images: [TWITTER_IMAGE],
+      images: [OG_IMAGE],
     },
   }
 }
@@ -147,6 +172,6 @@ export function privatePageMetadata({ title, share }: PrivatePageInput): Metadat
       locale: 'ja_JP',
       images: [OG_IMAGE],
     },
-    twitter: { card: 'summary_large_image', ...card, images: [TWITTER_IMAGE] },
+    twitter: { card: 'summary_large_image', ...TWITTER_ACCOUNT, ...card, images: [OG_IMAGE] },
   }
 }

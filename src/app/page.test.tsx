@@ -131,13 +131,17 @@ describe('Home page', () => {
     )
   })
 
-  it('publishes WebSite and VideoGame JSON-LD', () => {
+  it('publishes WebSite, publisher and VideoGame JSON-LD', () => {
     const { container } = renderWithProviders(<Home />)
     const scripts = container.querySelectorAll('script[type="application/ld+json"]')
     const data = [...scripts].flatMap((s) => JSON.parse(s.textContent ?? '')) as {
       '@type': string | string[]
     }[]
-    expect(data.map((d) => d['@type'])).toEqual(['WebSite', ['VideoGame', 'WebApplication']])
+    expect(data.map((d) => d['@type'])).toEqual([
+      'WebSite',
+      'Person',
+      ['VideoGame', 'WebApplication'],
+    ])
   })
 
   it('renders both hero strips outside compact so CSS picks one before hydration', () => {

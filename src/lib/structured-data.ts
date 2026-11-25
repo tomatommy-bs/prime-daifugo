@@ -2,7 +2,15 @@
  * schema.org structured data (JSON-LD) for the public pages. Builders are pure, so tests can
  * check the shapes Google's rich-result parsers expect.
  */
-import { SITE_DESCRIPTION, SITE_NAME, SITE_NAME_EN, SITE_URL, absoluteUrl } from './site'
+import {
+  EXTERNAL_URLS,
+  OG_IMAGE_PATH,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_NAME_EN,
+  SITE_URL,
+  absoluteUrl,
+} from './site'
 
 export type JsonLd = {
   '@context': 'https://schema.org'
@@ -12,6 +20,7 @@ export type JsonLd = {
 const CONTEXT = 'https://schema.org' as const
 const WEBSITE_ID = `${SITE_URL}/#website`
 const GAME_ID = `${SITE_URL}/#game`
+const PUBLISHER_ID = `${SITE_URL}/#publisher`
 
 export function websiteJsonLd(): JsonLd {
   return {
@@ -23,6 +32,19 @@ export function websiteJsonLd(): JsonLd {
     alternateName: SITE_NAME_EN,
     description: SITE_DESCRIPTION,
     inLanguage: 'ja',
+    publisher: { '@id': PUBLISHER_ID },
+  }
+}
+
+/** The person who makes and runs the site, with the X account as the matching profile. */
+export function publisherJsonLd(): JsonLd {
+  return {
+    '@context': CONTEXT,
+    '@type': 'Person',
+    '@id': PUBLISHER_ID,
+    name: 'TomaTommy',
+    url: EXTERNAL_URLS.x,
+    sameAs: [EXTERNAL_URLS.x],
   }
 }
 
@@ -36,7 +58,8 @@ export function videoGameJsonLd(): JsonLd {
     alternateName: SITE_NAME_EN,
     url: absoluteUrl('/'),
     description: SITE_DESCRIPTION,
-    image: absoluteUrl('/opengraph-image'),
+    image: absoluteUrl(OG_IMAGE_PATH),
+    author: { '@id': PUBLISHER_ID },
     inLanguage: 'ja',
     genre: ['カードゲーム', 'パズル', '教育'],
     gamePlatform: 'Web ブラウザ',
