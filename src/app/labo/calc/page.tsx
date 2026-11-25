@@ -195,7 +195,7 @@ const Page: NextPage = () => {
             radius="md"
           >
             <p>
-              Javascript で扱える最大の整数は{' '}
+              JavaScript で扱える最大の整数は{' '}
               <span className="num">{Number.MAX_SAFE_INTEGER.toLocaleString()}</span> です。
             </p>
           </Alert>

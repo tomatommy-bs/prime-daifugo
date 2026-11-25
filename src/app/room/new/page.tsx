@@ -1,6 +1,9 @@
 import { createRoom } from '@/lib/realtime-http'
+import { privatePageMetadata } from '@/lib/site'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+
+export const metadata = privatePageMetadata({ title: 'ルームを作成中' })
 
 // Every visit reserves a fresh room id; never prerender or cache this route.
 export const dynamic = 'force-dynamic'

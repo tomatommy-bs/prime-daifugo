@@ -3,7 +3,7 @@
 import { IconSunMoon } from '@/design/icons'
 import { useShouldDevice } from '@/hooks/use-should-device'
 import { Affix, Burger, Menu, useComputedColorScheme, useMantineColorScheme } from '@mantine/core'
-import { IconHome, IconMaximize, IconMinimize } from '@tabler/icons-react'
+import { IconBook, IconHome, IconMaximize, IconMinimize } from '@tabler/icons-react'
 import Link from 'next/link'
 import { type FC, useEffect, useState } from 'react'
 
@@ -64,6 +64,9 @@ const NavBurger: FC<NavBurgerProps> = ({ placement = 'affix' }) => {
       <Menu.Dropdown>
         <Menu.Item component={Link} href="/" leftSection={<IconHome {...ICON} />}>
           ホーム
+        </Menu.Item>
+        <Menu.Item component={Link} href="/rules" leftSection={<IconBook {...ICON} />}>
+          ルール
         </Menu.Item>
         {canFullscreen && (
           <Menu.Item

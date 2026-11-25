@@ -8,7 +8,7 @@ const SvgQs = (props: SVGProps<SVGSVGElement>) => (
     viewBox="0 0 167.087 242.667"
     {...props}
   >
-    <title>Queen of Spades</title>
+    <title>スペードのQ</title>
     <g
       style={{
         fillRule: 'nonzero',

@@ -8,7 +8,7 @@ const SvgJc = (props: SVGProps<SVGSVGElement>) => (
     viewBox="0 0 167.087 242.667"
     {...props}
   >
-    <title>Jack of Clubs</title>
+    <title>クラブのJ</title>
     <g
       style={{
         fillRule: 'nonzero',

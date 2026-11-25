@@ -69,6 +69,12 @@ describe('NavBurger', () => {
     expect(screen.getByRole('menuitem', { name: /ホーム/ })).toHaveAttribute('href', '/')
   })
 
+  it('links the rules page', async () => {
+    renderWithProviders(<NavBurger placement="inline" />)
+    await openMenu()
+    expect(screen.getByRole('menuitem', { name: /ルール/ })).toHaveAttribute('href', '/rules')
+  })
+
   it('shows the maximize icon to enter fullscreen when not fullscreen', async () => {
     renderWithProviders(<NavBurger placement="inline" />)
     await openMenu()

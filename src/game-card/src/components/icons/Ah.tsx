@@ -9,7 +9,7 @@ const SvgAh = (props: SVGProps<SVGSVGElement>) => (
     viewBox="0 0 167.087 242.667"
     {...props}
   >
-    <title>Ace of Hearts</title>
+    <title>ハートのA</title>
     <defs>
       <radialGradient
         xlinkHref="#AH_svg__e"

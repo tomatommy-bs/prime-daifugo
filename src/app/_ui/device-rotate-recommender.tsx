@@ -4,14 +4,26 @@ import { useShouldRotate } from '@/hooks/use-should-rotate'
 import { Affix, Checkbox, CloseButton, Group, Paper, Stack, Text } from '@mantine/core'
 import { useSessionStorage } from '@mantine/hooks'
 import { IconDeviceMobileRotated } from '@tabler/icons-react'
+import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 /**
+ * Pages built for portrait phones: the rules read top to bottom, and the lab stacks its readout
+ * over the keypad. The landscape hint would only cover them.
+ */
+export const READING_PATHS = ['/rules', '/labo/calc'] as const
+
+const isReadingPath = (pathname: string | null): boolean =>
+  READING_PATHS.some((p) => pathname === p || pathname?.startsWith(`${p}/`))
+
+/**
  * Dismissible top banner recommending landscape play on portrait phones (spec §7.6).
- * Honours the per-tab sessionStorage key `shouldShowRotateRecommender`.
+ * Honours the per-tab sessionStorage key `shouldShowRotateRecommender`. Reading pages
+ * (`READING_PATHS`) skip it: portrait is the right way to read them.
  */
 const DeviceRotateRecommender: React.FC = () => {
   const { shouldRotate } = useShouldRotate({})
+  const pathname = usePathname()
 
   const [shouldShow, setShouldShow] = useSessionStorage({
     key: 'shouldShowRotateRecommender',
@@ -34,7 +46,7 @@ const DeviceRotateRecommender: React.FC = () => {
     setDismissed(true)
   }
 
-  if (!(shouldShow && shouldRotate) || dismissed) {
+  if (!(shouldShow && shouldRotate) || dismissed || isReadingPath(pathname)) {
     return null
   }
 

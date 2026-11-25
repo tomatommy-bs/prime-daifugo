@@ -77,4 +77,16 @@ describe('HomeHero', () => {
     // the page owns the decision, so the hero must not mark the session
     expect(window.sessionStorage.getItem(INTRO_KEY)).toBeNull()
   })
+
+  it('auto renders the stack and portrait strips and leaves the choice to CSS', () => {
+    const { container } = renderWithProviders(<HomeHero variant="auto" />)
+    expect(container.querySelector('[data-hero-strip="stack"]')).toHaveClass(
+      'portrait-phone:hidden',
+    )
+    expect(container.querySelector('[data-hero-strip="portrait"]')).toHaveClass(
+      'hidden',
+      'portrait-phone:block',
+    )
+    expect(container.querySelector('h1')?.className).toContain('portrait-phone:text-')
+  })
 })

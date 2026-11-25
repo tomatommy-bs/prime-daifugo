@@ -1,3 +1,10 @@
+import {
+  SITE_URL,
+  X_ROBOTS_NOINDEX,
+  isProductionDeployment,
+  isProductionHost,
+  isVercelProduction,
+} from '@/lib/site'
 import { SID_COOKIE, SID_COOKIE_DAYS, generateSid, isValidSid } from '@/shared/ids'
 import { isValidName } from '@/shared/name'
 import { NextResponse } from 'next/server'
@@ -25,8 +32,11 @@ function ensureSid(request: NextRequest, response: NextResponse): NextResponse {
   return response
 }
 
+const isRoomPath = (pathname: string): boolean =>
+  pathname === '/room' || pathname.startsWith('/room/')
+
 /** `/room/*` gate (RQ-L5): a valid `name` cookie is required, otherwise `/login?callback=<path>`. */
-export function middleware(request: NextRequest) {
+function roomGate(request: NextRequest): NextResponse {
   const name = request.cookies.get('name')?.value
 
   if (!isValidName(name)) {
@@ -38,6 +48,31 @@ export function middleware(request: NextRequest) {
   return ensureSid(request, NextResponse.next())
 }
 
+/**
+ * 1. On the Vercel production deployment, any host other than the canonical ones (the
+ *    `*.vercel.app` aliases) is 308-redirected to the same path on the canonical origin, so
+ *    duplicates consolidate into www instead of competing with it.
+ * 2. Rooms go through the name gate.
+ * 3. `X-Robots-Tag: noindex` on rooms (bots get the 307 to /login, never the room's meta) and
+ *    on every response of a non-production deployment. Decided per request from the runtime
+ *    environment, the same source of truth as robots.txt.
+ */
+export function middleware(request: NextRequest) {
+  const host = request.headers.get('host') ?? request.nextUrl.host
+  if (isVercelProduction() && !isProductionHost(host)) {
+    const target = new URL(`${request.nextUrl.pathname}${request.nextUrl.search}`, SITE_URL)
+    return NextResponse.redirect(target, 308)
+  }
+
+  const room = isRoomPath(request.nextUrl.pathname)
+  const response = room ? roomGate(request) : NextResponse.next()
+  if (room || !isProductionDeployment()) {
+    response.headers.set('X-Robots-Tag', X_ROBOTS_NOINDEX)
+  }
+  return response
+}
+
 export const config: MiddlewareConfig = {
-  matcher: ['/room/:path*'],
+  // every page and metadata route (robots.txt, sitemap.xml, images); not build assets or APIs
+  matcher: ['/((?!_next/static|_next/image|api/).*)'],
 }
