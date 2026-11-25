@@ -36,8 +36,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# partykit
-.partykit
 .env*.local
 
 *storybook.log

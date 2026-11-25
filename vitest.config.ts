@@ -84,7 +84,6 @@ export default defineConfig(async () => ({
       include: ['src/**', 'worker/src/**'],
       exclude: [
         'src/game-card/src/components/icons/**',
-        'src/partykit/**',
         '**/*.stories.*',
         'src/app/labo/gallery/**',
         // the simulator harness runs in `npm test` but is not held to a threshold (spec §12.3)

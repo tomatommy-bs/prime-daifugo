@@ -10,7 +10,7 @@ This spec starts from the consensus winner, **ふるい (Furui)**, which all thr
 
 ## 0. Hard constraints (non-negotiable)
 
-1. **No server or rule behaviour changes.** These must stay byte-identical in behaviour:
+1. **No server or rule behaviour changes** (during the redesign; the realtime rebuild, [`docs/realtime/rebuild-spec.md`](../realtime/rebuild-spec.md), has since replaced the backend and the files listed here). These must stay byte-identical in behaviour:
    - `src/partykit/**`
    - `src/utils/play-card.ts`
    - `src/interface/**`
@@ -31,19 +31,13 @@ This spec starts from the consensus winner, **ふるい (Furui)**, which all thr
    - localStorage key `cardSizeOption`, sessionStorage key `shouldShowRotateRecommender`, cookie `name` (3–10 characters, 365 days).
    - The login `callback` redirect via `location.pathname`.
    - The `/room/new` server fetch and redirect.
-   - Auto-pass at `leftTime === 0`, sent only by the current player's client.
-   - The observer guard in `onGameEvent`.
+   - ~~Auto-pass at `leftTime === 0`~~ and ~~the observer guard in `onGameEvent`~~: superseded by the realtime rebuild. The server passes on its deadline and the guard reads `presence.role` / `playOrder` (see [`docs/realtime/rebuild-spec.md`](../realtime/rebuild-spec.md) §5 and §9.2).
    - Mantine `<Notifications position="top-right">`.
    - Every server event wipes the trays (`setHandCardIds`). This stays, but now it animates and is explained.
 4. **No primality spoilers.** Before a server result, the UI never says whether a number is prime. The one existing exception stays: the tray turns gold at exactly 57. Arithmetic help (card count, `>` field, factor expression `=`/`≠` its target) is allowed because it is not a primality judgement.
 5. **No joker or 1729 visuals.** Neither is implemented on the server. `Seat` and `FieldStack` accept an optional `variant?: 'default'` slot for the future and nothing else.
 6. **No new runtime dependencies.** Fonts come from the existing `src/fonts/Geist*.woff` via `next/font/local`. Factorization reuses the existing `primes-and-factors` dependency, with a budgeted BigInt fallback. daisyUI is **removed**: its single use is rebuilt in Mantine.
-7. **Known server quirks** are designed around, not fixed:
-   - Observers appear in `playOrder`, so the turn can land on an observer and no seat is lit.
-   - `sync` reads storage key `'ctx'` instead of `'gameCtx'`, so late joiners see the "次のイベントを待っています…" state.
-   - The timer can go negative; it displays `0`.
-   - INVALID_MOVE is silent; the client shakes the tray before sending.
-   - The server sends `game-end`, then `room-status`, then the winning `submit`; the director reorders them.
+7. **Server behaviour** is now defined by the realtime rebuild, not designed around: see [`docs/realtime/rebuild-spec.md`](../realtime/rebuild-spec.md). Observers are never in `playOrder`, late joiners get a full snapshot, the server owns the deadline, rejected moves get an `ack` with a reason, and a winning submit arrives as `submitted` then `game-ended`. (The PartyKit quirks this item used to list are gone with that backend.)
 
 ---
 

@@ -1,7 +1,8 @@
 /**
- * Engine cases ported from the PartyKit rules (spec §7.4, RQ-R21):
- *   src/partykit/room/logic/game-rule/game-rule.test.ts   5 its
- *   src/partykit/room/logic/game-rule/game-party.test.ts 10 its
+ * Engine cases ported from the pre-rebuild server rules (spec §7.4, RQ-R21; the old files were
+ * removed with that backend, see git history before the realtime rebuild):
+ *   room/logic/game-rule/game-rule.test.ts                5 its
+ *   room/logic/game-rule/game-party.test.ts              10 its
  *   ------------------------------------------------------------
  *   total                                                15 its, all ported
  *

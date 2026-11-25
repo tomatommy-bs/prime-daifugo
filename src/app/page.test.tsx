@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { renderWithProviders } from '@/test-utils'
 import { act, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -57,11 +55,6 @@ describe('Home page', () => {
   it('connects to the realtime lobby socket', () => {
     renderWithProviders(<Home />)
     expect(FakeWebSocket.last().url).toBe('ws://127.0.0.1:8787/lobby')
-  })
-
-  it('no longer imports partysocket', () => {
-    const source = readFileSync(join(__dirname, 'page.tsx'), 'utf8')
-    expect(source).not.toMatch(/partysocket/)
   })
 
   it('shows — for every counter before the first lobby message', () => {

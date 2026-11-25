@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { RealtimeHttpError } from '@/lib/realtime-http'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import NewRoomPage, { dynamic } from './page'
@@ -52,10 +50,5 @@ describe('/room/new', () => {
 
   it('is always rendered dynamically', () => {
     expect(dynamic).toBe('force-dynamic')
-  })
-
-  it('no longer imports partysocket', () => {
-    const source = readFileSync(join(__dirname, 'page.tsx'), 'utf8')
-    expect(source).not.toMatch(/partysocket/)
   })
 })
