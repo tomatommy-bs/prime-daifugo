@@ -10,6 +10,7 @@ import {
   TEST_ORIGIN,
   makePersistDir,
   removePersistDir,
+  TEST_VARS,
   startWorker,
 } from './start-worker'
 
@@ -279,5 +280,45 @@ describe('RoomDO in workerd', () => {
     expect(game?.hand).toEqual(handA)
     expect(game?.turn).toBe(turn)
     expect(game?.deadline ?? 0).toBeGreaterThanOrEqual(before + 10_000 - 500)
+  })
+})
+
+describe('RoomDO in workerd: room GC', () => {
+  let worker: RunningWorker
+  let persistDir: string
+  const clients: Client[] = []
+
+  beforeAll(async () => {
+    persistDir = makePersistDir()
+    worker = await startWorker(persistDir, {
+      ...TEST_VARS,
+      GRACE_IDLE_MS: '300',
+      ROOM_TTL_IDLE_MS: '1000',
+    })
+  })
+
+  afterAll(async () => {
+    for (const c of clients) {
+      c.close()
+    }
+    await worker?.dispose()
+    removePersistDir(persistDir)
+  })
+
+  it('the same object serves a new room after GC wiped the old one', async () => {
+    const roomId = nextRoom()
+    const a = await Client.open(worker, roomId, 1)
+    clients.push(a)
+    const oldEpoch = a.welcome.epoch
+    a.close()
+    // grace (0.3 s) then the idle TTL (1 s), then the alarm runs the GC
+    await new Promise((r) => setTimeout(r, 3_000))
+    const info = await (await fetch(`${worker.url}/rooms/${roomId}`)).json()
+    expect(info).toMatchObject({ exists: false })
+    const b = await Client.open(worker, roomId, 2)
+    clients.push(b)
+    expect(b.welcome).toMatchObject({ t: 'welcome', mode: 'snapshot', seq: 1 })
+    expect(b.welcome.epoch).not.toBe(oldEpoch)
+    expect(b.view.members.map((m) => m.name)).toEqual(['user2'])
   })
 })

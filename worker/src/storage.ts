@@ -137,10 +137,18 @@ export class SqlHostStorage extends DurableObjectAlarm implements HostStorage {
       })
   }
 
+  /**
+   * Wipe the rows, not the database: `storage.deleteAll()` on a SQLite-backed object also drops
+   * the tables, and the same instance keeps serving the room id after GC (spec §4.4), so its next
+   * write would fail with "no such table".
+   */
   deleteAll(): void {
     this.alarm = null
     void this.storage.deleteAlarm()
-    void this.storage.deleteAll()
+    this.storage.transactionSync(() => {
+      this.storage.sql.exec('DELETE FROM room_state')
+      this.storage.sql.exec('DELETE FROM events')
+    })
   }
 }
 

@@ -131,6 +131,18 @@ describe('SqlHostStorage', () => {
     const reopened = await SqlHostStorage.open(asDo(f))
     expect(reopened.loadState()).toBeNull()
   })
+
+  it('keeps serving writes on the same instance after deleteAll (room GC then reconnect)', async () => {
+    const s = await SqlHostStorage.open(asDo(fakeDurableObjectStorage()))
+    s.persist(stateAt(3), rows(1, 3), 1)
+    s.deleteAll()
+    expect(s.loadState()).toBeNull()
+    expect(s.readEvents(0)).toEqual([])
+    // no "no such table": the same object takes the next room's first write
+    s.persist(stateAt(1), rows(1, 1), 1)
+    expect(s.loadState()).toEqual(stateAt(1))
+    expect(s.readEvents(0)).toEqual(rows(1, 1))
+  })
 })
 
 describe('SqlLobbyStorage', () => {
