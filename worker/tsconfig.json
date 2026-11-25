@@ -1,0 +1,34 @@
+{
+  // Typecheck for the Cloudflare Worker (`tsc --noEmit -p worker`). Wrangler bundles with esbuild;
+  // this config only checks types. It also covers the pure shared layers the Worker imports.
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["esnext"],
+    "types": ["@cloudflare/workers-types", "vitest/globals"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      // `src/interface/common.ts` type-imports CardId from the UI card package; point that one
+      // import at the plain card-id module so React components stay out of the Worker program.
+      "@/game-card/src": ["../src/game-card/src/tools/suit-num.ts"],
+      "@/*": ["../src/*"]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "../src/shared/**/*.ts",
+    "../src/game/**/*.ts",
+    "../src/session/**/*.ts"
+  ],
+  // Tests of the shared layers run under the root (DOM) config with vitest globals.
+  "exclude": ["../src/**/*.test.ts", "../src/**/*.test.tsx"]
+}
