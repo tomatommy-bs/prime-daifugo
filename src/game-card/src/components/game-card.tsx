@@ -1,9 +1,13 @@
-import type { SVGAttributes, SVGProps } from 'react'
+import { type SVGAttributes, type SVGProps, Suspense } from 'react'
 import { cardLabel } from '../tools/card-label'
 import type { CardId } from '../tools/suit-num'
-import * as svgCards from './icons'
+import { COURT_FACES, type CourtCardId, CourtPlaceholder, isCourtCard } from './court-faces'
+import * as svgCards from './number-faces'
 
-const cardIdToModuleName: Record<CardId | 'Back', keyof typeof svgCards> = {
+type NumberCardId = Exclude<CardId, CourtCardId>
+
+/** Number cards, aces and the back are bundled; the 12 court faces (96% of the bytes) load lazily. */
+const cardIdToModuleName: Record<NumberCardId | 'Back', keyof typeof svgCards> = {
   '2C': 'Svg2C',
   '2D': 'Svg2D',
   '2H': 'Svg2H',
@@ -44,18 +48,6 @@ const cardIdToModuleName: Record<CardId | 'Back', keyof typeof svgCards> = {
   AD: 'Ad',
   AH: 'Ah',
   AS: 'As',
-  JC: 'Jc',
-  JD: 'Jd',
-  JH: 'Jh',
-  JS: 'Js',
-  QC: 'Qc',
-  QD: 'Qd',
-  QH: 'Qh',
-  QS: 'Qs',
-  KC: 'Kc',
-  KD: 'Kd',
-  KH: 'Kh',
-  KS: 'Ks',
   Back: 'Back',
 } as const
 
@@ -85,5 +77,14 @@ export const GameCard: React.FC<GameCardProps> = ({ card, ...props }) => {
     'data-card': card,
     className,
   } as SVGProps<SVGSVGElement>
+  if (isCourtCard(card)) {
+    const Face = COURT_FACES[card]
+    // the placeholder carries the same role, label and data-card, so semantics never change
+    return (
+      <Suspense fallback={<CourtPlaceholder card={card} {...svgProps} />}>
+        <Face {...svgProps} />
+      </Suspense>
+    )
+  }
   return svgCards[cardIdToModuleName[card]](svgProps)
 }

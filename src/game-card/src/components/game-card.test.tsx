@@ -61,4 +61,20 @@ describe('GameCard', () => {
       expect(container.querySelector('[data-layer="one"]')).toHaveAttribute('fill', '#FF8A5C')
     })
   })
+
+  it('court faces load lazily behind a placeholder with the same role, label and data-card', async () => {
+    const { container } = render(<GameCard card="KC" />)
+    const placeholder = screen.getByRole('option', { name: 'クラブのK, 13' })
+    expect(placeholder).toHaveAttribute('data-card', 'KC')
+    await vi.waitFor(() => expect(container.querySelector('[data-placeholder]')).toBeNull())
+    const face = screen.getByTitle('King of Clubs').closest('svg')
+    expect(face).toHaveAttribute('data-card', 'KC')
+    expect(face).toHaveAccessibleName('クラブのK, 13')
+  })
+
+  it('number cards are bundled and render at once', () => {
+    const { container } = render(<GameCard card="7D" />)
+    expect(container.querySelector('[data-placeholder]')).toBeNull()
+    expect(screen.getByRole('option', { name: 'ダイヤの7, 7' })).toBeInTheDocument()
+  })
 })

@@ -11,7 +11,7 @@ import type { ROOM_STATUS } from '@/constants/status'
 import { useReducedMotionSafe } from '@/design/motion'
 import { useBoxSize } from '@/design/use-box-size'
 import { useLayoutMode } from '@/design/use-layout-mode'
-import type { CardId } from '@/game-card/src'
+import { type CardId, preloadCourtFaces } from '@/game-card/src'
 import type { PrimeDaifugoSetupData } from '@/interface/common'
 import type * as serverToClient from '@/interface/server-to-client'
 import { concatCardNumbers } from '@/utils/play-card'
@@ -254,6 +254,13 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
   const winnerId = winnerIdOf(gs?.players)
 
   useEffect(() => chrome.onBoardInfo?.({ status: roomStatus, n }), [chrome, roomStatus, n])
+  // court faces are lazy chunks: fetch them once the board (not the waiting room) is up
+  const onBoard = roomStatus !== null && roomStatus !== 'waiting'
+  useEffect(() => {
+    if (onBoard) {
+      preloadCourtFaces().catch(() => undefined)
+    }
+  }, [onBoard])
   // biome-ignore lint/correctness/useExhaustiveDependencies: a tray change clears the message
   useEffect(() => setTray((t) => ({ ...t, error: null })), [submitCardIds, factCardIds])
   const endedWinner = director.ended ? (director.ended.winner ?? winner) : null
