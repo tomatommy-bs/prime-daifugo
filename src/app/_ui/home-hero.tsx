@@ -74,18 +74,23 @@ export function Hairline({ play, delay = 0 }: { play: boolean; delay?: number })
   )
 }
 
-export type HomeHeroVariant = 'stack' | 'compact' | 'portrait'
+export type HomeHeroVariant = 'stack' | 'compact' | 'portrait' | 'auto'
+type StripVariant = Exclude<HomeHeroVariant, 'auto'>
 
 export type HomeHeroProps = {
   /** force the static final state (also implied by the OS reduced-motion setting) */
   reduced?: boolean
   /** intro state from `useHomeIntro`; when omitted the hero decides by itself */
   intro?: IntroState
-  /** strip geometry: 2 × 50 (stack), 1 × 30 (compact), 2 × 25 (portrait) */
+  /**
+   * strip geometry: 2 × 50 (stack), 1 × 30 (compact), 2 × 25 (portrait). `auto` renders the
+   * stack and portrait strips and lets the portrait-phone media query pick one, so the
+   * server-rendered hero already matches a phone (no shift once the JS layout mode resolves).
+   */
   variant?: HomeHeroVariant
 }
 
-const STRIP: Record<HomeHeroVariant, { n: number; cols: number; size: number }> = {
+const STRIP: Record<StripVariant, { n: number; cols: number; size: number }> = {
   stack: { n: 100, cols: 50, size: 10 },
   compact: { n: 30, cols: 30, size: 14 },
   portrait: { n: 50, cols: 25, size: 12 },
@@ -109,8 +114,31 @@ export function HomeHero({ reduced = false, intro, variant = 'stack' }: HomeHero
   const mode = useMotionMode()
   const state: IntroState = reduced || mode === 'reduced' ? 'static' : (intro ?? own)
   const play = state === 'play'
-  const strip = STRIP[variant]
-  const titleSize = variant === 'stack' ? 'var(--fs-6)' : 'var(--fs-5)'
+  const strip = (v: StripVariant, className?: string) => (
+    <div data-hero-strip={v} className={className}>
+      <SieveGrid
+        n={STRIP[v].n}
+        cols={STRIP[v].cols}
+        size={STRIP[v].size}
+        animate={play}
+        primeOpacity={0.25}
+        className="block h-auto w-full"
+      />
+    </div>
+  )
+  // Sizes as classes: `auto` steps them down with the portrait-phone variant.
+  const titleClass = {
+    stack: 'text-[length:var(--fs-6)]',
+    compact: 'text-[length:var(--fs-5)]',
+    portrait: 'text-[length:var(--fs-5)]',
+    auto: 'text-[length:var(--fs-6)] portrait-phone:text-[length:var(--fs-5)]',
+  }[variant]
+  const subtitleClass = {
+    stack: 'text-[length:var(--fs-1)]',
+    compact: 'text-[length:var(--fs-0)]',
+    portrait: 'text-[length:var(--fs-0)]',
+    auto: 'text-[length:var(--fs-1)] portrait-phone:text-[length:var(--fs-0)]',
+  }[variant]
 
   return (
     <header
@@ -136,16 +164,14 @@ export function HomeHero({ reduced = false, intro, variant = 'stack' }: HomeHero
         </div>
       </div>
 
-      <div data-hero-strip={variant}>
-        <SieveGrid
-          n={strip.n}
-          cols={strip.cols}
-          size={strip.size}
-          animate={play}
-          primeOpacity={0.25}
-          className="block h-auto w-full"
-        />
-      </div>
+      {variant === 'auto' ? (
+        <>
+          {strip('stack', 'portrait-phone:hidden')}
+          {strip('portrait', 'hidden portrait-phone:block')}
+        </>
+      ) : (
+        strip(variant)
+      )}
 
       <m.div
         initial={play ? { opacity: 0, y: 8 } : false}
@@ -153,15 +179,12 @@ export function HomeHero({ reduced = false, intro, variant = 'stack' }: HomeHero
         transition={{ duration: DUR.lg, ease: EASE.out, delay: play ? SIEVE_TOTAL * 0.5 : 0 }}
       >
         <h1
-          className="m-0 font-bold tracking-[0.08em]"
-          style={{ fontSize: titleSize, lineHeight: 1.236 }}
+          className={`m-0 font-bold tracking-[0.08em] ${titleClass}`}
+          style={{ lineHeight: 1.236 }}
         >
           素数大富豪
         </h1>
-        <p
-          className="m-0 mt-fib-1 text-ink-muted"
-          style={{ fontSize: variant === 'stack' ? 'var(--fs-1)' : 'var(--fs-0)' }}
-        >
+        <p className={`m-0 mt-fib-1 text-ink-muted ${subtitleClass}`}>
           {/* each half is unbreakable, so a narrow phone wraps before ∀, never inside it */}
           <span lang="ja-Latn" className="whitespace-nowrap">
             Prime Daifugō

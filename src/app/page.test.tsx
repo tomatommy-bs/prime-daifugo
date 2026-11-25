@@ -117,12 +117,37 @@ describe('Home page', () => {
     expect(document.querySelector('a[href="/labo/training"]')).toBeNull()
   })
 
+  it('links ゲームルール to the on-site rules page', () => {
+    renderWithProviders(<Home />)
+    const link = screen.getByRole('link', { name: /ゲームルール/ })
+    expect(link).toHaveAttribute('href', '/rules')
+    expect(link).not.toHaveAttribute('target')
+  })
+
+  it('describes the game in a plain paragraph', () => {
+    const { container } = renderWithProviders(<Home />)
+    expect(container.querySelector('[data-home-lede]')).toHaveTextContent(
+      /素数.*オンライン|ブラウザ/,
+    )
+  })
+
+  it('publishes WebSite and VideoGame JSON-LD', () => {
+    const { container } = renderWithProviders(<Home />)
+    const scripts = container.querySelectorAll('script[type="application/ld+json"]')
+    const data = [...scripts].flatMap((s) => JSON.parse(s.textContent ?? '')) as {
+      '@type': string | string[]
+    }[]
+    expect(data.map((d) => d['@type'])).toEqual(['WebSite', ['VideoGame', 'WebApplication']])
+  })
+
+  it('renders both hero strips outside compact so CSS picks one before hydration', () => {
+    const { container } = renderWithProviders(<Home />)
+    expect(container.querySelector('[data-hero-strip="stack"]')).toBeInTheDocument()
+    expect(container.querySelector('[data-hero-strip="portrait"]')).toHaveClass('hidden')
+  })
+
   it('keeps the external URLs unchanged', () => {
     renderWithProviders(<Home />)
-    expect(screen.getByRole('link', { name: /ゲームルール/ })).toHaveAttribute(
-      'href',
-      'https://primeqk.themedia.jp/pages/4500251/rules',
-    )
     expect(screen.getByRole('link', { name: /フィードバック/ })).toHaveAttribute(
       'href',
       'https://forms.gle/1Aaexb2zNy39nPPF8',
