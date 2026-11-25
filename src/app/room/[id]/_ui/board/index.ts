@@ -20,6 +20,8 @@ export { DeckPile, type DeckPileProps } from './DeckPile'
 export { ResultOverlay, type ResultOverlayProps } from './ResultOverlay'
 export { GrothendieckCut, type GrothendieckCutProps } from './GrothendieckCut'
 export { GameSetDialog, type GameSetDialogProps } from './GameSetDialog'
+export { FlightLayer, type FlightLayerHandle, type FlightLayerProps } from './FlightLayer'
+export { type FlightSpec, planFlights } from './flight-plan'
 
 // T3 board
 export { BoardLayout, type BoardLayoutProps } from './BoardLayout'

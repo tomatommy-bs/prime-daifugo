@@ -126,3 +126,10 @@ describe('seatLabel', () => {
     )
   })
 })
+
+describe('Seat flight anchor', () => {
+  it('writes the player id to data-seat-anchor for card flights', () => {
+    renderWithProviders(<Seat {...base} id="p2" />)
+    expect(seatEl()).toHaveAttribute('data-seat-anchor', 'p2')
+  })
+})

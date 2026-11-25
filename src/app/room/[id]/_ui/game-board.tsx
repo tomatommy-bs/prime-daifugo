@@ -74,6 +74,7 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
   const [live, setLive] = useState<string | null>(null)
   const [, rerender] = useState(0) // socket open / close
   const wipedAt = useRef(0)
+  const flights = useRef<B.FlightLayerHandle>(null)
   const mode = useLayoutMode()
   const table = useBoxSize()
   const director = useBoardDirector({ reduced: useReducedMotionSafe() })
@@ -102,6 +103,8 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
   /** Visual bookkeeping for one server event (the state itself is already applied). */
   const direct = (prev: T.GameState | null, next: T.GameState, msg: T.SystemMessage) => {
     const events = T.classifyTransition(prev, next, msg, ws.id)
+    // measured before React commits `next`: the sources are still on screen
+    flights.current?.launch(B.planFlights(events, { selfId: ws.id, prev, next }))
     for (const e of events) {
       e.type === 'end' ? director.holdEnd(e) : director.push(e)
       const line = T.announcementOf(e, nameOf, ws.id)
@@ -294,10 +297,15 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
     <B.FieldStack
       field={gs?.field ?? []}
       leadName={nameOf(gs?.deckTopPlayer) || null}
+      flightHandoff={true}
       resultOverlay={
         <>
           <B.ResultOverlay result={T.resultViewOf(current, submitter)} onDone={director.done} />
-          <B.GrothendieckCut active={current?.type === 'cut57'} onDone={director.done} />
+          <B.GrothendieckCut
+            active={current?.type === 'cut57'}
+            onDone={director.done}
+            cards={current?.type === 'cut57' ? current.cards : undefined}
+          />
         </>
       }
     />
@@ -432,6 +440,7 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
         onNextRound={() => handleGameStart(gs?.rule)}
       />
       <B.LiveRegion message={live} />
+      <B.FlightLayer ref={flights} />
     </div>
   )
 }

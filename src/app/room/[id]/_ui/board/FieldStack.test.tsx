@@ -109,3 +109,21 @@ describe('FieldStack', () => {
     expect(container.querySelector('[data-confirmed]')).not.toBeNull()
   })
 })
+
+describe('FieldStack flight hand-off', () => {
+  it('marks the hand-off and keeps the field cards as flight anchors', () => {
+    const { container } = renderWithProviders(
+      <FieldStack field={[PLAY_13, PLAY_1013]} flightHandoff={true} />,
+      { reducedMotion: false },
+    )
+    const root = container.querySelector('[data-field-stack]')
+    expect(root).toHaveAttribute('data-flight-handoff', 'true')
+    // FlightLayer lands play flights on, and spirals flow flights off, these anchors
+    expect(container.querySelectorAll('[data-field-top] li[data-card]')).toHaveLength(2)
+  })
+
+  it('without a flight layer nothing is marked', () => {
+    const { container } = renderWithProviders(<FieldStack field={[PLAY_13]} />)
+    expect(container.querySelector('[data-field-stack]')).not.toHaveAttribute('data-flight-handoff')
+  })
+})

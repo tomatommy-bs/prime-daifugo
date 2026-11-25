@@ -64,6 +64,8 @@
   body { font-family: var(--font-sans), "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif; line-height: 1.5; }
   .num { font-family: var(--font-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums slashed-zero; }
   :focus-visible { outline: 2px solid var(--mod); outline-offset: 2px; }
+  /* a card whose flight ghost has not landed yet: transparent but still clickable (§9.2) */
+  [data-flight-pending] { opacity: 0 !important; }
   @media (prefers-reduced-motion: reduce) {
     :root { --t-sm:.01ms; --t-md:.01ms; --t-lg:.01ms; --t-xl:.01ms; --t-xxl:.01ms; } /* --t-xs kept */
   }

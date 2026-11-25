@@ -401,6 +401,7 @@ export function Hand({
         // biome-ignore lint/a11y/useSemanticElements: a card listbox, not a <select>
         role="listbox"
         aria-label="手札"
+        data-anchor="hand"
         aria-orientation="horizontal"
         tabIndex={n === 0 ? 0 : -1}
         data-layout={resolved.mode}

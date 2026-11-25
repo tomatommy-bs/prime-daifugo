@@ -14,6 +14,8 @@ import { TurnTimer } from './TurnTimer'
 import { seatHueVar } from './seat-model'
 
 export type SeatProps = {
+  /** player id: written to `data-seat-anchor` so card flights can land on the seat */
+  id?: string
   name: string
   handCount: number | null
   hueIndex: number
@@ -132,6 +134,7 @@ function HandCount({ value, full, size }: { value: number; full: boolean; size: 
 }
 
 export function Seat({
+  id,
   name,
   handCount,
   hueIndex,
@@ -293,6 +296,7 @@ export function Seat({
       aria-label={label}
       aria-current={isActive ? 'true' : undefined}
       data-seat=""
+      data-seat-anchor={id}
       data-layout={layout}
       data-active={isActive ? 'true' : 'false'}
       data-self={isSelf ? 'true' : undefined}

@@ -24,6 +24,11 @@ export type FieldStackProps = {
   variant?: 'default'
   /** ResultOverlay / GrothendieckCut layered over the field */
   resultOverlay?: ReactNode
+  /**
+   * A `FlightLayer` flies the cards (play in, flow out), so the field drops its own
+   * `layoutId` hand-over and lets a flowing top vanish at once under its ghosts.
+   */
+  flightHandoff?: boolean
 }
 
 export const FREE_READOUT = 'k = 自由'
@@ -54,6 +59,8 @@ const topExit = {
     transition: { duration: DUR.lg, ease: EASE.in },
   },
   reduced: { opacity: 0, transition: { duration: DUR.sm } },
+  /** the flight ghosts carry the cards away */
+  handoff: { opacity: 0, transition: { duration: 0 } },
 }
 
 export function FieldStack({
@@ -62,6 +69,7 @@ export function FieldStack({
   compactHistory = 3,
   variant = 'default',
   resultOverlay,
+  flightHandoff = false,
 }: FieldStackProps) {
   const mode = useMotionMode()
   const full = mode === 'full'
@@ -90,7 +98,13 @@ export function FieldStack({
     return () => clearTimeout(id)
   }, [field, full, compactHistory])
 
-  const exitKind = !full ? 'reduced' : field.length === 0 ? 'flow' : 'replace'
+  const exitKind = !full
+    ? 'reduced'
+    : field.length === 0
+      ? flightHandoff
+        ? 'handoff'
+        : 'flow'
+      : 'replace'
   const topKey = hasTop ? top.join('-') : 'empty'
 
   return (
@@ -99,6 +113,7 @@ export function FieldStack({
       data-field-stack=""
       data-variant={variant}
       data-motion={mode}
+      data-flight-handoff={flightHandoff ? 'true' : undefined}
       data-empty={hasTop ? undefined : 'true'}
       className="relative flex min-w-0 flex-col items-center justify-center gap-fib-2"
     >
@@ -130,7 +145,7 @@ export function FieldStack({
                   {top.map((card, i) => (
                     <m.li
                       key={card}
-                      layoutId={full ? `card-${card}` : undefined}
+                      layoutId={full && !flightHandoff ? `card-${card}` : undefined}
                       data-card={card}
                       className="flex"
                       transition={full ? { delay: i * 0.034 } : undefined}
