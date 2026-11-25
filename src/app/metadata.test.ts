@@ -74,7 +74,7 @@ describe('route metadata', () => {
   })
 
   it.each([
-    ['/rules', rules, '素数大富豪のルールと遊び方'],
+    ['/rules', rules, '素数大富豪のルールと遊び方｜無料でオンライン対戦'],
     ['/labo/calc', laboCalc, '素数判定ラボ'],
   ] as const)('%s is canonical and indexable', (path, meta, title) => {
     expect(titleOf(meta)).toBe(title)
@@ -94,6 +94,11 @@ describe('route metadata', () => {
     expect(meta.robots).toMatchObject(PRIVATE)
     expect(meta.alternates?.canonical).toBeUndefined()
     expect(meta.openGraph).not.toHaveProperty('url')
+  })
+
+  it('does not repeat the site name in the /rules title', () => {
+    expect(rules.title).toEqual({ absolute: '素数大富豪のルールと遊び方｜無料でオンライン対戦' })
+    expect(rules.openGraph?.title).toBe('素数大富豪のルールと遊び方｜無料でオンライン対戦')
   })
 
   it('previews a room link as an invite', () => {

@@ -94,3 +94,28 @@ describe('/rules', () => {
     }
   })
 })
+
+describe('/rules content', () => {
+  it('shows only real card ranks in the example chips (the 1 is the A)', () => {
+    const { container } = renderWithProviders(<RulesPage />)
+    const chips = [...container.querySelectorAll('[aria-label^="カード "]')].flatMap((el) =>
+      (el.getAttribute('aria-label') ?? '').replace('カード ', '').split('、'),
+    )
+    expect(chips.length).toBeGreaterThan(0)
+    const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
+    for (const chip of chips) {
+      expect(ranks).toContain(chip)
+    }
+  })
+
+  it('says the count rules apply to the played cards only, not the expression', () => {
+    renderWithProviders(<RulesPage />)
+    expect(screen.getByText(/式に使うカードの枚数は数えません/)).toBeInTheDocument()
+    expect(screen.getByText(/形が正しくない式.*ペナルティはありません/)).toBeInTheDocument()
+  })
+
+  it('links the 57 exception to its section', () => {
+    renderWithProviders(<RulesPage />)
+    expect(screen.getByRole('link', { name: '57 切り' })).toHaveAttribute('href', '#grothendieck')
+  })
+})

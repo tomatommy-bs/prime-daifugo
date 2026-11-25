@@ -12,13 +12,15 @@ import {
   HOW_TO_STEPS,
   RULES_CRUMBS,
   RULES_DESCRIPTION,
-  RULES_TITLE,
+  RULES_DOC_TITLE,
   SECTIONS,
   type SectionId,
 } from './content'
 
 export const metadata = pageMetadata({
-  title: RULES_TITLE,
+  // already starts with the site name, so no ` | 素数大富豪` suffix
+  title: RULES_DOC_TITLE,
+  absoluteTitle: true,
   description: RULES_DESCRIPTION,
   path: '/rules',
 })
@@ -108,14 +110,14 @@ export default function RulesPage() {
                 公式ルール
                 <IconArrowUpRight stroke={1.5} size="1em" aria-label="（外部サイト）" />
               </a>
-              です。このアプリでの違いは「
+              です。違いは「
               <a
                 href="#differences"
                 className="text-ink underline decoration-line underline-offset-4"
               >
                 公式ルールとの違い
               </a>
-              」にまとめています。
+              」へ。
             </p>
             <div>
               <Link
@@ -132,7 +134,7 @@ export default function RulesPage() {
 
           <Section id="overview" n={1}>
             <P>
-              2〜4人で遊ぶ対戦カードゲームです。手番の人は、手札のカードを並べてできる数が素数なら、その数を場に出せます。次の人は、場の数より大きな素数を同じ枚数で出さなければなりません。
+              2〜4人で遊ぶ対戦カードゲームです。手番の人は、手札のカードを並べてできる数が素数なら、その数を場に出せます。次の人がカードを出すときは、場と同じ枚数で、場の数より大きな素数にする必要があります。
             </P>
             <P>
               出せないときや出したくないときはパスします。最初に手札をすべて出し切った人の勝ちです。素数でない数を出してしまうと、ペナルティとして山札からカードを引きます。
@@ -209,7 +211,14 @@ export default function RulesPage() {
                 <strong>場の数より大きい</strong>数であること。
               </li>
               <li>
-                その数が<strong>素数</strong>であること（例外として 57 も出せます。→「57 切り」）。
+                その数が<strong>素数</strong>であること（例外として 57 も出せます。→
+                <a
+                  href="#grothendieck"
+                  className="text-ink underline decoration-line underline-offset-4"
+                >
+                  57 切り
+                </a>
+                ）。
               </li>
             </Ol>
             <P>
@@ -219,7 +228,7 @@ export default function RulesPage() {
             <Examples
               items={[
                 [['2'], '2', '場が空なら 1 枚の素数を出せる'],
-                [['3', '1'], '31', '場が 2 枚の 29 なら、2 枚の 31 を出せる'],
+                [['3', 'A'], '31', '場が 2 枚の 29 なら、2 枚の 31 を出せる'],
                 [['J', '3'], '113', '同じく 2 枚で 113 も出せる'],
               ]}
             />
@@ -233,14 +242,14 @@ export default function RulesPage() {
             <Examples
               items={[
                 [['6', '9'], '69 = 3 × 23', '6・9 で 69 を出し、3・×・2・3 で式を添える'],
-                [['8', '1'], '81 = 3⁴', '8・1 で 81 を出し、3・^・4 で式を添える'],
+                [['8', 'A'], '81 = 3⁴', '8・A で 81 を出し、3・^・4 で式を添える'],
               ]}
             />
             <P>式は次のルールで組み立てます。</P>
             <Ul>
               <li>
-                カードと演算子（× と ^）を交互に置きます。カードが続くと 1 つの数になります（2・3
-                なら 23）。
+                数（1 枚以上のカードを並べたもの）と演算子（× と ^）を交互に置きます。2・3
+                のようにカードを続けて置くと、23 という 1 つの数になります。
               </li>
               <li>演算子は 1 つ以上必要で、式の最初と最後、連続には置けません。</li>
               <li>
@@ -252,7 +261,16 @@ export default function RulesPage() {
                 のような重ね累乗は不可）。
               </li>
               <li>式に出てくる底はすべて素数で、式の値が出した数と等しくなければなりません。</li>
+              <li>
+                場と同じ枚数・最大提出枚数の条件は、<strong>出す数のカードだけ</strong>
+                に適用されます。式に使うカードの枚数は数えません（例：場が 2 枚なら、69 を出して 3 ×
+                23 を添えられます）。
+              </li>
             </Ul>
+            <Note>
+              形が正しくない式（演算子で始まる・終わる、演算子が続く、値が 1
+              の項がある、重ね累乗など）はそもそも出せません。この場合ペナルティはありません。
+            </Note>
             <P>
               成功すると、出したカードは場に置かれ、式に使ったカードは山札に戻ってシャッフルされます。式のカードも手札から減るので、一気に手札を減らすチャンスです。
             </P>
@@ -294,7 +312,7 @@ export default function RulesPage() {
             </Ul>
             <Note>
               画面では、出す欄の数がちょうど 57
-              になると金色に変わります。素数かどうかを教えてくれる表示はこれだけです。
+              になると金色に変わります。出す前に数について教えてくれる表示はこれだけで、素数かどうかは表示されません。
             </Note>
           </Section>
 
@@ -379,10 +397,22 @@ export default function RulesPage() {
                 <strong>1729（ラマヌジャン革命）はありません。</strong>
                 1729 を出しても特別な効果は起きません。
               </li>
-              <li>
-                <strong>累乗は 1 段まで</strong>です（底は素数、指数は 2 以上）。
-              </li>
               <li>素数かどうかは、プレイヤーが確かめる代わりにサーバーが自動で判定します。</li>
+            </Ul>
+            <h3 className="m-0 text-[length:var(--fs-0)] font-bold leading-[1.618]">
+              このアプリでの決まり
+            </h3>
+            <Ul>
+              <li>
+                一度に出せるのは初期設定で {DEFAULTS.maxSubmitNumCards}{' '}
+                枚までです（ルールオプションで無制限にできます）。
+              </li>
+              <li>
+                1 手番に制限時間（初期設定 {DEFAULTS.timeLimit}{' '}
+                秒）があり、時間切れは自動的にパスになります。
+              </li>
+              <li>合成数出しの累乗は 1 段までです（底は素数、指数は 2 以上）。</li>
+              <li>合成数出しで式に使ったカードは、場ではなく山札に戻ります。</li>
             </Ul>
             <Note>公式ルールの細かな点は、上のリンク先で確認してください。</Note>
           </Section>

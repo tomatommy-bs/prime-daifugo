@@ -6,7 +6,10 @@
 import type { Faq, HowToStep } from '@/lib/structured-data'
 import { ALLOWED_RULES, DEFAULT_RULE } from '@/shared/rule-options'
 
+/** The h1 and the breadcrumb's page name. */
 export const RULES_TITLE = '素数大富豪のルールと遊び方'
+/** The document title (no site-name suffix: it already starts with 素数大富豪). */
+export const RULES_DOC_TITLE = `${RULES_TITLE}｜無料でオンライン対戦`
 export const RULES_DESCRIPTION =
   '素数大富豪のルールをやさしく解説。カードで数をつくる方法、出せる素数の条件、合成数出し（素因数分解）、ペナルティ、場の流れ、57（グロタンディーク素数）切り、制限時間まで、オンライン版の遊び方とよくある質問をまとめました。'
 
@@ -25,11 +28,11 @@ export const SECTIONS = [
   { id: 'factor', title: '合成数出し（素因数分解）' },
   { id: 'penalty', title: 'ペナルティ' },
   { id: 'flow', title: '場の流れ' },
-  { id: 'grothendieck', title: '57 切り（グロタンディーク素数）' },
+  { id: 'grothendieck', title: '57 切り（グロタンディーク素数切り）' },
   { id: 'end', title: '勝敗' },
   { id: 'time', title: '制限時間と通信切れ' },
   { id: 'options', title: 'ルールオプション' },
-  { id: 'differences', title: '公式ルールとの違い' },
+  { id: 'differences', title: '公式ルールとの違い・このアプリでの決まり' },
   { id: 'how-to-play', title: 'オンラインでの遊び方' },
   { id: 'faq', title: 'よくある質問' },
 ] as const
@@ -67,7 +70,7 @@ export const FAQS: readonly Faq[] = [
   {
     question: '素数大富豪とはどんなゲームですか？',
     answer:
-      'トランプのカードを並べて数をつくり、素数だけを場に出していくカードゲームです。前の人より大きな素数を出し、最初に手札をなくした人が勝ちです。大富豪（大貧民）のように、場の数を上回る手を出し合います。',
+      'トランプのカードを並べて数をつくり、素数だけを場に出していくカードゲームです。前の人と同じ枚数で、より大きな素数を出し、最初に手札をなくした人が勝ちです。大富豪（大貧民）のように、場の数を上回る手を出し合います。',
   },
   {
     question: '無料で遊べますか？登録は必要ですか？',
@@ -77,12 +80,12 @@ export const FAQS: readonly Faq[] = [
   {
     question: '何人で遊べますか？',
     answer:
-      '1ゲームは2〜4人です。5人目以降は観戦者として同じルームに入れて（最大8人）、次のラウンドから参加できます。',
+      '1ゲームは2〜4人です。5人目以降も観戦者として最大8人まで同じルームに入れて（ルーム全体で12人まで）、次のラウンドから参加できます。',
   },
   {
     question: 'ひとりで練習できますか？',
     answer:
-      '対戦は2人からです。ひとりのときは「素数判定ラボ」で、カードを並べた数が素数かどうかや素因数分解を確かめられます。ランダムマッチとトレーニングは準備中です。',
+      '対戦は2人からです。ひとりのときは「素数判定ラボ」で、カードを並べた数（約16桁まで）が素数かどうかや素因数分解を確かめられます。ランダムマッチとトレーニングは準備中です。',
   },
   {
     question: '57 はなぜ出せるのですか？',
