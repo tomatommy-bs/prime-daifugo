@@ -1,7 +1,13 @@
 import { renderWithProviders } from '@/test-utils'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { GameSetDialog, type GameSetDialogProps, QED, sortStandings } from './GameSetDialog'
+import {
+  GameSetDialog,
+  type GameSetDialogProps,
+  QED,
+  readyToggleLabel,
+  sortStandings,
+} from './GameSetDialog'
 
 const props = (partial: Partial<GameSetDialogProps> = {}): GameSetDialogProps => ({
   opened: true,
@@ -119,6 +125,47 @@ describe('GameSetDialog', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     rerender(<GameSetDialog {...props({ opened: false })} />)
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
+  it('no ready toggle without onToggleReady (default rendering unchanged)', async () => {
+    renderWithProviders(<GameSetDialog {...props({ selfReady: false, isObserver: true })} />)
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog.querySelector('[data-ready-toggle]')).toBeNull()
+    expect(within(dialog).getAllByRole('button')).toHaveLength(1)
+  })
+
+  it.each([
+    { selfReady: false, isObserver: true, label: '次のラウンドに参加' },
+    { selfReady: false, isObserver: false, label: '準備OK' },
+    { selfReady: true, isObserver: false, label: '取消' },
+    { selfReady: true, isObserver: true, label: '取消' },
+  ])(
+    'ready toggle: ready=$selfReady observer=$isObserver → $label',
+    async ({ selfReady, isObserver, label }) => {
+      const onToggleReady = vi.fn()
+      const onNextRound = vi.fn()
+      renderWithProviders(
+        <GameSetDialog {...props({ selfReady, isObserver, onToggleReady, onNextRound })} />,
+      )
+      const toggle = await screen.findByRole('button', { name: label })
+      expect(toggle).toHaveAttribute('data-ready-toggle', selfReady ? 'ready' : 'not-ready')
+      fireEvent.click(toggle)
+      expect(onToggleReady).toHaveBeenCalledOnce()
+      expect(onNextRound).not.toHaveBeenCalled()
+      // the CTA is still there
+      expect(screen.getByRole('button', { name: /次のラウンドを開始/ })).toBeInTheDocument()
+    },
+  )
+
+  it('the ready toggle defaults to a not-ready player', async () => {
+    renderWithProviders(<GameSetDialog {...props({ onToggleReady: vi.fn() })} />)
+    expect(await screen.findByRole('button', { name: '準備OK' })).toBeInTheDocument()
+  })
+
+  it('readyToggleLabel', () => {
+    expect(readyToggleLabel(false, true)).toBe('次のラウンドに参加')
+    expect(readyToggleLabel(false, false)).toBe('準備OK')
+    expect(readyToggleLabel(true, true)).toBe('取消')
   })
 
   it('data-motion follows reduced motion', async () => {

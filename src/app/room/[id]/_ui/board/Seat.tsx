@@ -4,7 +4,8 @@
  *
  * A seat NEVER renders card faces, for anyone: only a mini back (▣) and the hand count.
  * Every state pairs colour with a glyph: `▲` lead, `∅` passed, `観戦` observer, `+n` penalty,
- * and the active seat carries `aria-current="true"`.
+ * `◌` with a dashed outline while reconnecting (`connected={false}`), and the active seat
+ * carries `aria-current="true"`.
  */
 import { DUR, EASE, SPRING, motionPreset, useMotionMode } from '@/design/motion'
 import { GameCard } from '@/game-card/src'
@@ -28,10 +29,18 @@ export type SeatProps = {
   timeLimit?: number
   /** `+n` penalty chip */
   penalty?: number
+  /**
+   * `false` while the member's socket is gone (grace period): a dashed ◌ outline and the
+   * aria suffix 「（再接続中）」. Omitted or `true` renders the default seat.
+   */
+  connected?: boolean
   /** reserved for future variants (no joker / 1729 visuals) */
   variant?: 'default'
   layout: 'chip' | 'node'
 }
+
+/** Suffix of the seat label while the member reconnects. */
+export const RECONNECTING_SUFFIX = '（再接続中）'
 
 /** Screen-reader summary of a seat, e.g. `bob、手札 9 枚、場の主、手番`. */
 export function seatLabel({
@@ -43,6 +52,7 @@ export function seatLabel({
   passed,
   observer,
   penalty,
+  connected,
 }: Omit<SeatProps, 'layout' | 'hueIndex'>): string {
   const parts = [isSelf ? `${name}（あなた）` : name]
   if (observer) {
@@ -62,7 +72,8 @@ export function seatLabel({
   if (isActive) {
     parts.push('手番')
   }
-  return parts.join('、')
+  const label = parts.join('、')
+  return connected === false ? `${label}${RECONNECTING_SUFFIX}` : label
 }
 
 /** One or two stacked card backs, decorative. */
@@ -146,6 +157,7 @@ export function Seat({
   leftTime,
   timeLimit,
   penalty,
+  connected,
   variant = 'default',
   layout,
 }: SeatProps) {
@@ -154,6 +166,7 @@ export function Seat({
   const preset = motionPreset(!full)
   const hue = seatHueVar(hueIndex)
   const node = layout === 'node'
+  const offline = connected === false
   const quiet = passed || observer
   const label = seatLabel({
     name,
@@ -164,6 +177,7 @@ export function Seat({
     passed,
     observer,
     penalty,
+    connected,
   })
 
   const nameEl = (
@@ -264,6 +278,21 @@ export function Seat({
             ∅
           </m.span>
         ) : null}
+        {offline ? (
+          <m.span
+            key="offline"
+            data-marker="offline"
+            title="再接続中"
+            className="num leading-none"
+            style={{ color: 'var(--ink-muted)', fontSize: node ? 'var(--fs-0)' : 'var(--fs--1)' }}
+            variants={preset.pop}
+            initial="hidden"
+            animate="show"
+            exit="hidden"
+          >
+            ◌
+          </m.span>
+        ) : null}
         {penalty && penalty > 0 ? (
           <m.span
             key={`penalty-${penalty}`}
@@ -306,6 +335,7 @@ export function Seat({
       data-self={isSelf ? 'true' : undefined}
       data-observer-seat={observer ? 'true' : undefined}
       data-passed={passed ? 'true' : undefined}
+      data-connected={offline ? 'false' : undefined}
       data-variant={variant}
       data-motion={mode}
       className={
@@ -326,6 +356,10 @@ export function Seat({
               ? 'var(--shadow-1), 0 0 0 1px var(--line)'
               : 'none',
           opacity: observer ? 0.85 : 1,
+          // reconnecting: a dashed outline beside the ◌ marker (colour is never the only cue)
+          ...(offline
+            ? { outline: '1px dashed var(--border-strong)', outlineOffset: -1 }
+            : undefined),
         } as CSSProperties
       }
       initial={false}

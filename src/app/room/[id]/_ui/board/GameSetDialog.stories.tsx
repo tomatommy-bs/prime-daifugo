@@ -39,5 +39,24 @@ export const ThreePlayers: Story = {
 
 export const CannotStart: Story = { args: { canStart: false } }
 
+/** An observer of this round can join the next one (rebuild spec §3.7). */
+export const ObserverJoin: Story = {
+  args: { isObserver: true, selfReady: false, onToggleReady: fn() },
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(await body.findByRole('button', { name: '次のラウンドに参加' }))
+    await expect(args.onToggleReady).toHaveBeenCalled()
+  },
+}
+
+export const PlayerReadyToggle: Story = {
+  args: { selfReady: false, onToggleReady: fn() },
+}
+
+export const PlayerReady: Story = {
+  args: { selfReady: true, onToggleReady: fn() },
+}
+
 export const FourPlayersDark: Story = { ...FourPlayers, globals: { colorScheme: 'dark' } }
 export const TwoPlayersDark: Story = { ...TwoPlayers, globals: { colorScheme: 'dark' } }
+export const ObserverJoinDark: Story = { ...ObserverJoin, globals: { colorScheme: 'dark' } }

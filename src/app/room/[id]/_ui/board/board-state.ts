@@ -3,7 +3,8 @@
  * the component so they can be unit-tested on their own. No React, no socket.
  */
 import type { CardId } from '@/game-card/src'
-import type { SubmitCardSet } from '@/interface/client-to-server'
+import type { ClientPlayer, SubmitCardSet } from '@/shared/client-state'
+import type { RoomStatus as ProtocolRoomStatus } from '@/shared/protocol'
 import { concatCardNumbers, isValidFactCardIds } from '@/utils/play-card'
 import type { ActionBarProps } from './ActionBar'
 import type { ConnectionState, DrawDisabledReason, LayoutMode } from './types'
@@ -16,7 +17,7 @@ export const ACTION_ORIENTATION = {
   wide: 'row',
 } as const satisfies Record<LayoutMode, ActionBarProps['orientation']>
 
-type RoomStatus = 'waiting' | 'playing' | 'waitingNextRound' | null
+type RoomStatus = ProtocolRoomStatus | null
 
 /**
  * The one `> 場` rule, shared by the tray hint (`trayChecks`) and the submit gate: the value
@@ -83,7 +84,10 @@ export function drawDisabledReason({
   return null
 }
 
-/** The ConnectionOverlay state from the socket and the sync progress. */
+/**
+ * The ConnectionOverlay state from the socket and the sync progress. Kept for the gallery and
+ * tests; the room container reads `session.connection` instead (spec §9.2).
+ */
 export function connectionStateOf({
   readyState,
   roomStatus,
@@ -121,12 +125,34 @@ export function isObserver(
   return selfStatus === 'not-ready' || (players !== undefined && !(selfId in players))
 }
 
-/** The player whose hand is empty (the winner), if any. */
+type HandCounts = Record<string, Pick<ClientPlayer, 'handCount'>>
+
+/** Cards in `id`'s hand by count (other players' `hand` is always `[]`, spec §9.3). */
+export function handSize(players: HandCounts | null | undefined, id: string): number {
+  return players?.[id]?.handCount ?? 0
+}
+
+/** `id`'s own card ids: only ever non-empty for self (`[]` for others and absentees). */
+export function handOf(
+  players: Record<string, Pick<ClientPlayer, 'hand'>> | null | undefined,
+  id: string,
+): ClientPlayer['hand'] {
+  return players?.[id]?.hand ?? []
+}
+
+/**
+ * The winner: the server's `gameState.winner` when known (a last-standing win leaves cards in
+ * hand), else the player whose hand count is 0.
+ */
 export function winnerIdOf(
-  players: Record<string, { hand: readonly unknown[] }> | undefined,
+  players: HandCounts | null | undefined,
+  winner: string | null = null,
 ): string | undefined {
+  if (winner !== null) {
+    return winner
+  }
   if (!players) {
     return undefined
   }
-  return Object.keys(players).find((id) => players[id].hand.length === 0)
+  return Object.keys(players).find((id) => players[id].handCount === 0)
 }

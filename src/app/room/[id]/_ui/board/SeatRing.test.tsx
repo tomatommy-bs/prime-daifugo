@@ -1,24 +1,23 @@
 import { ellipsePoint, seatAngle } from '@/design/math/geometry'
-import type { CardId } from '@/game-card/src'
-import { makeCtx, makeGameState, makePresence, renderWithProviders } from '@/test-utils'
+import {
+  makeClientCtx,
+  makeClientGameState,
+  makeSessionPresence,
+  renderWithProviders,
+} from '@/test-utils'
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ARC_FROM, SeatRing, ellipseArcPath, ringGeometry, shortestTurn } from './SeatRing'
 import { buildSeats } from './seat-model'
 
-const hand = (n: number) => Array.from({ length: n }, () => 'AS' as CardId)
-
 function seatsFor(n: 2 | 3 | 4, { selfId = 'p1', currentPlayer = 'p1', observer = false } = {}) {
   const ids = ['p1', 'p2', 'p3', 'p4'].slice(0, n)
-  const players = Object.fromEntries(ids.map((id, i) => [id, { hand: hand(3 + i) }]))
+  const players = Object.fromEntries(ids.map((id, i) => [id, { handCount: 3 + i }]))
   const names = ['alice', 'bob', 'carol', 'dave'].slice(0, n)
   return buildSeats({
-    gameState: makeGameState({ players }),
-    ctx: makeCtx({ playOrder: observer ? [...ids, 'p9'] : ids, currentPlayer }),
-    presence: [
-      ...makePresence(names),
-      ...(observer ? [{ id: 'p9', name: 'eve', status: 'ready' as const }] : []),
-    ],
+    gameState: makeClientGameState({ players }),
+    ctx: makeClientCtx({ playOrder: observer ? [...ids, 'p9'] : ids, currentPlayer }),
+    presence: [...makeSessionPresence(names), ...(observer ? [{ id: 'p9', name: 'eve' }] : [])],
     selfId,
   })
 }

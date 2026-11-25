@@ -6,6 +6,8 @@ import {
   beatsField,
   connectionStateOf,
   drawDisabledReason,
+  handOf,
+  handSize,
   isObserver,
   validateSubmitCardSet,
   winnerIdOf,
@@ -99,10 +101,36 @@ describe('isObserver / winnerIdOf', () => {
     expect(isObserver(undefined, undefined, 'p1')).toBe(false)
   })
 
-  it('the winner is the player with an empty hand', () => {
-    expect(winnerIdOf({ p1: { hand: ['AS'] }, p2: { hand: [] } })).toBe('p2')
-    expect(winnerIdOf({ p1: { hand: ['AS'] } })).toBeUndefined()
+  it('without a server winner, the winner is the player whose hand count is 0', () => {
+    expect(winnerIdOf({ p1: { handCount: 1 }, p2: { handCount: 0 } })).toBe('p2')
+    expect(winnerIdOf({ p1: { handCount: 1 } })).toBeUndefined()
     expect(winnerIdOf(undefined)).toBeUndefined()
+    expect(winnerIdOf(null, null)).toBeUndefined()
+  })
+
+  it('prefers gameState.winner (a last-standing win keeps cards in hand)', () => {
+    const players = { p1: { handCount: 3 }, p2: { handCount: 0 } }
+    expect(winnerIdOf(players, 'p1')).toBe('p1')
+    expect(winnerIdOf(undefined, 'p1')).toBe('p1')
+    expect(winnerIdOf(players, null)).toBe('p2')
+  })
+})
+
+describe('handSize / handOf', () => {
+  const players = {
+    p1: { hand: c('AS', '3H'), handCount: 2 },
+    p2: { hand: [], handCount: 9 },
+  }
+  it('sizes come from handCount: other hands are [] on the client', () => {
+    expect(handSize(players, 'p1')).toBe(2)
+    expect(handSize(players, 'p2')).toBe(9)
+    expect(handSize(players, 'p3')).toBe(0)
+    expect(handSize(undefined, 'p1')).toBe(0)
+  })
+  it('card ids exist only for self', () => {
+    expect(handOf(players, 'p1')).toEqual(['AS', '3H'])
+    expect(handOf(players, 'p2')).toEqual([])
+    expect(handOf(null, 'p1')).toEqual([])
   })
 })
 

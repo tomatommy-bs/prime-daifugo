@@ -1,9 +1,11 @@
 import type { CardId } from '@/game-card/src'
-import { makeCtx, makeGameState, serverMsg } from '@/test-utils'
+import type { FactCardId } from '@/interface/common'
+import type { SubmitResultCode } from '@/shared/protocol'
+import { makeClientCtx, makeClientGameState } from '@/test-utils'
 import { describe, expect, it } from 'vitest'
 import {
   type GameState,
-  type SystemMessage,
+  type TransitionMsg,
   classifyTransition,
   offendingFactorIndex,
   resultViewOf,
@@ -13,29 +15,69 @@ import type { BoardEvent } from './types'
 const alice = { id: 'p1', name: 'alice' }
 const bob = { id: 'p2', name: 'bob' }
 
+/**
+ * A UI state as `viewer` receives it (spec §9.3): the viewer's own hand carries ids, every
+ * other hand is `[]` with only its `handCount`.
+ */
 const snap = ({
   hands = { p1: ['AS', '3H', 'JD'], p2: ['2S', '5C', 'KH'] },
   field = [],
   current = 'p1',
+  viewer = 'p1',
 }: {
   hands?: Record<string, string[]>
   field?: string[][]
   current?: string
+  viewer?: string
 } = {}): GameState => ({
-  gameState: makeGameState({
+  gameState: makeClientGameState({
     players: Object.fromEntries(
-      Object.entries(hands).map(([id, hand]) => [id, { hand: hand as CardId[] }]),
+      Object.entries(hands).map(([id, hand]) => [
+        id,
+        { hand: id === viewer ? (hand as CardId[]) : [], handCount: hand.length },
+      ]),
     ),
     field: field as CardId[][],
   }),
-  ctx: makeCtx({ playOrder: Object.keys(hands), currentPlayer: current }),
+  ctx: makeClientCtx({ playOrder: Object.keys(hands), currentPlayer: current }),
 })
+
+type Commander = { id: string; name: string }
+
+/** The game messages the session adapter builds from room events (spec §9.2). */
+const msg = {
+  gameStart: (commander: Commander): TransitionMsg => ({ action: 'game-start', commander }),
+  draw: (commander: Commander): TransitionMsg => ({ action: 'draw', commander }),
+  pass: (commander: Commander, reason: 'manual' | 'timeout' = 'manual'): TransitionMsg => ({
+    action: 'pass',
+    commander,
+    reason,
+  }),
+  submit: (
+    commander: Commander,
+    submit: string[],
+    factor: string[] = [],
+    result: SubmitResultCode | null = null,
+  ): TransitionMsg => ({
+    action: 'submit',
+    commander,
+    submissionResult: {
+      submitCardSet: { submit: submit as CardId[], factor: factor as FactCardId[] },
+      result,
+    },
+  }),
+  gameEnd: (winner: Commander): TransitionMsg => ({
+    action: 'game-end',
+    winner: winner.name,
+    winnerId: winner.id,
+  }),
+}
 
 type Row = {
   name: string
   prev: GameState | null
   next: GameState
-  msg: SystemMessage
+  msg: TransitionMsg
   self?: string
   expected: BoardEvent[]
 }
@@ -45,31 +87,28 @@ const rows: Row[] = [
     name: 'deal on game-start',
     prev: null,
     next: snap(),
-    msg: serverMsg.gameStart({ commander: alice }) as SystemMessage,
+    msg: msg.gameStart(alice),
     expected: [{ type: 'deal' }, { type: 'turn', from: null, to: 'p1' }],
   },
   {
     name: 'draw by me',
     prev: snap(),
     next: snap({ hands: { p1: ['AS', '3H', 'JD', '4S'], p2: ['2S', '5C', 'KH'] } }),
-    msg: serverMsg.draw({ commander: alice }) as SystemMessage,
+    msg: msg.draw(alice),
     expected: [{ type: 'draw', who: 'me', playerId: 'p1' }],
   },
   {
     name: 'draw by another player',
     prev: snap({ current: 'p2' }),
     next: snap({ current: 'p2', hands: { p1: ['AS'], p2: ['2S', '5C', 'KH', '4S'] } }),
-    msg: serverMsg.draw({ commander: bob }) as SystemMessage,
+    msg: msg.draw(bob),
     expected: [{ type: 'draw', who: 'other', playerId: 'p2' }],
   },
   {
     name: 'submit ok moves the turn',
     prev: snap({ field: [['3S']] }),
     next: snap({ field: [['3S'], ['AS', '3H']], current: 'p2' }),
-    msg: serverMsg.submit({
-      commander: alice,
-      submitCardSet: { submit: ['AS', '3H'], factor: [] },
-    }) as SystemMessage,
+    msg: msg.submit(alice, ['AS', '3H']),
     expected: [
       { type: 'submit-ok', playerId: 'p1', cards: ['AS', '3H'], factor: [] },
       { type: 'turn', from: 'p1', to: 'p2' },
@@ -79,17 +118,14 @@ const rows: Row[] = [
     name: '57 is a cut, never a flow, and keeps the turn',
     prev: snap({ field: [['3S']] }),
     next: snap({ field: [], current: 'p1' }),
-    msg: serverMsg.submit({
-      commander: alice,
-      submitCardSet: { submit: ['5S', '7H'], factor: [] },
-    }) as SystemMessage,
+    msg: msg.submit(alice, ['5S', '7H']),
     expected: [{ type: 'cut57', playerId: 'p1', cards: ['5S', '7H'] }],
   },
   {
     name: 'flow after pass when the turn returns to the lead',
     prev: snap({ field: [['3S']], current: 'p2' }),
     next: snap({ field: [], current: 'p1' }),
-    msg: serverMsg.pass({ commander: bob }) as SystemMessage,
+    msg: msg.pass(bob),
     expected: [
       { type: 'pass', playerId: 'p2' },
       { type: 'flow' },
@@ -100,7 +136,7 @@ const rows: Row[] = [
     name: 'pass without flow',
     prev: snap({ current: 'p1' }),
     next: snap({ current: 'p2' }),
-    msg: serverMsg.pass({ commander: alice }) as SystemMessage,
+    msg: msg.pass(alice),
     expected: [
       { type: 'pass', playerId: 'p1' },
       { type: 'turn', from: 'p1', to: 'p2' },
@@ -110,11 +146,7 @@ const rows: Row[] = [
     name: 'BASE_IS_NOT_PRIME penalty equals the submitted count',
     prev: snap({ hands: { p1: ['2S', '2H', 'JD'], p2: ['KH'] } }),
     next: snap({ hands: { p1: ['2S', '2H', 'JD', '4S', '6D'], p2: ['KH'] }, current: 'p2' }),
-    msg: serverMsg.submit({
-      commander: alice,
-      submitCardSet: { submit: ['2S', '2H'], factor: [] },
-      result: 'BASE_IS_NOT_PRIME',
-    }) as SystemMessage,
+    msg: msg.submit(alice, ['2S', '2H'], [], 'BASE_IS_NOT_PRIME'),
     expected: [
       {
         type: 'submit-fail',
@@ -134,11 +166,7 @@ const rows: Row[] = [
       hands: { p1: ['2S', '2H', '4C', 'JD', '4S', '6D', '7C'], p2: ['KH'] },
       current: 'p2',
     }),
-    msg: serverMsg.submit({
-      commander: alice,
-      submitCardSet: { submit: ['2S', '2H'], factor: ['2S', '*', '4C'] },
-      result: 'FACT_CONTAIN_NOT_PRIME',
-    }) as SystemMessage,
+    msg: msg.submit(alice, ['2S', '2H'], ['2S', '*', '4C'], 'FACT_CONTAIN_NOT_PRIME'),
     expected: [
       {
         type: 'submit-fail',
@@ -158,11 +186,7 @@ const rows: Row[] = [
       current: 'p1',
       hands: { p1: ['AS'], p2: ['2S', '2H', '3C', 'KH', '4S', '6D', '7C'] },
     }),
-    msg: serverMsg.submit({
-      commander: bob,
-      submitCardSet: { submit: ['2S', '2H'], factor: ['3C'] },
-      result: 'INCORRECT_ANSWER',
-    }) as SystemMessage,
+    msg: msg.submit(bob, ['2S', '2H'], ['3C'], 'INCORRECT_ANSWER'),
     expected: [
       {
         type: 'submit-fail',
@@ -179,11 +203,7 @@ const rows: Row[] = [
     name: 'a failed submit can also flow the field',
     prev: snap({ field: [['3S']], current: 'p2', hands: { p1: ['AS'], p2: ['4S', '6D'] } }),
     next: snap({ field: [], current: 'p1', hands: { p1: ['AS'], p2: ['4S', '6D', '8H'] } }),
-    msg: serverMsg.submit({
-      commander: bob,
-      submitCardSet: { submit: ['6D'], factor: [] },
-      result: 'BASE_IS_NOT_PRIME',
-    }) as SystemMessage,
+    msg: msg.submit(bob, ['6D'], [], 'BASE_IS_NOT_PRIME'),
     expected: [
       {
         type: 'submit-fail',
@@ -201,31 +221,42 @@ const rows: Row[] = [
     name: 'game-end becomes a held end event',
     prev: snap(),
     next: snap(),
-    msg: serverMsg.gameEnd({ winner: 'bob', commander: bob }) as SystemMessage,
+    msg: msg.gameEnd(bob),
     expected: [{ type: 'end', winner: 'bob' }],
   },
   {
     name: 'the late winning submit (state already final) is still a submit-ok',
     prev: snap({ hands: { p1: ['AS'], p2: [] }, field: [['3S']] }),
     next: snap({ hands: { p1: ['AS'], p2: [] }, field: [['3S']] }),
-    msg: serverMsg.submit({
-      commander: bob,
-      submitCardSet: { submit: ['KH'], factor: [] },
-    }) as SystemMessage,
+    msg: msg.submit(bob, ['KH']),
     expected: [{ type: 'submit-ok', playerId: 'p2', cards: ['KH'], factor: [] }],
   },
   {
-    name: 'sync shows nothing',
+    name: 'a timeout pass animates like a manual pass',
+    prev: snap({ current: 'p2' }),
+    next: snap({ current: 'p1' }),
+    msg: msg.pass(bob, 'timeout'),
+    expected: [
+      { type: 'pass', playerId: 'p2' },
+      { type: 'turn', from: 'p2', to: 'p1' },
+    ],
+  },
+  {
+    name: 'a snapshot shows nothing',
     prev: null,
     next: snap(),
-    msg: serverMsg.sync() as SystemMessage,
+    msg: { action: 'snapshot' },
     expected: [],
   },
   {
     name: 'change-rule shows nothing',
     prev: null,
     next: snap(),
-    msg: serverMsg.changeRule({ timeLimit: 15 }) as SystemMessage,
+    msg: {
+      action: 'change-rule',
+      rule: { initNumCards: 11, maxSubmitNumCards: 4, timeLimit: 15, halfEvenNumbers: false },
+      by: 'p1',
+    },
     expected: [],
   },
 ]
@@ -239,7 +270,7 @@ describe('classifyTransition', () => {
     const prev = snap({ field: [['3S']] })
     const next = snap({ field: [], current: 'p2' })
     const before = JSON.stringify([prev, next])
-    classifyTransition(prev, next, serverMsg.pass({ commander: alice }) as SystemMessage, 'p1')
+    classifyTransition(prev, next, msg.pass(alice), 'p1')
     expect(JSON.stringify([prev, next])).toBe(before)
   })
 })

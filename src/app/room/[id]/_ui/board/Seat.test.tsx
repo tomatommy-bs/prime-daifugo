@@ -1,7 +1,7 @@
 import { renderWithProviders } from '@/test-utils'
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { Seat, type SeatProps, seatLabel } from './Seat'
+import { RECONNECTING_SUFFIX, Seat, type SeatProps, seatLabel } from './Seat'
 
 const base: SeatProps = { name: 'bob', handCount: 9, hueIndex: 1, layout: 'chip' }
 const seatEl = () => screen.getByRole('group')
@@ -113,6 +113,32 @@ describe('Seat', () => {
     expect(seatEl()).toHaveAttribute('data-variant', 'default')
   })
 
+  it('connected={false}: dashed outline, ◌ marker and the （再接続中） aria suffix', () => {
+    renderWithProviders(<Seat {...base} connected={false} />)
+    expect(seatEl()).toHaveAttribute('data-connected', 'false')
+    expect(seatEl().style.outline).toBe('1px dashed var(--border-strong)')
+    expect(screen.getByText('◌')).toHaveAttribute('data-marker', 'offline')
+    expect(seatEl()).toHaveAccessibleName('bob、手札 9 枚（再接続中）')
+    expect(RECONNECTING_SUFFIX).toBe('（再接続中）')
+  })
+
+  it.each([undefined, true])('connected=%s renders the default seat', (connected) => {
+    renderWithProviders(<Seat {...base} connected={connected} />)
+    expect(seatEl()).not.toHaveAttribute('data-connected')
+    expect(seatEl().style.outline).toBe('')
+    expect(screen.queryByText('◌')).toBeNull()
+    expect(seatEl()).toHaveAccessibleName('bob、手札 9 枚')
+  })
+
+  it('a reconnecting active node keeps its other markers', () => {
+    renderWithProviders(
+      <Seat {...base} layout="node" connected={false} isActive={true} isLead={true} />,
+    )
+    expect(screen.getByText('▲')).toBeInTheDocument()
+    expect(screen.getByText('◌')).toBeInTheDocument()
+    expect(seatEl()).toHaveAccessibleName('bob、手札 9 枚、場の主、手番（再接続中）')
+  })
+
   it('unknown hand count shows —', () => {
     renderWithProviders(<Seat {...base} handCount={null} />)
     expect(within(seatEl()).getByText('—')).toBeInTheDocument()
@@ -123,6 +149,11 @@ describe('seatLabel', () => {
   it('self, passed', () => {
     expect(seatLabel({ name: 'alice', handCount: 3, isSelf: true, passed: true })).toBe(
       'alice（あなた）、手札 3 枚、パス',
+    )
+  })
+  it('a reconnecting observer', () => {
+    expect(seatLabel({ name: 'dave', handCount: null, observer: true, connected: false })).toBe(
+      'dave、観戦（再接続中）',
     )
   })
 })

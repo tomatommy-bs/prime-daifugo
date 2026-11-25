@@ -6,10 +6,15 @@
  *   Proof.    |H_bob| = 0.
  *   ─────────────
  *   standings                       Q.E.D. ∎
+ *   [ 準備OK ]                      (only with `onToggleReady`)
  *   [ 次のラウンドを開始 → ]
  *
  * The modal enters with `scale .96 → 1, y 8 → 0`; the `Q.E.D. ∎` stamp lands on the bounce
  * spring. Tap or Esc skips straight to the final state. The CTA calls `onNextRound`.
+ *
+ * With `onToggleReady` (rebuild spec §3.7, §9.4) a ready toggle sits above the CTA:
+ * 「次のラウンドに参加」 for an observer who is not ready, 「準備OK」 for a player who is not,
+ * 「取消」 once ready. Without it the dialog renders exactly as before.
  */
 import { DUR, SPRING, motionPreset, useMotionMode } from '@/design/motion'
 import { Button, type MantineTransition, Modal } from '@mantine/core'
@@ -24,9 +29,26 @@ export type GameSetDialogProps = {
   plays?: number
   onNextRound: () => void
   canStart?: boolean
+  /** self is ready for the next round (drives the toggle label) */
+  selfReady?: boolean
+  /** self watched this round (observer or late joiner) */
+  isObserver?: boolean
+  /** adds the ready toggle; called on every press */
+  onToggleReady?: () => void
 }
 
 export const NEXT_ROUND_LABEL = '次のラウンドを開始'
+export const JOIN_NEXT_ROUND_LABEL = '次のラウンドに参加'
+export const READY_LABEL = '準備OK'
+export const UNREADY_LABEL = '取消'
+
+/** The ready toggle's label for self's ready flag and role. */
+export function readyToggleLabel(selfReady: boolean, isObserver: boolean): string {
+  if (selfReady) {
+    return UNREADY_LABEL
+  }
+  return isObserver ? JOIN_NEXT_ROUND_LABEL : READY_LABEL
+}
 export const QED = 'Q.E.D. ∎'
 
 /**
@@ -54,6 +76,9 @@ export function GameSetDialog({
   plays,
   onNextRound,
   canStart = true,
+  selfReady = false,
+  isObserver = false,
+  onToggleReady,
 }: GameSetDialogProps) {
   const mode = useMotionMode()
   const full = mode === 'full'
@@ -223,6 +248,19 @@ export function GameSetDialog({
           <p className="m-0" style={{ fontSize: 'var(--fs--1)', color: 'var(--ink-muted)' }}>
             証明の長さ: <span className="num">{plays}</span> 手
           </p>
+        ) : null}
+
+        {onToggleReady ? (
+          <Button
+            size="md"
+            fullWidth={true}
+            variant={selfReady ? 'default' : 'light'}
+            data-ready-toggle={selfReady ? 'ready' : 'not-ready'}
+            onClick={onToggleReady}
+            styles={{ root: { minHeight: 44 } }}
+          >
+            {readyToggleLabel(selfReady, isObserver)}
+          </Button>
         ) : null}
 
         <Button

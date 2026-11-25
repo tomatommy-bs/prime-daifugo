@@ -1,11 +1,13 @@
-import type { CardId } from '@/game-card/src'
-import { makeCtx, makeGameState, makePresence, renderWithProviders } from '@/test-utils'
+import {
+  makeClientCtx,
+  makeClientGameState,
+  makeSessionPresence,
+  renderWithProviders,
+} from '@/test-utils'
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { SeatLine, overflowMask, revealInScroller } from './SeatLine'
 import { buildSeats } from './seat-model'
-
-const hand = (n: number) => Array.from({ length: n }, () => 'AS' as CardId)
 
 function seatsFor({
   selfId = 'p1',
@@ -13,15 +15,15 @@ function seatsFor({
   observer = false,
   leftTime = 42,
 }: { selfId?: string; currentPlayer?: string; observer?: boolean; leftTime?: number } = {}) {
-  const players = { p1: { hand: hand(7) }, p2: { hand: hand(9) }, p3: { hand: hand(3) } }
+  const players = { p1: { handCount: 7 }, p2: { handCount: 9 }, p3: { handCount: 3 } }
   return buildSeats({
-    gameState: makeGameState({ players, deckTopPlayer: 'p2' }),
+    gameState: makeClientGameState({ players, deckTopPlayer: 'p2' }),
     // quirk: an observer (p4) shows up in playOrder
-    ctx: makeCtx({
+    ctx: makeClientCtx({
       playOrder: observer ? ['p1', 'p2', 'p4', 'p3'] : ['p1', 'p2', 'p3'],
       currentPlayer,
     }),
-    presence: makePresence(['alice', 'bob', 'carol', ...(observer ? ['dave'] : [])]),
+    presence: makeSessionPresence(['alice', 'bob', 'carol', ...(observer ? ['dave'] : [])]),
     selfId,
     passedIds: ['p3'],
     leftTime,

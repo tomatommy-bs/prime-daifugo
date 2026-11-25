@@ -1,6 +1,6 @@
 import { DUR, EASE } from '@/design/motion'
 import type { CardId } from '@/game-card/src'
-import { makeCtx, makeGameState } from '@/test-utils'
+import { makeClientCtx, makeClientGameState } from '@/test-utils'
 import { describe, expect, it } from 'vitest'
 import type { GameState } from './classify-transition'
 import {
@@ -8,37 +8,58 @@ import {
   MAX_FLIGHTS,
   PENALTY_DELAY,
   arrivedCards,
+  arrivedCount,
   flightsFor,
   planDuration,
   planFlights,
 } from './flight-plan'
 
+/** A UI state as `viewer` sees it: own hand by id, every other hand by count only (§9.3). */
 const snap = ({
   hands = { p1: ['AS', '3H', 'JD'], p2: ['2S', '5C', 'KH'] },
   field = [],
   current = 'p1',
+  viewer = 'p1',
 }: {
   hands?: Record<string, string[]>
   field?: string[][]
   current?: string
+  viewer?: string
 } = {}): GameState => ({
-  gameState: makeGameState({
+  gameState: makeClientGameState({
     players: Object.fromEntries(
-      Object.entries(hands).map(([id, hand]) => [id, { hand: hand as CardId[] }]),
+      Object.entries(hands).map(([id, hand]) => [
+        id,
+        { hand: id === viewer ? (hand as CardId[]) : [], handCount: hand.length },
+      ]),
     ),
     field: field as CardId[][],
   }),
-  ctx: makeCtx({ playOrder: Object.keys(hands), currentPlayer: current }),
+  ctx: makeClientCtx({ playOrder: Object.keys(hands), currentPlayer: current }),
 })
 
 const ctxOf = (prev: GameState | null, next: GameState, selfId = 'p1') => ({ selfId, prev, next })
 
-describe('arrivedCards', () => {
-  it('lists the cards new to a hand, in hand order', () => {
+describe('arrivedCards / arrivedCount', () => {
+  it('lists the cards new to my hand, in hand order (an id diff)', () => {
     const prev = snap()
     const next = snap({ hands: { p1: ['AS', '3H', '4S', 'JD', '9S'], p2: ['2S', '5C', 'KH'] } })
     expect(arrivedCards(prev, next, 'p1')).toEqual(['4S', '9S'])
+    expect(arrivedCount(prev, next, 'p1', 'p1')).toBe(2)
     expect(arrivedCards(prev, next, 'p2')).toEqual([])
+    expect(arrivedCount(prev, next, 'p2', 'p1')).toBe(0)
+  })
+
+  it("others' hands carry no ids: their arrivals are the handCount delta", () => {
+    const prev = snap()
+    const next = snap({ hands: { p1: ['AS', '3H', 'JD'], p2: ['2S', '5C', 'KH', '4S', '9S'] } })
+    expect(next.gameState.players.p2.hand).toEqual([])
+    expect(arrivedCards(prev, next, 'p2')).toEqual([])
+    expect(arrivedCount(prev, next, 'p2', 'p1')).toBe(2)
+    // a shrinking hand never counts as an arrival; nothing before the first state
+    expect(arrivedCount(next, prev, 'p2', 'p1')).toBe(0)
+    expect(arrivedCount(null, next, 'p2', 'p1')).toBe(5)
+    expect(arrivedCount(prev, next, 'nobody', 'p1')).toBe(0)
   })
 })
 
@@ -75,6 +96,25 @@ describe('flightsFor', () => {
       hideTarget: false,
       absorb: true,
     })
+  })
+
+  it("an opponent's draw of two (handCount + 2) sends two backs to their seat", () => {
+    const prev = snap()
+    const next = snap({ hands: { p1: ['AS', '3H', 'JD'], p2: ['2S', '5C', '9S', 'KH', '4S'] } })
+    const flights = flightsFor({ type: 'draw', who: 'other', playerId: 'p2' }, ctxOf(prev, next))
+    expect(flights.map((f) => f.to)).toEqual([
+      { kind: 'seat', id: 'p2' },
+      { kind: 'seat', id: 'p2' },
+    ])
+  })
+
+  it('a draw whose count did not change (snapshot already applied) still flies one back', () => {
+    const flights = flightsFor(
+      { type: 'draw', who: 'other', playerId: 'p2' },
+      ctxOf(snap(), snap()),
+    )
+    expect(flights).toHaveLength(1)
+    expect(flights[0].to).toEqual({ kind: 'seat', id: 'p2' })
   })
 
   it('my play: tray cards fly face up to the field top, staggered 34 ms', () => {
@@ -249,7 +289,7 @@ describe('planFlights', () => {
   })
 
   it('an observer (not in players) sees only seat flights on deal', () => {
-    const next = snap({ hands: { p1: ['AS'], p2: ['2S'] } })
+    const next = snap({ hands: { p1: ['AS'], p2: ['2S'] }, viewer: 'p9' })
     const plan = planFlights([{ type: 'deal' }], ctxOf(null, next, 'p9'))
     expect(plan.every((f) => f.to.kind === 'seat')).toBe(true)
     expect(plan).toHaveLength(2)

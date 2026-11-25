@@ -39,6 +39,20 @@ export const Observer: Story = {
   },
 }
 
+/** A member whose socket dropped (grace period): dashed ◌ outline, 「（再接続中）」 label. */
+export const Reconnecting: Story = {
+  args: { connected: false, name: 'carol', hueIndex: 2, handCount: 5 },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('◌')).toBeInTheDocument()
+    await expect(canvas.getByRole('group')).toHaveAccessibleName('carol、手札 5 枚（再接続中）')
+  },
+}
+
+export const ReconnectingNode: Story = {
+  args: { connected: false, layout: 'node', name: 'carol', hueIndex: 2, handCount: 5 },
+}
+
 /** The node layout used on the wide ring, with the turn timer on the active seat. */
 export const NodeSelfActive: Story = {
   args: {
@@ -74,3 +88,5 @@ export const Hues: Story = {
 export const HuesDark: Story = { ...Hues, globals: { colorScheme: 'dark' } }
 
 export const NodeSelfActiveDark: Story = { ...NodeSelfActive, globals: { colorScheme: 'dark' } }
+
+export const ReconnectingDark: Story = { ...Reconnecting, globals: { colorScheme: 'dark' } }

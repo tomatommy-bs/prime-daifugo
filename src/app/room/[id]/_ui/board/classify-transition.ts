@@ -1,3 +1,4 @@
+import type { TransitionMsg } from '@/app/room/[id]/session/types'
 /**
  * `classifyTransition` (§9.3): a pure function that turns one server game event into the
  * visual BoardEvents the director plays. State is applied by the container regardless;
@@ -6,19 +7,22 @@
 import { WORLD_CONFIG } from '@/constants/config'
 import { typesetExpr } from '@/design/Expr'
 import type { CardId } from '@/game-card/src'
-import type * as serverToClient from '@/interface/server-to-client'
-import type { Ctx } from '@/partykit/room/logic/game-rule'
-import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
+import type { ClientGameStateBundle, SystemMessage as GameMessage } from '@/shared/client-state'
 import { concatCardNumbers, evalFactCardIds, isValidFactCardIds } from '@/utils/play-card'
 import pf from 'primes-and-factors'
 import type { BoardEvent, SubmitResultView } from './types'
 
-/** The pair the server sends with every game event. */
-export type GameState = { gameState: PrimeDaifugoGameState; ctx: Ctx }
+/** The UI state pair every transition carries (rebuild spec §9.3). */
+export type GameState = ClientGameStateBundle
 
-export type SystemMessage = serverToClient.SystemEvent
+/** A game message the director animates (built from a `RoomEvent` by the session adapter). */
+export type SystemMessage = GameMessage
 
-const handSize = (s: GameState | null, id: string) => s?.gameState.players[id]?.hand.length ?? 0
+/** Anything a session transition carries: game messages, snapshots and rule changes. */
+export type { TransitionMsg }
+
+/** Hand size by count: other players' `hand` is always `[]` (RQ-S16). */
+const handSize = (s: GameState | null, id: string) => s?.gameState.players[id]?.handCount ?? 0
 
 const fieldEmptied = (prev: GameState | null, next: GameState) =>
   (prev?.gameState.field.length ?? 0) > 0 && next.gameState.field.length === 0
@@ -34,14 +38,15 @@ function turnEvent(prev: GameState | null, next: GameState): BoardEvent[] {
  * - `game-start` → deal, turn
  * - `draw` → draw (me | other)
  * - `pass` → pass, flow?, turn?
- * - `submit` → submit-ok | cut57 | submit-fail (penalty = next.hand − prev.hand), flow?, turn?
+ * - `submit` → submit-ok | cut57 | submit-fail (penalty = next.handCount − prev.handCount),
+ *   flow?, turn?
  * - `game-end` → end (the director holds it until the winning submit has played)
- * - `sync`, `change-rule` → nothing
+ * - `snapshot`, `change-rule` → nothing (state is applied without animation)
  */
 export function classifyTransition(
   prev: GameState | null,
   next: GameState,
-  msg: SystemMessage,
+  msg: TransitionMsg,
   selfId: string,
 ): BoardEvent[] {
   switch (msg.action) {

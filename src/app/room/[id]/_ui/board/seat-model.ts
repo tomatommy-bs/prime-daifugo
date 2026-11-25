@@ -1,13 +1,16 @@
 /**
  * Pure seat derivation for `SeatLine` / `SeatRing` (spec §6.3, §7.5).
  *
+ * Reads the UI state shape of the realtime protocol (`ClientGameState`, rebuild spec §9.3):
+ * hand sizes come from `players[id].handCount`, never from card ids.
+ *
  * - Players are ordered by `ctx.playOrder` and rotated so that self is `k = 0`.
  * - Only ids present in `gameState.players` are players. Presence ids that are not players
  *   are observers (`観戦`) and are appended after the players.
  * - Known server quirk: observers appear in `playOrder`, so the turn can land on one. In
  *   that case no seat is active.
  */
-import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
+import type { ClientGameState } from '@/shared/client-state'
 import type { SeatModel } from './types'
 
 /** The subset of `Ctx` the seats need. */
@@ -16,10 +19,15 @@ export type SeatCtx = {
   playOrder: string[]
 }
 
-export type SeatPresence = { id: string; name: string }
+export type SeatPresence = {
+  id: string
+  name: string
+  /** `false` while the member is disconnected (grace period); absent means connected */
+  connected?: boolean
+}
 
 export type BuildSeatsArgs = {
-  gameState: Pick<PrimeDaifugoGameState, 'players' | 'deckTopPlayer' | 'rule'> | null
+  gameState: Pick<ClientGameState, 'players' | 'deckTopPlayer' | 'rule'> | null
   ctx: SeatCtx | null
   presence: SeatPresence[]
   selfId: string | null | undefined
@@ -51,7 +59,7 @@ export function residueLabel(k: number): string {
 
 /** Presence ids that are not players. Before the first game state, nobody is an observer. */
 export function deriveObservers(
-  gameState: Pick<PrimeDaifugoGameState, 'players'> | null,
+  gameState: Pick<ClientGameState, 'players'> | null,
   presence: SeatPresence[],
 ): string[] {
   if (!gameState) {
@@ -62,7 +70,7 @@ export function deriveObservers(
 
 /** The player who owns the field top (`deckTopPlayer`), when that id is a player. */
 export function deriveLeadId(
-  gameState: Pick<PrimeDaifugoGameState, 'players' | 'deckTopPlayer'> | null,
+  gameState: Pick<ClientGameState, 'players' | 'deckTopPlayer'> | null,
 ): string | null {
   const lead = gameState?.deckTopPlayer ?? null
   if (lead === null || !gameState || !(lead in gameState.players)) {
@@ -119,6 +127,10 @@ export function buildSeats({
   penalties = {},
 }: BuildSeatsArgs): SeatModel[] {
   const nameOf = new Map(presence.map((p) => [p.id, p.name]))
+  const offline = new Set(presence.filter((p) => p.connected === false).map((p) => p.id))
+  /** `connected: false` only for disconnected members, so connected seats keep their shape */
+  const presenceFlag = (id: string): Pick<SeatModel, 'connected'> =>
+    offline.has(id) ? { connected: false } : {}
   const passed = new Set(passedIds)
   const playOrder = ctx?.playOrder ?? []
 
@@ -135,6 +147,7 @@ export function buildSeats({
       isLead: false,
       passed: false,
       observer: false,
+      ...presenceFlag(p.id),
     }))
   }
 
@@ -150,7 +163,7 @@ export function buildSeats({
     const seat: SeatModel = {
       id,
       name: nameOf.get(id) ?? id,
-      handCount: gameState.players[id]?.hand.length ?? 0,
+      handCount: gameState.players[id]?.handCount ?? 0,
       hueIndex: hueIndexOf(id, playOrder, k),
       k,
       isSelf: id === selfId,
@@ -159,6 +172,7 @@ export function buildSeats({
       passed: passed.has(id),
       observer: false,
       timeLimit,
+      ...presenceFlag(id),
     }
     if (isActive && leftTime !== null && leftTime !== undefined) {
       seat.leftTime = leftTime
@@ -183,6 +197,7 @@ export function buildSeats({
       isLead: false,
       passed: false,
       observer: true,
+      ...presenceFlag(id),
     })
   })
 

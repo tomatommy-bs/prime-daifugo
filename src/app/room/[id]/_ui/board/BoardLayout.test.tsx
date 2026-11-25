@@ -1,4 +1,4 @@
-import { makePresence, renderWithProviders } from '@/test-utils'
+import { makeSessionPresence, renderWithProviders } from '@/test-utils'
 import { screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { BoardLayout, BoardTopBar, GRID, gridStyle } from './BoardLayout'
@@ -80,7 +80,7 @@ describe('BoardLayout', () => {
 })
 
 describe('BoardTopBar', () => {
-  const seats: SeatModel[] = makePresence(['alice', 'bob']).map((p, k) => ({
+  const seats: SeatModel[] = makeSessionPresence(['alice', 'bob']).map((p, k) => ({
     id: p.id,
     name: p.name,
     handCount: 3,

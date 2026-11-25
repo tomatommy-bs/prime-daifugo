@@ -5,7 +5,7 @@
 import type { LayoutMode } from '@/design/use-layout-mode'
 import type { CardId } from '@/game-card/src'
 import type { FactCardId } from '@/interface/common'
-import type { SubmissionResult } from '@/interface/server-to-client'
+import type { SubmitResultCode as ProtocolSubmitResultCode } from '@/shared/protocol'
 import type { ReactNode } from 'react'
 
 export type { LayoutMode }
@@ -35,10 +35,15 @@ export type SeatModel = {
   timeLimit?: number
   /** penalty cards just received (`+n` chip) */
   penalty?: number
+  /** `false` while the member's socket is gone (grace period); omitted when connected */
+  connected?: boolean
 }
 
-/** Server result codes for a submission, derived from the protocol so new codes surface here. */
-export type SubmitResultCode = NonNullable<SubmissionResult['result']>
+/**
+ * Server result codes for a submission, derived from the protocol so new codes surface here.
+ * `INVALID_FACT` stays in the union for compatibility; the server never emits it.
+ */
+export type SubmitResultCode = ProtocolSubmitResultCode
 
 /** What `ResultOverlay` visualises after the server has judged a submission. */
 export type SubmitResultView = {
@@ -67,7 +72,7 @@ export type BoardEvent =
       playerId: string
       value: number
       factor: FactCardId[]
-      /** next.hand − prev.hand for the submitter */
+      /** next.handCount − prev.handCount for the submitter */
       penalty: number
     }
   | { type: 'pass'; playerId: string }

@@ -5,26 +5,54 @@
  * - `connecting`: a spinning `ModRing n=12` with 接続中…
  * - `waiting-sync`: connected but no game state yet (server sync quirk) → 次のイベントを待っています…
  * - `closed` / `error`: a red `Alert role="alert"` 接続が切れました with [再接続].
+ * - with `reason` (a terminal close, rebuild spec §9.4), `closed` / `error` instead show:
+ *   - `superseded`: 別のタブで開かれています with [このタブで再開] (calls `onReconnect`);
+ *   - `room-gone`: この部屋は閉じられました with a link home (`/`).
+ *   Any other reason keeps the default copy.
  * A scrim veils the board and the status cards are opaque, so the board's own captions and
  * empty-field placeholder never show through or poke out beside the card.
  */
+import type { CloseReason } from '@/app/room/[id]/session/types'
 import { ModRing } from '@/design/ModRing'
 import { useMotionPreset } from '@/design/motion'
 import { Alert, Button } from '@mantine/core'
-import { IconPlugConnectedX, IconRefresh } from '@tabler/icons-react'
+import {
+  IconAppWindow,
+  IconDoorExit,
+  IconHome,
+  IconPlugConnectedX,
+  IconRefresh,
+} from '@tabler/icons-react'
 import { AnimatePresence, m } from 'framer-motion'
+import Link from 'next/link'
 import type { ReactNode } from 'react'
 import type { ConnectionState } from './types'
 
 export type ConnectionOverlayProps = {
   state: ConnectionState
   onReconnect?: () => void
+  /** why the session ended for good; changes the `closed` / `error` copy */
+  reason?: CloseReason
   children: ReactNode
 }
 
-export function ConnectionOverlay({ state, onReconnect, children }: ConnectionOverlayProps) {
+export const SUPERSEDED_TITLE = '別のタブで開かれています'
+export const RESUME_HERE_LABEL = 'このタブで再開'
+export const ROOM_GONE_TITLE = 'この部屋は閉じられました'
+
+const ALERT_CLASS =
+  'pointer-events-auto w-full max-w-[377px] border border-danger/40 shadow-[var(--shadow-2)]'
+
+export function ConnectionOverlay({
+  state,
+  onReconnect,
+  reason = null,
+  children,
+}: ConnectionOverlayProps) {
   const preset = useMotionPreset()
   const blocked = state !== 'open'
+  const closed = state === 'closed' || state === 'error'
+  const terminal = closed && (reason === 'superseded' || reason === 'room-gone') ? reason : null
   return (
     <div
       className="relative h-full min-h-0 w-full"
@@ -44,7 +72,7 @@ export function ConnectionOverlay({ state, onReconnect, children }: ConnectionOv
       <AnimatePresence>
         {blocked ? (
           <m.div
-            key={state === 'waiting-sync' ? 'sync' : state}
+            key={state === 'waiting-sync' ? 'sync' : (terminal ?? state)}
             variants={preset.fadeUp}
             initial="hidden"
             animate="show"
@@ -64,7 +92,54 @@ export function ConnectionOverlay({ state, onReconnect, children }: ConnectionOv
                 <span className="text-[length:var(--fs-0)]">次のイベントを待っています…</span>
               </output>
             ) : null}
-            {state === 'closed' || state === 'error' ? (
+            {terminal === 'superseded' ? (
+              <Alert
+                role="alert"
+                color="red"
+                variant="light"
+                radius="lg"
+                title={SUPERSEDED_TITLE}
+                icon={<IconAppWindow stroke={1.5} />}
+                className={ALERT_CLASS}
+                data-close-reason="superseded"
+              >
+                <p className="mb-fib-3 text-ink-muted">
+                  この部屋は別のタブ（または端末）で続いています。
+                </p>
+                <Button
+                  color="red"
+                  leftSection={<IconRefresh size="1.25em" stroke={1.5} />}
+                  onClick={onReconnect}
+                >
+                  {RESUME_HERE_LABEL}
+                </Button>
+              </Alert>
+            ) : null}
+            {terminal === 'room-gone' ? (
+              <Alert
+                role="alert"
+                color="red"
+                variant="light"
+                radius="lg"
+                title={ROOM_GONE_TITLE}
+                icon={<IconDoorExit stroke={1.5} />}
+                className={ALERT_CLASS}
+                data-close-reason="room-gone"
+              >
+                <p className="mb-fib-3 text-ink-muted">
+                  新しい部屋を作るか、ホームから参加できます。
+                </p>
+                <Button
+                  component={Link}
+                  href="/"
+                  color="red"
+                  leftSection={<IconHome size="1.25em" stroke={1.5} />}
+                >
+                  ホームへ
+                </Button>
+              </Alert>
+            ) : null}
+            {closed && terminal === null ? (
               <Alert
                 role="alert"
                 color="red"
@@ -72,7 +147,7 @@ export function ConnectionOverlay({ state, onReconnect, children }: ConnectionOv
                 radius="lg"
                 title="接続が切れました"
                 icon={<IconPlugConnectedX stroke={1.5} />}
-                className="pointer-events-auto w-full max-w-[377px] border border-danger/40 shadow-[var(--shadow-2)]"
+                className={ALERT_CLASS}
               >
                 <p className="mb-fib-3 text-ink-muted">
                   {state === 'error'

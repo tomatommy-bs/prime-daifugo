@@ -18,10 +18,7 @@ function seats({
 }: { n: number; current?: number; observer?: boolean }) {
   const ids = NAMES.slice(0, n).map((_, i) => `p${i + 1}`)
   const players = Object.fromEntries(
-    ids.map((id, i) => [
-      id,
-      { hand: Array.from({ length: 7 + i }, () => 'AS' as CardId), drawRight: true },
-    ]),
+    ids.map((id, i) => [id, { hand: [], handCount: 7 + i, drawRight: true }]),
   )
   const playOrder = observer ? [...ids, 'obs'] : ids
   return buildSeats({

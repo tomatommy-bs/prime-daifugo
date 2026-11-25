@@ -66,12 +66,34 @@ export type FlightContext = {
   next: GameState
 }
 
+/** Card ids in `id`'s hand: only self's hand carries ids (others are `[]`, spec §9.3). */
 const handOf = (s: GameState | null, id: string): CardId[] => s?.gameState.players[id]?.hand ?? []
+const handCountOf = (s: GameState | null, id: string): number =>
+  s?.gameState.players[id]?.handCount ?? 0
 
-/** Cards that are in `next`'s hand of `id` but were not in `prev`'s. */
+/**
+ * Cards that are in `next`'s hand of `id` but were not in `prev`'s (an id diff). Only self's
+ * hand carries ids, so this is `[]` for every other player: use `arrivedCount` for them.
+ */
 export function arrivedCards(prev: GameState | null, next: GameState, id: string): CardId[] {
   const before = new Set(handOf(prev, id))
   return handOf(next, id).filter((c) => !before.has(c))
+}
+
+/**
+ * How many cards just reached `id`'s hand: the id diff for self, the `handCount` delta for
+ * everyone else (never negative).
+ */
+export function arrivedCount(
+  prev: GameState | null,
+  next: GameState,
+  id: string,
+  selfId: string,
+): number {
+  if (id === selfId) {
+    return arrivedCards(prev, next, id).length
+  }
+  return Math.max(0, handCountOf(next, id) - handCountOf(prev, id))
 }
 
 const deckToSeat = (key: string, id: string, delay: number, duration = DUR.lg): FlightSpec => ({
@@ -175,7 +197,7 @@ function dealFlights(ctx: FlightContext): FlightSpec[] {
   const perOther =
     others.length > 0 ? Math.floor(Math.max(0, MAX_FLIGHTS - mine.length) / others.length) : 0
   const quota = (id: string) =>
-    id === ctx.selfId ? mine.length : Math.min(handOf(ctx.next, id).length, perOther)
+    id === ctx.selfId ? mine.length : Math.min(handCountOf(ctx.next, id), perOther)
   const rounds = Math.max(0, ...order.map(quota))
   const slots: { id: string; r: number }[] = []
   for (let r = 0; r < rounds; r++) {
@@ -201,7 +223,8 @@ export function flightsFor(e: BoardEvent, ctx: FlightContext, offset = 0): Fligh
       return dealFlights(ctx).map((f) => ({ ...f, delay: f.delay + offset }))
     case 'draw': {
       const cards = arrivedCards(ctx.prev, ctx.next, e.playerId)
-      return drawFlights(e.playerId, cards, Math.max(1, cards.length), ctx, offset, 'draw')
+      const count = arrivedCount(ctx.prev, ctx.next, e.playerId, ctx.selfId)
+      return drawFlights(e.playerId, cards, Math.max(1, count), ctx, offset, 'draw')
     }
     case 'submit-ok':
       return playFlights(e.playerId, e.cards, ctx, 'field-card', offset)

@@ -1,4 +1,3 @@
-import type { CardId } from '@/game-card/src'
 import type { Meta, StoryObj } from '@storybook/react'
 import { expect, within } from '@storybook/test'
 import { LayoutGroup } from 'framer-motion'
@@ -17,10 +16,7 @@ function seats({
 }: { n: number; current?: number; observer?: boolean; leftTime?: number }) {
   const ids = NAMES.slice(0, n).map((_, i) => `p${i + 1}`)
   const players = Object.fromEntries(
-    ids.map((id, i) => [
-      id,
-      { hand: Array.from({ length: 9 - 2 * i }, () => 'AS' as CardId), drawRight: true },
-    ]),
+    ids.map((id, i) => [id, { hand: [], handCount: 9 - 2 * i, drawRight: true }]),
   )
   const presence = [
     ...NAMES.slice(0, n).map((name, i) => ({ id: ids[i], name })),
