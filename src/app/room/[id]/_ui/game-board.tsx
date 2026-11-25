@@ -1,47 +1,36 @@
-import { PlayingCardLine } from '@/components/playing-card-line'
-import { GAME_CONFIG, WORLD_CONFIG } from '@/constants/config'
-import { PARTYKIT_HOST } from '@/constants/env'
-import type { ROOM_STATUS } from '@/constants/status'
-import { type CardId, GameCard, isCardId } from '@/game-card/src'
-import type { SubmitCardSet } from '@/interface/client-to-server'
+'use client'
+/**
+ * The game board container (§6.4): the room session (`useRoomSession`, rebuild spec §9),
+ * `useMyField`, notifications and the director. Presentation lives in the board components;
+ * this file only wires them together through `BoardLayout`.
+ * Game state is applied immediately; only visuals are queued by the director (§9.3).
+ * Snapshots (welcome, seq gap) set state without animation (RQ-C3). There is no client
+ * auto-pass: the server owns the deadline and passes on timeout (RQ-C7, RQ-T2).
+ */
+import { useReducedMotionSafe } from '@/design/motion'
+import { useBoxSize } from '@/design/use-box-size'
+import { useLayoutMode } from '@/design/use-layout-mode'
+import { type CardId, preloadCourtFaces } from '@/game-card/src'
 import type { PrimeDaifugoSetupData } from '@/interface/common'
-import type * as serverToClient from '@/interface/server-to-client'
-import type { Ctx } from '@/partykit/room/logic/game-rule'
-import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
-import { concatCardNumbers, concatFactCardIds, isValidFactCardIds } from '@/utils/play-card'
-import {
-  ActionIcon,
-  Alert,
-  Badge,
-  Button,
-  Flex,
-  Grid,
-  Group,
-  Indicator,
-  Loader,
-  Modal,
-  Paper,
-  Popover,
-  SimpleGrid,
-  Stack,
-  Text,
-} from '@mantine/core'
-import { useSetState } from '@mantine/hooks'
+import type { ClientGameStateBundle } from '@/shared/client-state'
+import type { RejectReason, RoomStatus } from '@/shared/protocol'
+import { concatCardNumbers } from '@/utils/play-card'
+import { useLocalStorage } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
-import {
-  IconAsterisk,
-  IconCards,
-  IconChevronUp,
-  IconExclamationCircle,
-  IconReload,
-} from '@tabler/icons-react'
-import Cookies from 'js-cookie'
+import { LayoutGroup } from 'framer-motion'
 import _ from 'lodash'
-import usePartySocket from 'partysocket/react'
-import { type ReactNode, useMemo, useState } from 'react'
-import { ClientMessenger } from '../client-messenger'
-import { useMessageHandler, useMyField } from '../hooks'
-import NotifyMessageContent from './notification-message'
+import { type ReactNode, useContext, useEffect, useRef, useState } from 'react'
+import { useMyField } from '../hooks'
+import ClientRoomManager from '../room-manager'
+import type { AckResult, SessionTransition } from '../session/types'
+import { useRoomSession } from '../session/use-room-session'
+import { RoomChromeContext, SHOW_VALUES_KEY } from './RoomHeader'
+import * as B from './board'
+import { ACTION_ORIENTATION, drawDisabledReason, validateSubmitCardSet } from './board/board-state'
+import * as T from './board/classify-transition'
+import { ruleDiff } from './board/rule-diff'
+import { useBoardDirector } from './board/use-board-director'
+import NotifyMessageContent, * as Notice from './notification-message'
 import { WaitingRoom } from './waiting-room'
 
 type Props = {
@@ -50,579 +39,556 @@ type Props = {
   onLogNotification?: (message: ReactNode) => void
 }
 
+export const TRAY_WIPE_MESSAGE = '場が更新されたので選択を戻しました'
+const TRAY_WIPE_THROTTLE_MS = 5000
+/** For toasts whose text another live region (LiveRegion, the tray) already announces. */
+export const SILENT_TOAST_ROLE = 'none'
+const CEREMONY = new Set<B.BoardEvent['type']>(['submit-ok', 'submit-fail', 'cut57'])
+export const TIMEOUT_MESSAGE = '時間切れです'
+export const GAME_START_MESSAGE = 'ゲームを開始します'
+
+/** Why the server rejected a submit (ack `ok:false`), in the tray-error copy (RQ-C6). */
+export const SUBMIT_REJECT_MESSAGES: Partial<Record<RejectReason, string>> = {
+  'not-your-turn': 'あなたの番ではありません',
+  stale: 'その手番はもう終わっています',
+  'invalid-move': '出せないカードです',
+  'invalid-fact': '素因数分解として成立していません',
+  'deck-empty': '山札がありません',
+  'already-drawn': 'すでにドローしています',
+  'bad-status': 'ゲームは進行中ではありません',
+}
+export const SUBMIT_REJECT_FALLBACK = '送信できませんでした。もう一度お試しください'
+
+export function submitRejectMessage(result: Exclude<AckResult, { ok: true }>): string {
+  return SUBMIT_REJECT_MESSAGES[result.reason as RejectReason] ?? SUBMIT_REJECT_FALLBACK
+}
+
+/**
+ * Why the server refused a start (RQ-R7, RQ-S12). `stale` (someone else started first) and
+ * `disconnected` (the overlay already says so) stay silent.
+ */
+export const START_REJECT_MESSAGES: Partial<Record<AckFailure, string>> = {
+  'bad-rule': '山札が足りません：配る枚数か人数を減らしてください',
+  'not-enough-ready': '準備OKのプレイヤーが2人以上必要です',
+  'bad-status': 'ゲームはすでに進行中です',
+  'rate-limited': SUBMIT_REJECT_FALLBACK,
+  timeout: SUBMIT_REJECT_FALLBACK,
+}
+
+type AckFailure = Exclude<AckResult, { ok: true }>['reason']
+
+/** The notice for a refused start, or null when it needs none. */
+export function startRejectMessage(result: Exclude<AckResult, { ok: true }>): string | null {
+  return START_REJECT_MESSAGES[result.reason] ?? null
+}
+
+export const FORFEIT_MESSAGE = (name: string) => `${name} が棄権しました`
+
+/**
+ * A snapshot that lands in another round than the one on screen (a long sleep, a Worker
+ * restart): the previous round's end, pass markers and play count no longer apply.
+ */
+function snapshotStartsNewRound(
+  prev: ClientGameStateBundle | null,
+  next: ClientGameStateBundle,
+): boolean {
+  if (next.gameState.winner !== null) {
+    return false
+  }
+  return prev === null || prev.gameState.winner !== null || next.ctx.turn < prev.ctx.turn
+}
+
 const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }) => {
-  const [rule, setRule] = useSetState<PrimeDaifugoSetupData>({
-    initNumCards: GAME_CONFIG.initialNumCards as number,
-    timeLimit: GAME_CONFIG.timeLimit as number,
-    maxSubmitNumCards: GAME_CONFIG.maxSubmitNumCards as number,
-    halfEvenNumbers: false,
-  })
-  const [presence, setPresence] = useState<serverToClient.PresenceEvent['presence']>([])
-  const [roomStatus, setRoomStatus] = useState<
-    (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS] | null
-  >(null)
-  const [gameServerState, setGameServerState] = useState<{
-    gameState: PrimeDaifugoGameState
-    ctx: Ctx
-  } | null>(null)
+  const session = useRoomSession(id)
+  const { presence, roomStatus, rule, actions } = session
+  const game = session.game
+  const self = session.selfId ?? ''
   const [winner, setWinner] = useState('')
-  const [leftTime, setLeftTime] = useState<number | null>(null)
+  const [memo, setMemo] = useState<T.BoardMemo>(T.EMPTY_MEMO)
+  /** `memo.plays` counted this round from its deal (false after joining mid-round by snapshot) */
+  const [playsCounted, setPlaysCounted] = useState(false)
+  /** how the last round ended, from its `game-ended` event (a snapshot carries no reason) */
+  const [endReason, setEndReason] = useState<'empty-hand' | 'last-standing' | null>(null)
+  const [freshIds, setFreshIds] = useState<CardId[]>([])
+  const [tray, setTray] = useState({ error: null as string | null, shakeKey: 0 })
+  const [live, setLive] = useState<string | null>(null)
+  const wipedAt = useRef(0)
+  const ruleRef = useRef<PrimeDaifugoSetupData>(rule) // the last rule the log has seen
+  const flights = useRef<B.FlightLayerHandle>(null)
+  const mode = useLayoutMode()
+  const table = useBoxSize()
+  const director = useBoardDirector({ reduced: useReducedMotionSafe() })
+  const chrome = useContext(RoomChromeContext)
+  const [showValues] = useLocalStorage({ key: SHOW_VALUES_KEY, defaultValue: false })
 
-  const {
-    handCardIds,
-    submitCardIds,
-    isFactorizationMode,
-    factCardIds,
-    selectHandCardIdAsSubmit,
-    selectHandCardIdAsFact,
-    setHandCardIds,
-    removeSubmitCardId,
-    removeFactCard,
-    toggleMode,
-    reset,
-  } = useMyField({
+  const my = useMyField({
     all: [],
-    field: gameServerState?.gameState.field ?? [],
-    maxSubmitNumberCards: gameServerState?.gameState.rule.maxSubmitNumCards,
+    field: game?.gameState.field ?? [],
+    maxSubmitNumberCards: game?.gameState.rule.maxSubmitNumCards,
   })
+  const { submitCardIds, factCardIds, isFactorizationMode: factorMode } = my
+  const nameOf = (pid?: string | null) => presence.find((p) => p.id === pid)?.name ?? ''
+  const announce = (m: string) => setLive((prev) => (prev === m ? `${m}​` : m))
+  /**
+   * Board events (draw, pass, plays, the winner) are shown in the board itself and written
+   * to the proof log; only errors (red notices, e.g. a failed submit) also toast (§9.2 #29).
+   * The LiveRegion is the one screen-reader channel for board events, so these toasts are
+   * `role="none"` (Mantine's default `alert` would read the same failure a second time).
+   */
+  const notify = (message: ReactNode, color?: string) => {
+    if (color === 'red') {
+      notifications.show({ message, color, role: SILENT_TOAST_ROLE })
+    }
+    props.onLogNotification?.(message)
+  }
+  const log = (message: ReactNode) => props.onLogNotification?.(message)
+  const handOf = (bundle: ClientGameStateBundle | null) =>
+    bundle?.gameState.players[self]?.hand ?? []
 
-  const { onMessage } = useMessageHandler({
-    onChat: ({ message, from }) => {
-      const senderName = presence.find((p) => p.id === from)?.name
-      notifications.show({
-        message: <NotifyMessageContent.Chat sender={senderName} message={message} />,
-      })
-    },
-    onPresence: ({ presence }) => {
-      setPresence(presence)
-    },
-    onPass: ({ commander }) => {
-      const NotificationContent = <NotifyMessageContent.OnPass sender={commander.name} />
-      notifications.show({ message: NotificationContent })
-      props.onLogNotification?.(NotificationContent)
-    },
-    onSubmit: ({ commander, submissionResult }) => {
-      switch (submissionResult.result) {
-        case null: {
-          const submitCardNumber = concatCardNumbers(submissionResult.submitCardSet.submit)
-          if (submissionResult.submitCardSet.factor.length > 0) {
-            const NotificationContent = (
-              <NotifyMessageContent.OnSubmitSuccessful
-                sender={commander.name}
-                submit={submissionResult.submitCardSet.submit}
-                factor={submissionResult.submitCardSet.factor}
-              />
-            )
-            notifications.show({
-              message: NotificationContent,
-            })
-            props.onLogNotification?.(NotificationContent)
-          } else {
-            const NotificationContent = (
-              <NotifyMessageContent.OnSubmitSuccessful
-                sender={commander.name}
-                submit={submissionResult.submitCardSet.submit}
-              />
-            )
-            notifications.show({
-              message: NotificationContent,
-            })
-            props.onLogNotification?.(NotificationContent)
-          }
-
-          if (submitCardNumber === WORLD_CONFIG.GROTHENDIECK_PRIME) {
-            const NotificationContent = (
-              <NotifyMessageContent.OnSubmitWithGrothendieck
-                sender={commander.name}
-                submit={submissionResult.submitCardSet.submit}
-              />
-            )
-            notifications.show({
-              message: NotificationContent,
-              color: 'green',
-            })
-            props.onLogNotification?.(NotificationContent)
-          }
-          break
-        }
-        case 'BASE_IS_NOT_PRIME': {
-          const NotificationContent = (
-            <NotifyMessageContent.OnSubmitNotPrime
-              sender={commander.name}
-              submit={submissionResult.submitCardSet.submit}
-            />
-          )
-          notifications.show({
-            message: NotificationContent,
-            color: 'red',
-          })
-          props.onLogNotification?.(NotificationContent)
-          break
-        }
-        case 'INVALID_FACT': {
-          const NotificationContent = (
-            <NotifyMessageContent.OnSubmitWithInvalidFactor
-              sender={commander.name}
-              submit={submissionResult.submitCardSet.submit}
-              factor={submissionResult.submitCardSet.factor}
-            />
-          )
-          notifications.show({
-            message: NotificationContent,
-            color: 'red',
-          })
-          props.onLogNotification?.(NotificationContent)
-          break
-        }
-        case 'FACT_CONTAIN_NOT_PRIME': {
-          const NotificationContent = (
-            <NotifyMessageContent.OnSubmitWithPrimeFactor
-              sender={commander.name}
-              submit={submissionResult.submitCardSet.submit}
-              factor={submissionResult.submitCardSet.factor}
-            />
-          )
-          notifications.show({
-            message: NotificationContent,
-            color: 'red',
-          })
-          props.onLogNotification?.(NotificationContent)
-          break
-        }
-        case 'INCORRECT_ANSWER': {
-          const NotificationContent = (
-            <NotifyMessageContent.OnSubmitWithWrongEquation
-              sender={commander.name}
-              submit={submissionResult.submitCardSet.submit}
-              factor={submissionResult.submitCardSet.factor}
-            />
-          )
-          notifications.show({
-            message: NotificationContent,
-            color: 'red',
-          })
-          props.onLogNotification?.(NotificationContent)
-          break
-        }
-        default:
-          throw new Error(submissionResult.result satisfies never)
+  /** Visual bookkeeping for one server event (the state itself is already applied). */
+  const direct = (prev: T.GameState | null, next: T.GameState, msg: T.SystemMessage) => {
+    const events = T.classifyTransition(prev, next, msg, self)
+    // measured before React commits `next`: the sources are still on screen
+    flights.current?.launch(B.planFlights(events, { selfId: self, prev, next }))
+    for (const e of events) {
+      e.type === 'end' ? director.holdEnd(e) : director.push(e)
+      const line = T.announcementOf(e, nameOf, self)
+      if (line) {
+        announce(line)
       }
-    },
-    onDraw: ({ commander }) => {
-      const NotificationContent = (
-        <>
-          <Badge size="xs">{commander.name}</Badge>がドローしました
-        </>
-      )
-      notifications.show({ message: NotificationContent })
-      props.onLogNotification?.(NotificationContent)
-    },
-    onEndGame: ({ winner }) => {
-      const NotificationContent = (
-        <>
-          <Badge size="xs">{winner}</Badge>の勝利です 🎉
-        </>
-      )
-      notifications.show({
-        message: NotificationContent,
-      })
-      props.onLogNotification?.(NotificationContent)
-      setWinner(winner)
-    },
-    onGameEvent: ({ gameState, ctx }) => {
-      setGameServerState({ gameState: gameState, ctx })
-      if (myPresence?.status === 'not-ready') {
-        return
-      }
-
-      const hand = gameState?.players?.[ws.id]?.hand
-      setHandCardIds(hand)
-    },
-    onRoomStatus: ({ status }) => {
-      setRoomStatus(status)
-      if (status === 'playing') {
-        props.onLogNotification?.(<Text className="font-bold italic">ゲームを開始します</Text>)
-      }
-    },
-    onTimeCount: ({ leftTime: _leftTime }) => {
-      if (_leftTime === 0) {
-        if (gameServerState?.ctx.currentPlayer === ws.id) {
-          notifications.show({ message: '時間切れです', color: 'red' })
-          ClientMessenger.pass({ ws })
-        }
-        props.onLogNotification?.('時間切れです')
-      } else {
-        setLeftTime(_leftTime)
-      }
-    },
-    onChangeRule: ({ rule }) => {
-      setRule(rule)
-      props.onLogNotification?.(
-        <Text className="font-bold italic">ルールを変更しました: {JSON.stringify(rule)}</Text>,
-      )
-    },
-  })
-
-  const ws = usePartySocket({
-    host: PARTYKIT_HOST,
-    party: 'room',
-    room: id,
-
-    onMessage: (e) => {
-      onMessage(e.data)
-    },
-    onOpen: () => {
-      ClientMessenger.sendName({ ws, name: Cookies.get('name') ?? 'unknown' })
-    },
-  })
-
-  const componentSize = useMemo(() => sizeData[compSizeOption], [compSizeOption])
-
-  const myPresence = presence.find((p) => p.id === ws?.id)
-
-  const handleGameStart = (rule?: PrimeDaifugoSetupData) => {
-    ClientMessenger.startGame({ ws, rule })
+    }
+    setMemo((m) => events.reduce(T.reduceMemo, m))
+    const fresh = T.freshCards(prev, next, events, self)
+    if (fresh) {
+      setFreshIds(fresh)
+    }
   }
 
-  const handleChangeRule = (newRule: Partial<PrimeDaifugoSetupData>) => {
-    setRule(newRule)
-    ClientMessenger.changeRule({ ws, rule: { ...rule, ...newRule } })
+  /** One session transition: notices and the log, the director, then the hand. */
+  const onTransition = (t: SessionTransition) => {
+    const { msg, event } = t
+    if (msg.action === 'snapshot') {
+      // welcome / seq gap / forfeit: state only, no flights or penalty animation (RQ-C3)
+      if (event?.type === 'forfeited') {
+        log(
+          <Notice.SystemNotice>{FORFEIT_MESSAGE(nameOf(event.pid) || '???')}</Notice.SystemNotice>,
+        )
+      }
+      if (snapshotStartsNewRound(t.prev, t.next)) {
+        director.clearEnd()
+        setMemo(T.EMPTY_MEMO)
+        setEndReason(null)
+      }
+      if (t.prev === null || snapshotStartsNewRound(t.prev, t.next)) {
+        setPlaysCounted(false)
+      }
+      my.setHandCardIds(handOf(t.next))
+      return
+    }
+    if (msg.action === 'change-rule') {
+      const diff = ruleDiff(ruleRef.current, msg.rule).join(' · ')
+      ruleRef.current = msg.rule
+      log(<Notice.SystemNotice>ルールを変更しました{diff ? `: ${diff}` : ''}</Notice.SystemNotice>)
+      return
+    }
+    switch (msg.action) {
+      case 'game-start':
+        log(<Notice.SystemNotice>{GAME_START_MESSAGE}</Notice.SystemNotice>)
+        setPlaysCounted(true)
+        setEndReason(null)
+        break
+      case 'draw':
+        notify(<Notice.DrawNotice sender={msg.commander.name} />)
+        break
+      case 'pass': {
+        if (event?.type === 'passed' && event.reason === 'timeout') {
+          // the server passed on the deadline; the client never sends this pass (RQ-T5)
+          if (event.by === self) {
+            notifications.show({ message: TIMEOUT_MESSAGE, color: 'red' })
+          }
+          log(TIMEOUT_MESSAGE)
+        }
+        notify(<NotifyMessageContent.OnPass sender={msg.commander.name} />)
+        break
+      }
+      case 'submit': {
+        for (const n of Notice.submitNotices(
+          msg.commander.name,
+          msg.submissionResult.submitCardSet,
+          msg.submissionResult.result,
+        )) {
+          notify(n.message, n.color)
+        }
+        break
+      }
+      case 'game-end': {
+        const name = event?.type === 'game-ended' ? event.winnerName : msg.winner
+        notify(<Notice.EndNotice winner={name} />)
+        setWinner(name)
+        setEndReason(event?.type === 'game-ended' ? event.reason : null)
+        break
+      }
+      default:
+        break
+    }
+    direct(t.prev, t.next, msg)
+    const hand = handOf(t.next)
+    if (!t.next.ctx.playOrder.includes(self)) {
+      // an observer or a late joiner: no hand, no tray to wipe
+      my.setHandCardIds(hand)
+      return
+    }
+    // No helper toast for my own submit, nor at game end (the winner's tray is already empty)
+    const ownSubmit = msg.action === 'submit' && msg.commander.id === self
+    const quiet = ownSubmit || msg.action === 'game-end'
+    const trayFull = submitCardIds.length > 0 || factCardIds.length > 0
+    if (trayFull && !quiet && Date.now() - wipedAt.current >= TRAY_WIPE_THROTTLE_MS) {
+      wipedAt.current = Date.now()
+      notifications.show({ message: TRAY_WIPE_MESSAGE })
+    }
+    my.setHandCardIds(hand)
   }
+  // the listener always calls the latest render's handler (fresh tray, presence, selfId)
+  const onTransitionRef = useRef(onTransition)
+  onTransitionRef.current = onTransition
+  useEffect(() => session.subscribe((t) => onTransitionRef.current(t)), [session.subscribe])
 
-  const isCommendable = gameServerState?.ctx?.currentPlayer === ws.id
-  const playersState = useMemo(() => {
-    const enemyIds = Object.keys(gameServerState?.gameState?.players ?? {})
-    return enemyIds.map((id) => {
-      const name = presence.find((p) => p.id === id)?.name
-      const hand = gameServerState?.gameState.players[id]?.hand
-      return { id, name, hand, isCommendable: gameServerState?.ctx?.currentPlayer === id }
+  // A session that already holds a game when the board mounts (a remount), or a first welcome
+  // snapshot that carried selfId and the game together: its transition ran with the previous
+  // render's (empty) selfId, so the hand is synced again once selfId is known.
+  const sessionRef = useRef(session)
+  sessionRef.current = session
+  // biome-ignore lint/correctness/useExhaustiveDependencies: on mount and when selfId changes
+  useEffect(() => {
+    const hand = handOf(sessionRef.current.game)
+    if (hand.length > 0) {
+      my.setHandCardIds(hand)
+    }
+  }, [self])
+  // Keeps the rule-diff baseline in step with snapshots (late join, reconnect). Before the first
+  // deal there is no game, so the session makes no `change-rule` transition (its `next` is a
+  // game): a rule change in the first waiting room is logged from the rule itself. The first
+  // welcome (status still unknown before it) is not a change.
+  const statusSeenRef = useRef<RoomStatus | null>(roomStatus)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the rule or status changes
+  useEffect(() => {
+    const before = ruleRef.current
+    ruleRef.current = rule
+    const known = statusSeenRef.current !== null
+    statusSeenRef.current = roomStatus
+    if (known && roomStatus === 'waiting' && game === null) {
+      const diff = ruleDiff(before, rule)
+      if (diff.length > 0) {
+        log(<Notice.SystemNotice>ルールを変更しました: {diff.join(' · ')}</Notice.SystemNotice>)
+      }
+    }
+  }, [rule, roomStatus])
+
+  // the header 「退出」 needs the session's leave (spec §3.6)
+  useEffect(() => {
+    chrome.setLeave?.(() => sessionRef.current.actions.leave())
+    return () => chrome.setLeave?.(null)
+  }, [chrome])
+
+  const myPresence = presence.find((p) => p.id === self)
+  const handleGameStart = async () => {
+    const result = await actions.startGame()
+    const message = result.ok ? null : startRejectMessage(result)
+    if (message !== null) {
+      notify(message, 'red')
+    }
+  }
+  const handleChangeRule = (patch: Partial<PrimeDaifugoSetupData>) => actions.changeRule(patch)
+
+  const gs = game?.gameState
+  const fieldTop = _.nth(gs?.field, -1)
+  // moves only while the round is live: under GAME SET the server has already moved
+  // currentPlayer on, and a D / P there would run a move on the finished game
+  const playing = roomStatus === 'playing'
+  const isMyTurn = self !== '' && game?.ctx.currentPlayer === self
+  const canMove = isMyTurn && playing
+  const deckCount = gs?.deckCount ?? 0
+  const drawReason = drawDisabledReason({
+    isMyTurn,
+    drawRight: gs?.players[self]?.drawRight,
+    deckCount,
+  })
+  const canDraw = drawReason === null && gs !== undefined && playing
+  const current = director.current
+  const seats = B.buildSeats({
+    gameState: gs ?? null,
+    ctx: game?.ctx ?? null,
+    presence,
+    selfId: self,
+    passedIds: memo.passedIds,
+    penalties: current?.type === 'submit-fail' ? memo.penalties : {},
+  })
+  const players = B.playerSeats(seats)
+  const n = gs ? players.length : presence.length
+  // seats are exactly the play order; everyone else (observers, late joiners) only watches
+  const observer =
+    game !== null && (myPresence?.role === 'observer' || !game.ctx.playOrder.includes(self))
+  const winnerId = gs?.winner ?? null
+  const canStart = ClientRoomManager.canStartGame(presence)
+  const selfReady = myPresence?.status === 'ready'
+
+  useEffect(() => chrome.onBoardInfo?.({ status: roomStatus, n }), [chrome, roomStatus, n])
+  // court faces are lazy chunks: fetch them once the board (not the waiting room) is up
+  const onBoard = roomStatus !== null && roomStatus !== 'waiting'
+  useEffect(() => {
+    if (onBoard) {
+      preloadCourtFaces().catch(() => undefined)
+    }
+  }, [onBoard])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a tray change clears the message
+  useEffect(() => setTray((t) => ({ ...t, error: null })), [submitCardIds, factCardIds])
+  // a snapshot straight into GAME SET (reload during the dialog) has no game-ended event
+  const snapWinner = nameOf(gs?.winner) || null
+  useEffect(() => {
+    if (roomStatus === 'waitingNextRound') {
+      director.holdEnd({ type: 'end', winner: snapWinner })
+    }
+  }, [roomStatus, snapWinner, director.holdEnd])
+  const endedWinner = director.ended ? (director.ended.winner ?? winner) : null
+  // a snapshot straight into GAME SET has no event: a winner still holding cards won by forfeit
+  const winnerState = winnerId ? gs?.players[winnerId] : undefined
+  const winnerLeft = winnerState ? (winnerState.handCount ?? winnerState.hand.length) : 0
+  const endedReason = endReason ?? (winnerLeft > 0 ? 'last-standing' : 'empty-hand')
+  // 「残り5秒」 from the deadline-driven clock (RQ-T5)
+  const urgentRef = useRef(false)
+  urgentRef.current = isMyTurn && playing
+  // biome-ignore lint/correctness/useExhaustiveDependencies: announce only sets state
+  useEffect(
+    () =>
+      session.clock.subscribe(() => {
+        if (session.clock.get() === 5 && urgentRef.current) {
+          announce('残り5秒')
+        }
+      }),
+    [session.clock],
+  )
+  // biome-ignore lint/correctness/useExhaustiveDependencies: announce once per release
+  useEffect(() => {
+    if (endedWinner) {
+      announce(`${endedWinner} の勝ち`)
+    }
+  }, [endedWinner])
+
+  const handleSubmit = async () => {
+    const errMessage = validateSubmitCardSet(fieldTop, {
+      submit: submitCardIds,
+      factor: factCardIds,
     })
-  }, [gameServerState, presence])
-
-  if ([ws.CONNECTING, ws.CLOSED].includes(ws.readyState)) {
-    return <Loader />
+    if (errMessage !== null) {
+      // SubmitTray's polite error region reads the message; the toast stays silent
+      notifications.show({ message: errMessage, color: 'red', role: SILENT_TOAST_ROLE })
+      setTray((t) => ({ error: errMessage, shakeKey: t.shakeKey + 1 }))
+      return
+    }
+    const result = await actions.submit({ submit: submitCardIds, factor: factCardIds })
+    if (!result.ok) {
+      // the server's judgement goes through the same tray-error path (RQ-C6)
+      const message = submitRejectMessage(result)
+      notifications.show({ message, color: 'red', role: SILENT_TOAST_ROLE })
+      setTray((t) => ({ error: message, shakeKey: t.shakeKey + 1 }))
+    }
   }
+  const addOperator = (op: '*' | '^') => factorMode && my.selectHandCardIdAsFact(op)
+  B.useBoardShortcuts(
+    {
+      x: () => addOperator('*'),
+      '*': () => addOperator('*'),
+      '^': () => addOperator('^'),
+      Backspace: (e) => {
+        e.preventDefault()
+        if (factorMode && factCardIds.length > 0) {
+          my.removeFactCard(factCardIds.length - 1)
+        } else if (submitCardIds.length > 0) {
+          my.removeSubmitCardId(submitCardIds[submitCardIds.length - 1])
+        }
+      },
+      // Esc skips a ceremony first, then resets the tray
+      Escape: () => (current && CEREMONY.has(current.type) ? director.done() : my.reset()),
+    },
+    playing,
+  )
 
-  if (ws.readyState !== ws.OPEN) {
-    return (
-      <Alert
-        variant="filled"
-        color="red"
-        title={'サーバーへの接続に失敗'}
-        icon={<IconExclamationCircle />}
-      >
-        <Button onClick={() => ws.reconnect()}>再接続</Button>
-      </Alert>
-    )
-  }
+  const submitter = current && 'playerId' in current ? nameOf(current.playerId) : ''
+  const fieldStack = (
+    <B.FieldStack
+      field={gs?.field ?? []}
+      leadName={nameOf(gs?.deckTopPlayer) || null}
+      flightHandoff={true}
+      resultOverlay={
+        <>
+          <B.ResultOverlay result={T.resultViewOf(current, submitter)} onDone={director.done} />
+          <B.GrothendieckCut
+            active={current?.type === 'cut57'}
+            onDone={director.done}
+            cards={current?.type === 'cut57' ? current.cards : undefined}
+          />
+        </>
+      }
+    />
+  )
+  const timer = (
+    <B.SeatClock
+      active={players.some((s) => s.isActive)}
+      timeLimit={gs?.rule.timeLimit ?? rule.timeLimit}
+    />
+  )
 
   return (
-    <>
-      {roomStatus === 'waiting' && (
-        <WaitingRoom
-          rule={rule}
-          onChangeRule={handleChangeRule}
-          presence={presence}
-          myPresence={myPresence}
-          onGameStart={handleGameStart}
-          onSetReady={() => ClientMessenger.setReady({ ws })}
-          onUnsetReady={() => ClientMessenger.unsetReady({ ws })}
-        />
-      )}
-      {roomStatus !== 'waiting' && (
-        <Stack gap={componentSize.p}>
-          <Grid justify="center">
-            <Grid.Col span={{ xs: 4, sm: 3 }}>
-              <Paper p={componentSize.p}>
-                <Group>
-                  <GameCard card={'Back'} fontSize={componentSize.deckCard} /> x{' '}
-                  {gameServerState?.gameState?.deck.length}
-                  <Button
-                    size={componentSize.button}
-                    disabled={
-                      gameServerState?.gameState?.players[ws.id]?.drawRight === false ||
-                      !isCommendable ||
-                      gameServerState?.gameState?.deck.length === 0
-                    }
-                    onClick={() => ClientMessenger.draw({ ws })}
-                  >
-                    draw
-                  </Button>
-                </Group>
-              </Paper>
-            </Grid.Col>
-            <Grid.Col span={{ xs: 8, sm: 9 }}>
-              <Flex gap={componentSize.p}>
-                {playersState.map((enemy) => (
-                  <Indicator
-                    key={enemy.id}
-                    disabled={!enemy.isCommendable}
-                    processing={true}
-                    size={16}
-                    color="green"
-                    inline={true}
-                    label={leftTime}
-                  >
-                    <Badge size={'md'} p={componentSize.p}>
-                      <Group>
-                        <span>{enemy.name}</span>
-                        <Group gap={0}>
-                          <IconCards />x {enemy.hand?.length}
-                        </Group>
-                      </Group>
-                    </Badge>
-                  </Indicator>
-                ))}
-              </Flex>
-            </Grid.Col>
-          </Grid>
-          <Indicator
-            mr={16}
-            size={32}
-            label={`= ${(
-              concatCardNumbers(_.nth(gameServerState?.gameState.field, -1) ?? []) || '0'
-            ).toString()}`}
-          >
-            <Paper p={componentSize.p}>
-              <SimpleGrid cols={4} mt={'mt'} mih={componentSize.fieldCard}>
-                {_.nth(gameServerState?.gameState?.field, -1)?.map((card) => (
-                  <GameCard key={card} card={card} fontSize={componentSize.fieldCard} />
-                ))}
-              </SimpleGrid>
-            </Paper>
-          </Indicator>
-          <Grid align="center">
-            <Grid.Col span={'content'}>
-              <ActionIcon onClick={reset}>
-                <IconReload />
-              </ActionIcon>
-            </Grid.Col>
-            <Grid.Col span={'auto'}>
-              <Indicator
-                size={32}
-                label={`= ${(concatCardNumbers(submitCardIds) || '0').toString()}`}
-                color={
-                  concatCardNumbers(submitCardIds) === WORLD_CONFIG.GROTHENDIECK_PRIME
-                    ? 'green'
-                    : undefined
-                }
-                processing={concatCardNumbers(submitCardIds) === WORLD_CONFIG.GROTHENDIECK_PRIME}
-              >
-                <Paper
-                  p={componentSize.p}
-                  bg={isCommendable ? 'white' : 'lightgray'}
-                  mih={componentSize.submitCard}
-                  mt={'md'}
-                >
-                  <PlayingCardLine
-                    cardIds={submitCardIds}
-                    onClickCard={(card) => removeSubmitCardId(card)}
-                    gameCardProps={{
-                      fontSize: componentSize.submitCard,
-                    }}
-                  />
-                </Paper>
-              </Indicator>
-            </Grid.Col>
-            <Grid.Col span={{ xs: 4, sm: 'content' }}>
-              <Grid>
-                <Grid.Col span={{ xs: 12, sm: 'content' }}>
-                  <Popover
-                    position="top-end"
-                    withArrow={true}
-                    closeOnClickOutside={false}
-                    closeOnEscape={false}
-                    opened={isFactorizationMode}
-                  >
-                    <Popover.Target>
-                      <Button
-                        disabled={submitCardIds.length === 0}
-                        onClick={toggleMode}
-                        fullWidth={true}
-                      >
-                        {isFactorizationMode ? 'キャンセル' : '素因数分解'}
-                      </Button>
-                    </Popover.Target>
-                    <Popover.Dropdown maw={'100vw'}>
-                      <Grid align="center">
-                        <Grid.Col span={'content'}>
-                          <Badge>{concatCardNumbers(submitCardIds) || 0} =</Badge>
-                        </Grid.Col>
-                        <Grid.Col span={'auto'}>
-                          <Stack align="end" gap={'xs'}>
-                            <Paper
-                              p={componentSize.p}
-                              miw={200}
-                              bg={isCommendable ? 'while' : 'lightgray'}
-                            >
-                              <Flex align={'center'} mih={componentSize.submitCard}>
-                                {factCardIds.map((card, idx) =>
-                                  isCardId(card) ? (
-                                    <GameCard
-                                      key={card}
-                                      card={card}
-                                      fontSize={componentSize.submitCard}
-                                      onClick={() => removeFactCard(idx)}
-                                    />
-                                  ) : (
-                                    <ActionIcon
-                                      // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-                                      key={`${card}-${idx}`}
-                                      variant="white"
-                                      onClick={() => removeFactCard(idx)}
-                                    >
-                                      {card === '*' ? (
-                                        <IconAsterisk size={componentSize.submitCard} />
-                                      ) : (
-                                        <IconChevronUp size={componentSize.submitCard} />
-                                      )}
-                                    </ActionIcon>
-                                  ),
-                                )}
-                              </Flex>
-                            </Paper>
-                            <Badge>= {concatFactCardIds(factCardIds)}</Badge>
-                          </Stack>
-                        </Grid.Col>
-                        <Grid.Col span={'content'}>
-                          <Stack gap={'xs'}>
-                            <ActionIcon>
-                              <IconAsterisk onClick={() => selectHandCardIdAsFact('*')} />
-                            </ActionIcon>
-                            <ActionIcon>
-                              <IconChevronUp onClick={() => selectHandCardIdAsFact('^')} />
-                            </ActionIcon>
-                          </Stack>
-                        </Grid.Col>
-                      </Grid>
-                    </Popover.Dropdown>
-                  </Popover>
-                </Grid.Col>
-                <Grid.Col span={'auto'}>
-                  <Stack gap={componentSize.p}>
-                    <Button
-                      size={componentSize.button}
-                      disabled={!isCommendable}
-                      onClick={() => ClientMessenger.pass({ ws })}
-                    >
-                      pass
-                    </Button>
-                    <Button
-                      size={componentSize.button}
-                      disabled={submitCardIds.length === 0 || !isCommendable}
-                      onClick={() => {
-                        const fieldTop = _.nth(gameServerState?.gameState.field, -1)
-                        const errMessage = validateSubmitCardSet(fieldTop, {
-                          submit: submitCardIds,
-                          factor: factCardIds,
-                        })
-                        if (errMessage !== null) {
-                          notifications.show({ message: errMessage, color: 'red' })
-                          return
-                        }
-                        ClientMessenger.submit({
-                          ws,
-                          submitCardSet: {
-                            submit: submitCardIds,
-                            factor: factCardIds,
-                          },
-                        })
-                      }}
-                    >
-                      submit
-                    </Button>
-                  </Stack>
-                </Grid.Col>
-              </Grid>
-            </Grid.Col>
-          </Grid>
-
-          <Paper p={componentSize.p} bg={isCommendable ? 'white' : 'lightgray'}>
-            <PlayingCardLine
-              cardIds={handCardIds}
-              onClickCard={(card) => {
-                isFactorizationMode ? selectHandCardIdAsFact(card) : selectHandCardIdAsSubmit(card)
-              }}
-            />
-          </Paper>
-        </Stack>
-      )}
-      <Modal
-        opened={roomStatus === 'waitingNextRound'}
-        onClose={() => false}
-        title={'GAME SET'}
-        closeOnClickOutside={false}
-        closeOnEscape={false}
-        withCloseButton={false}
-        centered={true}
+    <B.TurnClockContext.Provider value={session.clock}>
+      <div
+        data-card-size={compSizeOption}
+        data-room-status={roomStatus ?? 'unknown'}
+        className="h-full"
       >
-        <Stack>
-          <Text>{winner}の勝利です🎉</Text>
-          <Button onClick={() => handleGameStart(gameServerState?.gameState.rule)}>
-            次のラウンドを開始
-          </Button>
-        </Stack>
-      </Modal>
-    </>
+        <B.ConnectionOverlay
+          state={session.connection}
+          reason={session.closeReason}
+          onReconnect={actions.reconnect}
+        >
+          {/* one LayoutGroup around both screens, so the waiting ring's seat-<id> layoutIds
+            match the table's and the seats morph into place when the game starts (#6) */}
+          <LayoutGroup id="board">
+            {roomStatus === 'waiting' ? (
+              <WaitingRoom
+                rule={rule}
+                onChangeRule={handleChangeRule}
+                presence={presence}
+                myPresence={myPresence}
+                onGameStart={handleGameStart}
+                onSetReady={() => actions.setReady()}
+                onUnsetReady={() => actions.unsetReady()}
+              />
+            ) : (
+              <B.BoardLayout
+                mode={mode}
+                factorOpen={factorMode}
+                top={
+                  <B.BoardTopBar
+                    mode={mode}
+                    seats={seats}
+                    n={n}
+                    timer={timer}
+                    isMyTurn={isMyTurn}
+                    reserveRight={mode === 'compact' || mode === 'portrait'}
+                  />
+                }
+                deck={
+                  <B.DeckPile
+                    count={deckCount}
+                    canDraw={canDraw}
+                    disabledReason={drawReason}
+                    onDraw={mode === 'wide' ? () => actions.draw() : undefined}
+                    compact={mode !== 'wide'}
+                  />
+                }
+                field={
+                  mode === 'wide' ? (
+                    <div ref={table.ref} className="h-full min-h-0 w-full">
+                      <B.SeatRing
+                        seats={seats}
+                        width={table.width || 960}
+                        height={table.height || 420}
+                        shimmerKey={current?.type === 'submit-ok' ? memo.plays : null}
+                        rippleFromId={director.ended ? winnerId : null}
+                      >
+                        {fieldStack}
+                      </B.SeatRing>
+                    </div>
+                  ) : (
+                    fieldStack
+                  )
+                }
+                tray={
+                  <div className="flex h-full min-h-0 flex-col gap-fib-1">
+                    <B.SubmitTray
+                      cardIds={submitCardIds}
+                      fieldTop={fieldTop ?? null}
+                      onRemove={my.removeSubmitCardId}
+                      onReset={my.reset}
+                      hasFactor={factorMode || factCardIds.length > 0}
+                      shakeKey={tray.shakeKey}
+                      errorMessage={tray.error}
+                    />
+                    <B.FactorPanel
+                      open={factorMode}
+                      target={concatCardNumbers(submitCardIds)}
+                      factCards={factCardIds}
+                      onAddOperator={my.selectHandCardIdAsFact}
+                      onRemove={my.removeFactCard}
+                      onClose={my.toggleMode}
+                    />
+                  </div>
+                }
+                actions={
+                  <B.ActionBar
+                    orientation={ACTION_ORIENTATION[mode]}
+                    canDraw={canDraw}
+                    drawReason={drawReason}
+                    canPass={canMove}
+                    canSubmit={submitCardIds.length > 0 && canMove}
+                    shortcuts={playing}
+                    factorMode={factorMode}
+                    // leaving factor mode stays possible even after the tray was emptied
+                    factorDisabled={submitCardIds.length === 0 && !factorMode}
+                    isMyTurn={isMyTurn}
+                    onDraw={() => actions.draw()}
+                    onPass={() => actions.pass()}
+                    onSubmit={handleSubmit}
+                    onToggleFactor={my.toggleMode}
+                  />
+                }
+                hand={
+                  <div
+                    className="relative h-full"
+                    data-observer={observer && gs ? 'true' : undefined}
+                  >
+                    <B.Hand
+                      cardIds={my.handCardIds}
+                      isMyTurn={isMyTurn}
+                      mode={factorMode ? 'factor' : 'basic'}
+                      freshIds={freshIds}
+                      showValues={showValues}
+                      layout={mode === 'portrait' ? 'wrap' : 'auto'}
+                      onSelect={
+                        factorMode ? my.selectHandCardIdAsFact : my.selectHandCardIdAsSubmit
+                      }
+                    />
+                    {observer && gs ? <ObserverNote /> : null}
+                  </div>
+                }
+              />
+            )}
+          </LayoutGroup>
+        </B.ConnectionOverlay>
+        <B.GameSetDialog
+          opened={roomStatus === 'waitingNextRound' && director.ended !== null}
+          winner={endedWinner || null}
+          standings={players.map((s) => ({ name: s.name, handCount: s.handCount ?? 0 }))}
+          plays={playsCounted ? memo.plays : undefined}
+          reason={endedReason}
+          onNextRound={handleGameStart}
+          canStart={canStart}
+          selfReady={selfReady}
+          isObserver={observer}
+          onToggleReady={() => (selfReady ? actions.unsetReady() : actions.setReady())}
+        />
+        <B.LiveRegion message={live} />
+        <B.FlightLayer ref={flights} />
+      </div>
+    </B.TurnClockContext.Provider>
   )
 }
 
-const sizeData = {
-  S: {
-    p: '0.25rem',
-    deckCard: '2rem',
-    fieldCard: '3rem',
-    submitCard: '3rem',
-    button: 'xs',
-  },
-  M: {
-    p: '0.5rem',
-    deckCard: '3.5rem',
-    fieldCard: '4rem',
-    submitCard: '4rem',
-    button: 'sm',
-  },
-  L: {
-    p: '1.0rem',
-    deckCard: '5rem',
-    fieldCard: '5rem',
-    submitCard: '5rem',
-    button: 'md',
-  },
-} as const satisfies Record<
-  'S' | 'M' | 'L',
-  { p: string; deckCard: string; fieldCard: string; submitCard: string; button: string }
->
-
-const validateSubmitCardSet = (
-  fieldTop: CardId[] | undefined,
-  submitCardSet: SubmitCardSet,
-): string | null => {
-  const asFactMode = submitCardSet.factor.length > 0
-
-  if (fieldTop !== undefined) {
-    if (concatCardNumbers(fieldTop) > concatCardNumbers(submitCardSet.submit)) {
-      return '場のカードの数より大きくないといけません'
-    }
-    if (submitCardSet.submit.length !== fieldTop.length) {
-      return '出すカードの枚数が合っていません'
-    }
-  }
-
-  if (!asFactMode) {
-    if (fieldTop === undefined) {
-      return null
-    }
-    return null
-  }
-  if (fieldTop === undefined) {
-    if (!isValidFactCardIds(submitCardSet.factor)) {
-      return '素因数分解として成立していません'
-    }
-    return null
-  }
-
-  return null
-}
+const ObserverNote = () => (
+  <p className="pointer-events-none absolute inset-0 m-0 flex items-center justify-center gap-fib-2 text-ink-muted">
+    <span className="rounded-[var(--r-1)] border border-line px-fib-2 font-semibold">観戦</span>
+    次のラウンドから参加できます
+  </p>
+)
 
 export { GameBoard }

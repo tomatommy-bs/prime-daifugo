@@ -1,0 +1,221 @@
+{
+  "spec": "docs/realtime/rebuild-spec.md",
+  "global_rules": [
+    "Read docs/realtime/rebuild-spec.md fully before starting; it is the source of truth. Requirement IDs (RQ-*) and sections (§n) refer to it.",
+    "Strict file ownership: edit only files in your task's `files` list; create new files only under directories listed with `/**`.",
+    "Frozen contracts owned by the foundation and NOT editable by parallel tasks: src/shared/**, src/game/types.ts, src/session/types.ts, src/app/room/[id]/session/types.ts. If a change is needed, add a local extension type in your own files and note it for integration.",
+    "src/game, src/session, src/shared: relative runtime imports only (type-only `@/` imports allowed); no Node/DOM/Workers APIs; no Math.random or Date.now (inject Rng and time).",
+    "Leave `npm test` green for your files; `tsc` clean except explicitly named cross-task seams.",
+    "Commit messages in English. Do NOT deploy anything. Do not commit secrets."
+  ],
+  "foundation": {
+    "title": "Foundation: tooling, frozen contracts, shared helpers, stubs",
+    "files": [
+      "package.json",
+      "package-lock.json",
+      "tsconfig.json",
+      "vitest.config.ts",
+      "biome.jsonc",
+      ".gitignore",
+      ".env.development",
+      "next.config.mjs",
+      "src/constants/env.ts",
+      "src/shared/protocol.ts",
+      "src/shared/client-state.ts",
+      "src/shared/rule-options.ts",
+      "src/shared/name.ts",
+      "src/shared/ids.ts",
+      "src/shared/rng.ts",
+      "src/shared/protocol.test.ts",
+      "src/shared/rule-options.test.ts",
+      "src/shared/name.test.ts",
+      "src/shared/rng.test.ts",
+      "src/game/types.ts",
+      "src/session/types.ts",
+      "src/app/room/[id]/session/types.ts",
+      "src/lib/session-id.ts",
+      "src/lib/session-id.test.ts",
+      "src/test-utils.tsx",
+      "src/game/engine.ts (stub, ownership -> T1)",
+      "src/session/reducer.ts (stub, ownership -> T2)",
+      "src/session/view.ts (stub, ownership -> T2)",
+      "src/app/room/[id]/session/use-room-session.ts (stub, ownership -> T4)",
+      "worker/tsconfig.json (ownership -> T3)",
+      "worker/wrangler.jsonc (ownership -> T3)",
+      "worker/src/index.ts (stub, ownership -> T3)",
+      "docs/realtime/spike-notes.md"
+    ],
+    "instructions": "1) package.json: add devDependencies wrangler, @cloudflare/workers-types, concurrently, fast-check, @playwright/test (exact versions verified via `npm view`, at least 2 weeks old); remove parcel-bundler. Scripts: `dev` = `concurrently -k -n web,rt \"next dev\" \"npm:dev:server\"`, `dev:web` = `next dev`, `dev:server` = `WRANGLER_SEND_METRICS=false wrangler dev -c worker/wrangler.jsonc --port 8787 --local --persist-to .wrangler/state`, `typecheck` = `tsc --noEmit -p . && tsc --noEmit -p worker`, `test:integration` = `INTEGRATION=1 vitest run --project integration`, `test:e2e` = `playwright test -c e2e/playwright.config.ts`, `deploy:server` = `wrangler deploy -c worker/wrangler.jsonc --env production`, `biome:ci` = `biome ci src worker e2e`. Keep dev:pk, deploy, partykit and partysocket until integration. Run `npm install` to update the lockfile.\n2) tsconfig.json: exclude `worker`, `e2e`, `dist-worker`. worker/tsconfig.json: strict, types [@cloudflare/workers-types], lib esnext, moduleResolution bundler, include worker/src/**, worker/test/**, ../src/shared/**, ../src/game/**, ../src/session/**; paths `@/*` -> `../src/*`. worker/wrangler.jsonc: name prime-daifugo-rt, main src/index.ts, compatibility_date 2026-11-01, durable_objects bindings ROOM->RoomDO, LOBBY->LobbyDO, migrations [{tag:'v1', new_sqlite_classes:['RoomDO','LobbyDO']}], vars with dev ALLOWED_ORIGINS and default GRACE_PLAYING_MS=120000, GRACE_IDLE_MS=60000, AWAY_TURN_CAP_MS=20000, ROOM_TTL_IDLE_MS=600000, ROOM_TTL_ACTIVE_MS=1800000, plus an env.production block with placeholder origins. worker/src/index.ts stub: exports default fetch returning 501 and empty RoomDO/LobbyDO classes extending DurableObject so `wrangler dev` starts.\n3) vitest.config.ts: unit project include `src/**/*.test.{ts,tsx}` and `worker/test/*.test.ts`; exclude `worker/test/integration/**`; add `integration` project (environment node, include worker/test/integration/**, only when INTEGRATION=1); coverage thresholds per spec §12.3 (src/game/** 95/90, src/session/** 90/80 excluding src/session/sim/**, worker/src/** 85/75 excluding room-do.ts, lobby-do.ts, index.ts, src/app/room/*/session/** 85/75); keep existing thresholds; remove nothing else yet (src/partykit exclusion is removed in integration).\n4) biome.jsonc: include worker and e2e; restrict globals setTimeout/setInterval in worker/src/** (override with noRestrictedGlobals).\n5) .gitignore: add .wrangler/, worker/.dev.vars, test-results/, playwright-report/, dist-worker/. .env.development: add NEXT_PUBLIC_REALTIME_URL=http://127.0.0.1:8787 (keep the PartyKit var until integration).\n6) src/constants/env.ts: export REALTIME_URL (NEXT_PUBLIC_REALTIME_URL, default http://127.0.0.1:8787 only when NODE_ENV !== 'production'; in production an unset value yields null and callers surface connection 'error'), wsUrl(path) and httpUrl(path) helpers. Keep PARTYKIT_* exports. next.config.mjs: throw when VERCEL_ENV==='production' and NEXT_PUBLIC_REALTIME_URL is unset or contains localhost/127.0.0.1.\n7) Frozen contracts, typed exactly as spec §4.1 (src/session/types.ts: RoomState, Member, RoomConfig with defaults, SessionInput = connect|disconnect|command|tick|reconcile, ReducerDeps {now, rng, engine, config}, ReducerResult {state, events: {seq, e}[], directives (welcome{pid,mode,fromSeq}, ack{pid,connNo,id,result}, bye{pid,connNo,reason,code}, close), wakeAt, lobbyCount}), §6 (src/shared/protocol.ts: zod schemas + types for Hello, CmdFrame, Cmd, Welcome, Evt, Ack, Bye, RoomEvent, RejectReason, SubmitResultCode, View, LobbyStats, CLOSE codes, parseClientFrame, parseServerFrame), §7.1 (src/game/types.ts), §9.1 (src/app/room/[id]/session/types.ts) and §9.3 (src/shared/client-state.ts). PrimeDaifugoSetupData/FactCardId stay imported from src/interface/common.ts (type-only).\n8) src/shared/rule-options.ts: ALLOWED_RULES, DEFAULT_RULE (from ../constants/config GAME_CONFIG, relative import), parseRulePatch. src/shared/name.ts: isValidName (trim, 3-10 UTF-16 units, matching current middleware), normalizeName. src/shared/ids.ts: ROOM_ID_RE=/^[A-Za-z0-9_-]{1,32}$/, SID_RE=/^[A-Za-z0-9_-]{43}$/, SID_COOKIE='pd_sid', generateSid() via globalThis.crypto.getRandomValues, PV=1. src/shared/rng.ts: Rng interface re-export, mulberry32(seed), cryptoRng(), shuffle(arr, rng) (Fisher-Yates, returns new array).\n9) src/lib/session-id.ts (client only): getOrCreateSid(): read cookie pd_sid (js-cookie), validate, mirror to localStorage, restore cookie from localStorage, else generate and set cookie (365 days, SameSite=Lax, Secure on https); all storage in try/catch.\n10) src/test-utils.tsx: ADD makeClientGameState, makeClientCtx, makeClientBundle, makeView, makeMember, frames.{welcome,evt,ack,bye} builders typed against the new contracts; keep all existing exports untouched.\n11) Stubs: src/game/engine.ts exports `engine: GameEngine` whose methods throw Error('not implemented'); src/session/reducer.ts exports `roomReduce` and `initialRoomState` throwing/ minimal; src/session/view.ts exports `viewFor` throwing; use-room-session.ts exports a hook returning a static disconnected RoomSession.\n12) Spike: run `npm run dev:server` with networking disabled; record outcome, startup time and any needed env flags in docs/realtime/spike-notes.md.\nAcceptance: `npm test`, `npm run typecheck`, `npm run build` pass; `npm run dev:server` starts and GET /healthz-equivalent stub responds; tests: protocol schemas accept valid fixtures and reject malformed ones (oversize arrays, bad card ids, unknown types); parseRulePatch rejects timeLimit 30 / initNumCards 5 / maxSubmitNumCards 10; isValidName table tests incl. trimming; mulberry32 determinism; session-id cookie/localStorage restore paths."
+  },
+  "tasks": [
+    {
+      "key": "T1",
+      "title": "Rules engine (pure, BigInt, deterministic) with ported and new tests",
+      "files": [
+        "src/game/** (except src/game/types.ts)",
+        "src/game/engine.ts",
+        "src/game/cards.ts",
+        "src/game/numbers.ts",
+        "src/game/factor.ts",
+        "src/game/index.ts",
+        "src/game/cards.test.ts",
+        "src/game/numbers.test.ts",
+        "src/game/factor.test.ts",
+        "src/game/engine.test.ts",
+        "src/game/engine.ported.test.ts",
+        "src/game/factor.ported.test.ts",
+        "src/game/engine.property.test.ts",
+        "src/utils/play-card.ts",
+        "src/utils/play-card.test.ts"
+      ],
+      "instructions": "Implement spec §7 against the frozen GameEngine contract in src/game/types.ts. cards.ts: full deck, halfEvenNumbers filter (RQ-R5), cardValue. numbers.ts: concatValue -> bigint, bitLength, isPrime(bigint) = small-prime trial division + deterministic Miller-Rabin bases 2..41 below 3.317e24 + strong Lucas (BPSW) above; document BPSW status in the header. factor.ts: parseFact with the syntax of RQ-R16 (one ^ level only, no operand equal to 1, <=64 tokens), checkFact with guarded evaluation and INCORRECT_ANSWER precedence. engine.ts: setup (2-4 seats, deck check initNumCards*seats, playOrder as given, currentPlayer=playOrder[0], turn=0), applyMove implementing validation order RQ-R12 (multiset distinctness across submit+factor), judging RQ-R13, success RQ-R14, penalties RQ-R15 (draw from array end), flow RQ-R11, 57 cut RQ-R17 (success only, keeps turn but increments turn), end RQ-R18 (winner set before flow resets deckTopPlayer), bad-status after end RQ-R19, draw rules RQ-R9 (deck-empty, already-drawn); timeoutPass == pass for currentPlayer; forfeit per spec §3.6 (hand to deck + shuffle, leave playOrder, immediate flow if deckTopPlayer, advance turn if current, last-standing end). Never mutate input (structuredClone). Use injected Rng for every shuffle. Port every case from src/partykit/room/logic/game-rule/{game-rule,game-party}.test.ts into engine.ported.test.ts and the factor cases of src/utils/play-card.test.ts into factor.ported.test.ts; mark intentional differences with `// CHANGED: <reason>` (spec §7.4). Add every new test listed in spec §7.4 and fast-check property tests (seeded) for conservation, currentPlayer in playOrder, rejected-move immutability, winner iff empty hand, monotonic turn. src/utils/play-card.ts: keep every exported name and signature used by the UI (getCardNumber, concatCardNumbers, concatFactCardIds, isValidFactCardIds, isValidFactCardIdsStrict, evalFactCardIds, extractCardIdsFromFactCardIds, compareCard); make isValidFactCardIds/isValidFactCardIdsStrict delegate to src/game/factor.ts so client pre-validation equals the server; evalFactCardIds/concatCardNumbers stay number-returning display helpers (document). Update play-card.test.ts accordingly (tower cases now invalid; keep display eval tests).\nAcceptance: coverage src/game/** >= 95 lines / 90 branches; all ported pinned cases present (count printed in a comment block at the top of each ported file); property tests 200 runs pass; play-card exports unchanged (tsc clean for UI importers); no Math.random/Date.now in src/game."
+    },
+    {
+      "key": "T2",
+      "title": "Session reducer, per-viewer view, deterministic simulator",
+      "files": [
+        "src/session/** (except src/session/types.ts)",
+        "src/session/reducer.ts",
+        "src/session/view.ts",
+        "src/session/members.ts",
+        "src/session/timers.ts",
+        "src/session/commands.ts",
+        "src/session/testing/fake-engine.ts",
+        "src/session/sim/sim-clock.ts",
+        "src/session/sim/sim-host.ts",
+        "src/session/sim/sim-network.ts",
+        "src/session/sim/sim-client.ts",
+        "src/session/sim/invariants.ts",
+        "src/session/reducer.test.ts",
+        "src/session/view.test.ts",
+        "src/session/timers.test.ts",
+        "src/session/sim/scenarios.test.ts",
+        "src/session/sim/fuzz.test.ts"
+      ],
+      "instructions": "Implement roomReduce(state, input, deps) and initialRoomState(roomId, epoch, config) per spec §3, §4.1, §5, §6 using only the injected GameEngine (deps.engine), deps.now, deps.rng. Inputs: connect (new/existing member, supersede previous connNo with bye superseded 4001, room-full 4002, bad-name 4003, welcome mode current/replay/snapshot using epoch, lastSeq, ringFloor), disconnect (ignore stale connNo; set graceUntil by status; cap current player's deadline to now+AWAY_TURN_CAP_MS if it is their turn), command (ready/unready in waiting|waitingNextRound incl. observers; set-rule via parseRulePatch; start with expectedVersion, >=2 ready+connected, first 4 by readyAt seated, seat order shuffled with rng, setup computed before status change, roles recomputed; draw/pass/submit with turn guard -> 'stale', non-current -> 'not-your-turn', engine rejects mapped; leave = forfeit if seated in game + remove member + bye left 4000), tick (timeout pass, grace expiry -> forfeit/remove, gc), reconcile (members marked connected without live socket -> disconnected with fresh grace; if playing, deadline = max(deadline, now+10s)). Deadline policy spec §5 (set on every core.turn change and at start; null outside playing). Each emitted event increments version; winning submit emits submitted then game-ended. Rejected commands produce only an ack directive and leave state reference-equal. Maintain ringFloor (RING_SIZE 64), gcAt (10 min waiting / 30 min otherwise when no member connected; cleared on connect), lobbyCount = connected members. view.ts: viewFor(state, pid) per spec §6.3 (own hand only, handCount for others, deckCount, members sorted by joinedAt, winner {id,name}). testing/fake-engine.ts: a small deterministic GameEngine implementation (counter game honoring the contract: turns, draws, deck conservation, end condition, forfeit) used by reducer tests. Simulator per spec §12.1: SimClock (virtual priority queue, at-least-once alarms with seeded duplicates), SimHost (in-memory persist + ring + reconcile + crashRestart, mirrors DO host semantics), SimNetwork (delay, close, half-open until sweep, duplicate hello, second tab, reload with lastSeq, offline duration), SimClient (minimal model: applies welcome/evt by seq/epoch rules; integration swaps in real clientReduce via an injectable interface), invariants.ts (spec §3.8 plus §12.1 list). Write every scripted scenario of spec §12.1 as a named test, using the fake engine now; structure so the engine is injectable (integration adds a real-engine fuzz). Fuzz: 200 seeds x 300 steps default, SIM_RUNS and SIM_SEED env overrides, print seed on failure.\nAcceptance: all scenarios and fuzz pass; coverage src/session/** (excluding sim/**) >= 90/80; tests prove: reload keeps seat+hand; blip within grace replays (no snapshot) when lastSeq in ring; away current player times out at <=20s; grace expiry forfeits and conserves cards; duplicate tab supersedes; double start deals once (stale); late joiner sees stored rule; crashRestart keeps deadline >= now+10s; no frame leaks other hands; no deadline outside playing."
+    },
+    {
+      "key": "T3",
+      "title": "Cloudflare Worker: pure host, RoomDO, LobbyDO, router, wrangler config",
+      "files": [
+        "worker/**",
+        "worker/tsconfig.json",
+        "worker/wrangler.jsonc",
+        "worker/.dev.vars.example",
+        "worker/src/index.ts",
+        "worker/src/room-do.ts",
+        "worker/src/lobby-do.ts",
+        "worker/src/room-host.ts",
+        "worker/src/lobby-core.ts",
+        "worker/src/storage.ts",
+        "worker/src/sockets.ts",
+        "worker/src/crypto.ts",
+        "worker/src/config.ts",
+        "worker/src/rate-limit.ts",
+        "worker/src/http.ts",
+        "worker/test/room-host.test.ts",
+        "worker/test/lobby-core.test.ts",
+        "worker/test/http.test.ts",
+        "worker/test/rate-limit.test.ts",
+        "worker/test/crypto.test.ts",
+        "worker/test/integration/room.integration.test.ts",
+        "worker/test/integration/lobby.integration.test.ts",
+        "worker/test/integration/start-worker.ts"
+      ],
+      "instructions": "Implement spec §2.1, §3.3-3.4, §4.2-4.4, §5 host side, §6 framing, §8. room-host.ts (pure, no cloudflare imports): class RoomHost({storage: HostStorage, sockets: HostSocketRegistry, clock: Clock, reducer, engine, config, lobby: LobbyPort}) with onLoad(liveSockets) -> runs reconcile, onHello(socket, frame) (validate pv in {PV,PV-1} else bye upgrade-required 4005, validate sid format, pid = base64url(sha256('pd:'+sid)).slice(0,16) via crypto.ts, then call reducer synchronously after the await), onFrame (zod parse, 8KB cap, rate limit 20/5s -> ack rate-limited, protocol violations -> bye 4004, hello timeout 10s tracked via alarm/sweep not setTimeout), onClose, onAlarm (tick + sweep: close sockets whose auto-response timestamp is older than 75s and feed disconnect; re-report lobby every 5 min while count>0). Persist order per accepted input: upsert room_state, insert events + trim ring, set/delete alarm when wakeAt changes, THEN send frames (rendered per viewer with viewFor; replay reads ring rows seq>lastSeq). storage.ts: HostStorage interface + SqlStorage (ctx.storage.sql + setAlarm) + MemoryStorage for tests. sockets.ts: HostSocket {send, close, attachment, pid, connNo, lastPongAt}. room-do.ts / lobby-do.ts: thin DurableObject classes (blockConcurrencyWhile load, acceptWebSocket(ws,[pid]) with serializeAttachment, setWebSocketAutoResponse ping/pong, webSocketMessage/Close/Error, alarm, RPC info() and report()/release()/allocate()) delegating to the pure cores; NO setTimeout/setInterval. lobby-core.ts: allocate smallest free prime < 1e6 with 10 min reservation, report/release, stale cutoff 12 min, stats {lobby, room}, debounced broadcast through alarm (<=1/s). index.ts: router per spec §8.1 (ROOM_ID_RE, Origin allow-list from ALLOWED_ORIGINS, CORS for HTTP, upgrades without allowed Origin -> 403, /healthz, locationHint 'apac'). config.ts parses vars into RoomConfig. Tests (L2h, node env, unit project): MemoryStorage + fake sockets + fake clock + a fake reducer where useful, and the real reducer/engine once available behind describe.skipIf(stub) guards; must cover persist-before-send ordering (storage write recorded before any socket.send), ring replay rendering per viewer, supersede closes old socket with 4001, reconcile on load, wakeAt -> setAlarm changes only when different, sweep closes stale sockets, lobby allocation uniqueness under 50 sequential calls, stale row drop, report count 0 deletes unreserved, router 404 on bad id, 403 on bad Origin, CORS headers. Integration (opt-in INTEGRATION=1): start-worker.ts uses wrangler unstable_startWorker with vars GRACE_PLAYING_MS=1500, GRACE_IDLE_MS=1500, short timeLimit via rule 15 and AWAY_TURN_CAP_MS=1000; tests with Node 22 global WebSocket: hello->welcome snapshot, same sid reconnect -> same selfId and hand, forced close + reconnect within grace -> replay, grace expiry -> member removed/forfeit, dispose + restart on same persist dir -> state preserved and deadline >= now+10s, alarm-driven timeout pass event, second socket same sid -> first gets 4001, POST /rooms returns distinct primes. Keep total integration runtime under ~20s.\nSeams: compiles against T1/T2 stubs until they land; integration task flips skip guards.\nAcceptance: `npm run typecheck` clean for worker; `npx wrangler deploy --dry-run -c worker/wrangler.jsonc --outdir dist-worker` bundles; L2h coverage of worker/src (excluding DO bindings and index) >= 85/75; `npm run dev:server` serves /healthz, POST /rooms and a room WS locally offline."
+    },
+    {
+      "key": "T4",
+      "title": "Client session layer: transport, client reducer, adapter, server clock, useRoomSession",
+      "files": [
+        "src/app/room/[id]/session/** (except src/app/room/[id]/session/types.ts)",
+        "src/app/room/[id]/session/transport.ts",
+        "src/app/room/[id]/session/ws-transport.ts",
+        "src/app/room/[id]/session/client-reducer.ts",
+        "src/app/room/[id]/session/adapter.ts",
+        "src/app/room/[id]/session/server-clock.ts",
+        "src/app/room/[id]/session/use-room-session.ts",
+        "src/app/room/[id]/session/ws-transport.test.ts",
+        "src/app/room/[id]/session/client-reducer.test.ts",
+        "src/app/room/[id]/session/adapter.test.ts",
+        "src/app/room/[id]/session/server-clock.test.ts",
+        "src/app/room/[id]/session/use-room-session.test.tsx",
+        "src/test-mocks/room-transport.ts"
+      ],
+      "instructions": "Implement spec §9.1-9.3 and §3.4 client side, §6.4 client rules. transport.ts: RoomTransport interface. ws-transport.ts: reconnecting WebSocket (backoff 0.5,1,2,4,8,10s cap with +/-30% jitter; no reconnect after close codes 4000-4006 or after a bye frame; ping text every 20s; force reconnect if no frame for 45s; immediate reconnect on visibilitychange->visible, online, pageshow(persisted) when not OPEN or quiet >25s; injectable timers/WebSocket ctor for tests). client-reducer.ts: pure clientReduce(state, frame) -> {state, transitions[], acks[]} applying welcome (snapshot/replay/current), evt (seq===last+1 animate; <= ignore; gap -> snapshot transition), epoch change -> snapshot, ack resolution, bye -> closeReason. adapter.ts: viewToBundle(view, selfId) -> ClientGameStateBundle (players[self].hand = view.game.hand, others hand [] with handCount; deckCount; ctx {currentPlayer, playOrder, turn, deadline}; winner id), viewToPresence(view) -> SessionPresence[] (status from ready), eventToSystemMessage per spec §9.2 mapping table (presence/ready/forfeited/member-left -> no SystemMessage; forfeited -> snapshot-type transition). server-clock.ts: EMA offset from serverNow, interval driving the existing TurnClock store (find it via game-board/TurnTimer imports) only while deadline != null; injectable now/interval. use-room-session.ts: hook implementing RoomSession exactly; gets sid via src/lib/session-id.ts and name from cookie `name`; builds URL with wsUrl(`/rooms/${id}/ws`); sends hello with lastSeq/epoch kept in memory (and sessionStorage per room for reload replay, try/catch); actions send cmd frames with generated ids, include turn/expectedVersion from latest state, resolve on ack (10s timeout -> {ok:false, reason:'timeout'}, closed socket -> 'disconnected'); connection mapping: connecting (incl. reconnecting, board kept), open, closed (terminal bye; closeReason set), error (REALTIME_URL null or repeated failures before first welcome), waiting-sync (open but no welcome yet); bad-name -> location.assign('/login?callback='+path); upgrade-required -> reload once guarded by sessionStorage; reconnect() resets terminal state and reconnects; leave() sends leave, awaits ack/bye, then closes. src/test-mocks/room-transport.ts: fake with control.last().__open(), __emit(frameObj), __close(code), __error(), sent(), lastCmd(), and a factory the hook accepts via an optional `transportFactory` param/context.\nAcceptance: tests cover every RoomEvent mapping, seq gap/duplicate/epoch rules, replay animates while snapshot does not, ack timeout and disconnect, terminal codes do not reconnect, backoff jitter bounds, visibility/online triggers, liveness reconnect, deadline->seconds with skew; coverage src/app/room/*/session/** >= 85/75; no imports from src/partykit or partysocket."
+    },
+    {
+      "key": "T5",
+      "title": "Board view-model retype (handCount/deckCount/winner) and presentational additions",
+      "files": [
+        "src/app/room/[id]/_ui/board/**",
+        "src/app/labo/gallery/**"
+      ],
+      "instructions": "Re-point all type imports in board modules from @/partykit/* and @/interface/{server-to-client,client-to-server} to @/shared/client-state and @/shared/protocol (keep @/interface/common for FactCardId/SetupData). Adopt client R2 option (a): seat-model.ts reads players[id].handCount; board-state.ts handOf/handSize use handCount, winnerIdOf prefers gameState.winner then empty-hand fallback, connectionStateOf may remain but is no longer required by the container; flight-plan.ts arrivedCards uses id diff for self and handCount delta for others (Math.max(1, delta) unchanged semantics), deal plan from handCount; classify-transition.ts penalty = next.handCount - prev.handCount and accepts the T.GameState alias = ClientGameStateBundle; types.ts SubmitResultCode derived from @/shared/protocol SubmitResultCode (INVALID_FACT kept). Presentational additions per spec §9.4: Seat optional `connected?: boolean` (dashed outline + aria suffix 「（再接続中）」 when false; default unchanged), ConnectionOverlay optional `reason?: CloseReason` (superseded copy 「別のタブで開かれています」 + button 「このタブで再開」 calling onReconnect; room-gone copy 「この部屋は閉じられました」 with link to /), GameSetDialog optional `selfReady?`, `isObserver?`, `onToggleReady?` (toggle labelled 「次のラウンドに参加」 for observers, 「準備OK」/「取消」 otherwise). Do not change any existing prop or default rendering. Update/extend tests and stories for each change. Retype src/app/labo/gallery fixtures/scenes to the new shapes (handCount etc.), add gallery scenes `reconnecting-seat` and `superseded`; keep existing scene names working for scripts/screens.mjs.\nAcceptance: all board tests and gallery fixture tests pass; coverage thresholds for src/app/room/*/_ui/board/** unchanged (85/75); no imports from src/partykit or @/interface/server-to-client in owned files; `npm run screens` renders all existing scenes with no console errors (run against next dev)."
+    },
+    {
+      "key": "T6",
+      "title": "Room page wiring: game-board container on useRoomSession, leave button, next-round ready",
+      "files": [
+        "src/app/room/[id]/_ui/game-board.tsx",
+        "src/app/room/[id]/_ui/game-board.test.tsx",
+        "src/app/room/[id]/_ui/waiting-room.tsx",
+        "src/app/room/[id]/_ui/waiting-room.test.tsx",
+        "src/app/room/[id]/_ui/waiting-room.stories.tsx",
+        "src/app/room/[id]/_ui/notification-message.tsx",
+        "src/app/room/[id]/_ui/notification-message.test.tsx",
+        "src/app/room/[id]/_ui/RoomHeader.tsx",
+        "src/app/room/[id]/_ui/RoomHeader.test.tsx",
+        "src/app/room/[id]/hooks.ts",
+        "src/app/room/[id]/hooks.test.ts",
+        "src/app/room/[id]/room-manager.ts",
+        "src/app/room/[id]/page.tsx",
+        "src/app/room/[id]/page.test.tsx",
+        "src/app/room/[id]/layout.tsx",
+        "src/app/room/[id]/client-messenger.ts (delete)",
+        "src/app/room/[id]/client-messenger.test.ts (delete)",
+        "src/test-mocks/room-session.ts"
+      ],
+      "instructions": "Replace the data wiring of game-board.tsx (about L56-226 and every ws.* read) with `useRoomSession(id)` per spec §9.2 table; keep the JSX tree, director (direct()), toasts/notices, useMyField and tray logic. selfId replaces ws.id; actions replace ClientMessenger; session.connection and session.closeReason feed ConnectionOverlay (pass reason prop); subscribe(t => msg.action==='snapshot' ? set state only : direct(t.prev, t.next, t.msg)); observer guard = selfId not in game.ctx.playOrder (role from presence); hand from game.gameState.players[selfId].hand; deck count from deckCount; delete the client auto-pass; log 「時間切れです」 (and red toast if it was me) on t.event passed reason timeout; winner name from game-ended event; submit rejections (ack ok:false) go to the existing setTray({error, shakeKey+1}) + red toast path with a reason->Japanese message map ('not-your-turn','stale','invalid-move','invalid-fact','deck-empty','already-drawn','bad-status'); start uses actions.startGame() (no client rule); rule changes via actions.changeRule(patch) and the displayed rule is session.rule (server-stored). Pass `connected` to seats via presence (T5 prop), GameSetDialog ready-toggle props (T5) wired to setReady/unsetReady, RoomHeader new optional `onLeave` prop rendering 「退出」 with a Mantine confirm modal -> actions.leave() then router.push('/'). waiting-room.tsx: retype presence to SessionPresence (keep props and visuals; show ◌ for disconnected members). notification-message.tsx: retype. hooks.ts: delete useMessageHandler, keep useMyField and its tests; drop the dispatch tests in hooks.test.ts. room-manager.ts: canStartGame counts presence with status ready AND connected (>=2). Delete client-messenger.ts and its test. src/test-mocks/room-session.ts: controllable fake of useRoomSession (setSession(partial), emitTransition(t), actions as vi.fn returning configurable AckResult) used via vi.mock('@/app/room/[id]/session/use-room-session'). Rewrite game-board.test.tsx and page.test.tsx to that fake, keeping the existing role/text assertions; update order tests to submitted -> game-ended (client R4.1) and timer tests to deadline/timeout-event semantics (no client pass sent).\nSeams: T5's new props (Seat.connected, ConnectionOverlay.reason, GameSetDialog ready props) and T4's real hook are resolved at integration; use exactly the prop names in spec §9.4.\nAcceptance: game-board, waiting-room, RoomHeader, notification, hooks (useMyField) and page tests pass with the fake; no imports of partysocket, client-messenger or @/interface/server-to-client in owned files; no client-side pass on timer expiry (test asserts actions.pass not called when the clock hits 0)."
+    },
+    {
+      "key": "T7",
+      "title": "Entry, identity cookie, lobby counters and /room/new",
+      "files": [
+        "src/middleware.ts",
+        "src/middleware.test.ts",
+        "src/app/login/page.tsx",
+        "src/app/login/page.test.tsx",
+        "src/app/page.tsx",
+        "src/app/page.test.tsx",
+        "src/app/room/new/page.tsx",
+        "src/app/room/new/page.test.tsx",
+        "src/lib/realtime-http.ts",
+        "src/lib/realtime-http.test.ts",
+        "src/lib/use-lobby-stats.ts",
+        "src/lib/use-lobby-stats.test.ts"
+      ],
+      "instructions": "middleware.ts: keep matcher /room/:path* and the name gate but validate with isValidName from @/shared/name; when pd_sid cookie is missing or fails SID_RE, set it on the response (generateSid(), 365 days, SameSite=Lax, Secure when https, path /, not httpOnly), on both the pass-through and redirect responses. login/page.tsx: after setting the name cookie call getOrCreateSid() (src/lib/session-id.ts); keep the location.pathname = callback behaviour. realtime-http.ts: createRoom(): POST httpUrl('/rooms') with cache 'no-store' and AbortSignal.timeout(10000), validate response {roomId} matches ROOM_ID_RE, throw on failure; getRoomInfo(id). room/new/page.tsx: server component calling createRoom() then redirect(`/room/${roomId}`); error.tsx/loading.tsx untouched. use-lobby-stats.ts: hook opening WebSocket wsUrl('/lobby') with simple capped backoff (1..10s), parsing LobbyStats frames via @/shared/protocol, returning {online, lobby, rooms} or null before first data; silent on connection errors (no console.error) so screens.mjs stays clean; injectable WebSocket ctor for tests. page.tsx: replace usePartySocket with useLobbyStats; LobbyCounters shows '—' while null; random match/training placeholders unchanged.\nAcceptance: tests cover middleware redirect with callback, sid issued when missing and kept when valid, invalid sid replaced; login sets sid; home shows '—' then counts from a fake socket frame (online = sum(room)+lobby, rooms = key count); /room/new redirects on success and throws on HTTP error/timeout (error boundary path); no partysocket imports in owned files."
+    },
+    {
+      "key": "T8",
+      "title": "Ops: CI, README, E2E suite, screenshot script filters, runbook",
+      "files": [
+        "README.md",
+        ".github/workflows/ci.yml",
+        "e2e/**",
+        "e2e/playwright.config.ts",
+        "e2e/fixtures.ts",
+        "e2e/session.spec.ts",
+        "e2e/lobby.spec.ts",
+        "scripts/screens.mjs",
+        "scripts/flights.mjs",
+        "docs/realtime/runbook.md"
+      ],
+      "instructions": "CI per spec §12.4: test job (no secrets): npm ci, npx biome ci src worker e2e, npm run typecheck, npm test, npm run build (no NEXT_PUBLIC_PARTYKIT_HOST env; remove that secret reference), npm run build-storybook, npx wrangler deploy --dry-run -c worker/wrangler.jsonc --outdir dist-worker. Optional jobs `integration` and `e2e` on workflow_dispatch or PR label 'e2e' (npx playwright install --with-deps chromium; E2E=1 npm run test:e2e). E2E: e2e/playwright.config.ts skips entirely unless E2E=1; webServer starts `npm run dev:server -- --var GRACE_PLAYING_MS:5000 --var GRACE_IDLE_MS:5000 --var AWAY_TURN_CAP_MS:3000 --var ALLOWED_ORIGINS:http://localhost:3124` (verify wrangler --var syntax) and `next dev -p 3124` with NEXT_PUBLIC_REALTIME_URL=http://127.0.0.1:8787; fixtures.ts creates two browser contexts with name cookies alice/bob and helpers (joinRoom, readyAndStart, handCardIds, seatLayoutIds). Specs implement spec §12.2 scenarios 1-8 using role/text selectors (準備OK, ゲーム開始, パス, 退出, 別のタブで開かれています, このタブで再開, GAME SET dialog) and data attributes already present (seat layoutIds seat-<pid>); scenario timing via expect.poll, no fixed sleeps beyond the shortened grace. scripts/screens.mjs and flights.mjs: change the ignored WebSocket/connection error filter from :1999 to :8787 (also ignore failed lobby socket), keep exit-non-zero on other console errors. README: replace Getting Started, バックエンド and 6. デプロイメント with the new stack (npm run dev single command, dev:web/dev:server, env vars, test commands incl. INTEGRATION/E2E, deploy steps pointing to docs/realtime/runbook.md, Worker-first deploy order, partyserver as documented routing fallback, Workers Paid as escape hatch); keep the package-lock note. runbook.md: deploy (Workers Builds or npm run deploy:server, Vercel env), env matrix (dev/preview/prod), custom domain, usage notifications, rollback, smoke checklist (create room, two devices, reload mid-game, airplane mode 10s), manual phone checklist (iOS Safari background 2 min, Android tab discard). Do not deploy.\nAcceptance: ci.yml validates (actionlint if available); `npm run screens` passes with only next dev running; `E2E=1 npm run test:e2e` is runnable locally (may fail only on seams finalized in integration, documented in the PR); README contains no PartyKit instructions."
+    }
+  ],
+  "integration": {
+    "instructions": "Sequential, after T1-T8. 1) Resolve seams: remove stub guards (describe.skipIf) in worker tests now that T1/T2 are real; wire T5 props in T6 and the real T4 hook; fix all tsc errors across tasks without changing frozen contracts unless strictly necessary (if changed, update spec doc sections accordingly). 2) Switch SimClient to the real clientReduce through its injectable interface and add src/session/sim/real-engine.fuzz.test.ts (real engine + real client reducer, 100 seeds x 300 steps; invariants incl. each client's bundle equals viewToBundle(viewFor(server, pid))). 3) Remove PartyKit per spec §13: src/partykit/**, partykit.json, src/interface/{client-to-server,server-to-client,connection}.ts, src/test-mocks/partysocket.ts, PARTYKIT_* in src/constants/env.ts and .env.development, scripts dev:pk/deploy, dependencies partykit/partysocket (and ts-node if unused), .partykit gitignore entry, the src/partykit coverage exclusion, old builders in src/test-utils.tsx; update docs/design/redesign-spec.md §0 items 3 and 7 to point at docs/realtime/rebuild-spec.md. 4) Run and make green: npx biome ci src worker e2e; npm run typecheck; npm test; npm run test:coverage (all thresholds of spec §12.3); npm run build; npm run build-storybook; npm run test:storybook if Chromium available; npm run screens; npx wrangler deploy --dry-run -c worker/wrangler.jsonc --outdir dist-worker; INTEGRATION=1 npm run test:integration; E2E=1 npm run test:e2e (all 8 scenarios). 5) Manual: npm run dev from a fresh clone with network disabled; two phones on LAN (iOS Safari background 2 min, Android tab discard, airplane mode 10 s) keep seat and hand. 6) Write docs/realtime/traceability.md mapping every RQ-* in spec §1 to at least one passing test file/name. 7) Commit in small English-message commits; do NOT deploy. Acceptance: every check above green, no references to partykit/partysocket remain (`grep -ri partykit src worker e2e package.json` empty except historical docs), traceability complete."
+  }
+}

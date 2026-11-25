@@ -1,66 +1,103 @@
+@layer theme, base, mantine, components, utilities;
 @import "tailwindcss";
-@plugin "daisyui";
+/* Mantine is imported here, after the layer order statement, so `mantine` sits between
+   `base` and `components` (Next 14 hoists node_modules CSS imported from layout.tsx
+   above globals.css, which made Tailwind base win over Mantine). */
+@import "@mantine/core/styles.layer.css";
+@import "@mantine/notifications/styles.layer.css";
+/* Keep docs/ out of class detection: it would also be watched, and every screenshot that
+   `npm run screens` writes there made `next dev` recompile mid-capture. */
+@source not "../../docs";
 
-/*
-  The default border color has changed to `currentcolor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
+@custom-variant dark (&:where([data-mantine-color-scheme=dark], [data-mantine-color-scheme=dark] *));
+@custom-variant compact (@media (orientation: landscape) and (max-height: 500px));
+@custom-variant portrait-phone (@media (orientation: portrait) and (max-width: 600px));
+@custom-variant wide (@media (min-width: 1280px) and (min-height: 720px));
+@custom-variant fine (@media (pointer: fine));
 
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
 @layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
+  :root {
+    --bg:#F6F4EE; --surface:#FFFFFF; --surface-raised:#FFFFFF;
+    --ink:#15171C; --ink-muted:#585D69; --line:#DDD9CE; --composite:#C9C5B9;
+    --border-strong:#878B95; --prime:#B3361B; --on-prime:#FFFFFF; --factor:#0E6E66;
+    --mod:#4338CA; --gold:#8A5A00; --danger:#B42318; --card-face:#FFFFFF;
+    --seat-0:#00767E; --seat-1:#8D457B; --seat-2:#626A00; --seat-3:#2865A5;
+    --shadow-1: 0 1px 0 rgb(21 23 28 / .08);
+    --shadow-2: 0 1px 2px rgb(21 23 28 / .10), 0 5px 13px rgb(21 23 28 / .08);
+    /* type scale r = 1.25 */
+    --fs--2:.64rem; --fs--1:.8rem; --fs-0:1rem; --fs-1:1.25rem; --fs-2:1.5625rem;
+    --fs-3: clamp(1.5625rem, calc(1.5625rem + 1.2vmin), 1.953rem);
+    --fs-4: clamp(1.953rem, calc(1.953rem + 1.2vmin), 2.441rem);
+    --fs-5: clamp(2.441rem, calc(2.441rem + 1.2vmin), 3.052rem);
+    --fs-6: clamp(3.052rem, calc(3.052rem + 1.2vmin), 3.815rem);
+    /* Fibonacci × 4px */
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:20px; --sp-5:32px; --sp-6:52px; --sp-7:84px;
+    --r-1:4px; --r-2:8px; --r-3:12px;
+    /* Fibonacci ms */
+    --t-xs:89ms; --t-sm:144ms; --t-md:233ms; --t-lg:377ms; --t-xl:610ms; --t-xxl:987ms;
+    --ease-out: cubic-bezier(.22,1,.36,1); --ease-in-out: cubic-bezier(.65,0,.35,1); --ease-in: cubic-bezier(.55,0,1,.45);
+    /* card sizes (GameCard fontSize = card height). --card-k set by size option */
+    --card-k: 1;
+    --card-seat:  28px;
+    --mantine-color-body: var(--bg);
+  }
+  [data-mantine-color-scheme='dark'] {
+    --bg:#0D0F13; --surface:#161920; --surface-raised:#1F232C;
+    --ink:#ECE9E2; --ink-muted:#A2A7B2; --line:#2A2F3A; --composite:#3A404D;
+    --border-strong:#6E7483; --prime:#FF8A5C; --on-prime:#0D0F13; --factor:#2DD4BF;
+    --mod:#A5B4FC; --gold:#F5C542; --danger:#F87171;
+    --seat-0:#64D1D7; --seat-1:#E8A5D5; --seat-2:#BBC679; --seat-3:#8FC2FD;
+    --shadow-1: 0 1px 0 rgb(0 0 0 / .4);
+    --shadow-2: 0 1px 2px rgb(0 0 0 / .5), 0 5px 13px rgb(0 0 0 / .35);
+  }
+  /* A custom property's var() resolves where it is declared and descendants inherit the
+     result, so the --card-* sizes are restated on every [data-card-size] element: there
+     they pick up that element's --card-k (S / M / L). Declaring them only on :root would
+     freeze them at k = 1. */
+  :root, [data-card-size] {
+    --card-hand:  calc(clamp(64px, 26dvh, 132px) * var(--card-k));
+    --card-field: calc(clamp(56px, 22dvh, 120px) * var(--card-k));
+    --card-tray:  calc(clamp(44px, 14dvh, 80px) * var(--card-k));
+  }
+  /* phone portrait: width, not height, limits the cards (the dvh clamps assume landscape) */
+  @media (orientation: portrait) and (max-width: 600px) {
+    :root, [data-card-size] {
+      --card-hand:  calc(clamp(64px, 24vw, 112px) * var(--card-k));
+      --card-field: calc(clamp(56px, 22vw, 96px) * var(--card-k));
+      --card-tray:  calc(clamp(44px, 15vw, 72px) * var(--card-k));
+    }
+  }
+  [data-card-size='S'] { --card-k: .8; }
+  [data-card-size='M'] { --card-k: 1; }
+  [data-card-size='L'] { --card-k: 1.25; }
+  html, body { background: var(--bg); color: var(--ink); }
+  body { font-family: var(--font-sans), "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif; line-height: 1.5; }
+  .num { font-family: var(--font-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums slashed-zero; }
+  /* a card whose flight ghost has not landed yet: transparent but still clickable (§9.2) */
+  [data-flight-pending] { opacity: 0 !important; }
+  @media (prefers-reduced-motion: reduce) {
+    :root { --t-sm:.01ms; --t-md:.01ms; --t-lg:.01ms; --t-xl:.01ms; --t-xxl:.01ms; } /* --t-xs kept */
   }
 }
 
-@utility button-dark {
-  background-image: radial-gradient(
-    circle 975px at 2.6% 48.3%,
-    rgba(0, 8, 120, 1) 0%,
-    rgba(95, 184, 224, 1) 99.7%
-  );
-}
-
-@utility button-light {
-  background-image: linear-gradient(
-    174.2deg,
-    rgba(255, 244, 228, 1) 7.1%,
-    rgba(240, 246, 238, 1) 67.4%
-  );
-}
-
-@utility vote-bg {
-  background-image: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-}
-
-@utility vote-bg-own {
-  background-image: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-}
-
-@utility vote-bg-winning {
-  background-image: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
-}
-
-@layer utilities {
-  body {
-    width: 100%;
-    height: 100%;
-    min-height: 100vh;
-    overflow-x: hidden;
-    background-color: #4158d0;
-    background-image: linear-gradient(
-      43deg,
-      #4158d0 0%,
-      #c850c0 46%,
-      #ffcc70 100%
-    );
-
-    color: black;
+/* The focus ring sits in `components`, after `mantine`: the theme's `focusRing: 'never'`
+   puts `outline: none` on Mantine buttons in the mantine layer, and a base-layer ring lost
+   to it (出す / パス / 引く had no visible focus). Utilities can still override it. */
+@layer components {
+  :focus-visible { outline: 2px solid var(--mod); outline-offset: 2px; }
+  /* wide room header is 52px: centre the 44px menu affix in it instead of hanging 4px below */
+  @media (min-width: 1280px) and (min-height: 720px) {
+    body:has([data-room-header='full']) [data-placement='affix'] { top: 4px !important; }
   }
+}
+
+@theme inline {
+  --color-bg: var(--bg); --color-surface: var(--surface); --color-raised: var(--surface-raised);
+  --color-ink: var(--ink); --color-ink-muted: var(--ink-muted); --color-line: var(--line);
+  --color-composite: var(--composite); --color-border-strong: var(--border-strong);
+  --color-prime: var(--prime); --color-on-prime: var(--on-prime); --color-factor: var(--factor);
+  --color-mod: var(--mod); --color-gold: var(--gold); --color-danger: var(--danger);
+  --font-sans: var(--font-sans); --font-mono: var(--font-mono);
+  --spacing-fib-1: 4px; --spacing-fib-2: 8px; --spacing-fib-3: 12px; --spacing-fib-4: 20px;
+  --spacing-fib-5: 32px; --spacing-fib-6: 52px; --spacing-fib-7: 84px;
 }

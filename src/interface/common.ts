@@ -1,13 +1,14 @@
 import type { CardId } from '@/game-card/src'
-import { z } from 'zod'
 
 export type FactCardId = CardId | '*' | '^'
 
-export const PrimeDaifugoSetupDataSchema = z.object({
-  initNumCards: z.number(),
-  maxSubmitNumCards: z.number(),
-  timeLimit: z.number(),
-  halfEvenNumbers: z.boolean(),
-})
-
-export type PrimeDaifugoSetupData = z.infer<typeof PrimeDaifugoSetupDataSchema>
+/**
+ * Room rule values. A plain type: the allowed values and the validation live in
+ * `src/shared/rule-options.ts` (`ALLOWED_RULES`, `parseRulePatch`) and `src/shared/protocol.ts`.
+ */
+export type PrimeDaifugoSetupData = {
+  initNumCards: number
+  maxSubmitNumCards: number
+  timeLimit: number
+  halfEvenNumbers: boolean
+}

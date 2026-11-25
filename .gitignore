@@ -11,6 +11,7 @@
 
 # next.js
 /.next/
+/.next-*/
 /out/
 
 # production
@@ -35,9 +36,17 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# partykit
-.partykit
 .env*.local
 
 *storybook.log
 storybook-static
+# design screenshots (scripts/screens.mjs)
+docs/design/screens/*
+!docs/design/screens/.gitkeep
+
+# realtime worker (wrangler) and E2E
+.wrangler/
+worker/.dev.vars
+dist-worker/
+test-results/
+playwright-report/

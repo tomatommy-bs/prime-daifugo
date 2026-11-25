@@ -1,39 +1,35 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import { fn } from '@storybook/test'
+import { expect, fn, userEvent, within } from '@storybook/test'
 import { PlayingCardLine } from './playing-card-line'
 
-// More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = {
-  title: 'PlayingCardLine',
+  title: 'Cards/PlayingCardLine',
   component: PlayingCardLine,
-  parameters: {
-    // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
-    // layout: 'centered',
-  },
-  // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
-  // More on argTypes: https://storybook.js.org/docs/api/argtypes
-  argTypes: {},
-  // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#action-args
   args: { onClickCard: fn(), cols: 10 },
 } satisfies Meta<typeof PlayingCardLine>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
-// More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
 export const Basic: Story = {
-  args: {
-    cardIds: ['2C', '3D', 'JS'],
+  args: { cardIds: ['2C', '3D', 'JS'] },
+  play: async ({ canvasElement, args }) => {
+    const options = within(canvasElement).getAllByRole('option')
+    await expect(options).toHaveLength(3)
+    await userEvent.click(options[2])
+    await expect(args.onClickCard).toHaveBeenCalledWith('JS', 2)
   },
 }
 
 export const Cards10: Story = {
-  args: {
-    cardIds: ['2C', '3D', 'JS', 'JC', 'JD', 'JH', 'AC', 'AS', 'AD', 'AH'],
+  args: { cardIds: ['2C', '3D', 'JS', 'JC', 'JD', 'JH', 'AC', 'AS', 'AD', 'AH'] },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getAllByRole('option')).toHaveLength(10)
   },
 }
 
+/** Repeated ids (as in the labo calculator) keep distinct layout ids. */
 export const Cards15: Story = {
   args: {
     cardIds: [
@@ -54,10 +50,18 @@ export const Cards15: Story = {
       'JD',
     ],
   },
+  play: async ({ canvasElement }) => {
+    const ids = within(canvasElement)
+      .getAllByRole('option')
+      .map((o) => o.getAttribute('data-layout-id'))
+    await expect(new Set(ids).size).toBe(15)
+  },
 }
 
 export const Cards20: Story = {
   args: {
+    cols: undefined,
+    size: 's',
     cardIds: [
       'AC',
       'AD',
@@ -80,5 +84,8 @@ export const Cards20: Story = {
       '5H',
       '5S',
     ],
+  },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getAllByRole('option')).toHaveLength(20)
   },
 }
