@@ -8,9 +8,9 @@ import type { RoomServerFrame, View } from '../../../src/shared/protocol'
 import {
   type RunningWorker,
   TEST_ORIGIN,
+  TEST_VARS,
   makePersistDir,
   removePersistDir,
-  TEST_VARS,
   startWorker,
 } from './start-worker'
 
