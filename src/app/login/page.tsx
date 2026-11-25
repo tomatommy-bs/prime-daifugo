@@ -1,6 +1,8 @@
 'use client'
 
 import { IconQed } from '@/design/icons'
+import { getOrCreateSid } from '@/lib/session-id'
+import { NAME_MAX_LENGTH, NAME_MIN_LENGTH, isValidName, normalizeName } from '@/shared/name'
 import { Button, CloseButton, Paper, TextInput } from '@mantine/core'
 import { useInputState } from '@mantine/hooks'
 import { IconArrowRight } from '@tabler/icons-react'
@@ -9,14 +11,15 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import type { FormEvent } from 'react'
 import { NameLengthMeter } from './name-length-meter'
 
-const MIN_LENGTH = 3
-const MAX_LENGTH = 10
+const MIN_LENGTH = NAME_MIN_LENGTH
+const MAX_LENGTH = NAME_MAX_LENGTH
 
 export default function Page() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [name, setName] = useInputState(Cookies.get('name') || '')
-  const isValid = name.length >= MIN_LENGTH && name.length <= MAX_LENGTH
+  // Same rule as the middleware and the server (trimmed, 3 to 10 code units).
+  const isValid = isValidName(name)
 
   // Behaviour kept verbatim from the previous page (§0.3): cookie `name` for 365 days, then
   // `location.pathname = callback` or `router.push('/')`. Enter submits through the form.
@@ -26,6 +29,8 @@ export default function Page() {
       return
     }
     Cookies.set('name', name, { expires: 365 })
+    // Make sure this browser has its session secret (spec §3.1) before entering a room.
+    getOrCreateSid()
     const callback = searchParams.get('callback')
     if (typeof callback === 'string') {
       // CHECK: router.push() では, middleware の cache 処理によりすでに `/room/[id]` からリダイレクトされているため, ページ遷移が行われない
@@ -83,7 +88,7 @@ export default function Page() {
 
       <NameLengthMeter
         className="mt-fib-3"
-        length={name.length}
+        length={normalizeName(name).length}
         min={MIN_LENGTH}
         max={MAX_LENGTH}
       />

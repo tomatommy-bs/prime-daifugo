@@ -1,11 +1,37 @@
-import { partySocketControl } from '@/test-mocks/partysocket'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { renderWithProviders } from '@/test-utils'
 import { act, screen, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
-import { vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import Home from './page'
 
-vi.mock('partysocket/react', () => import('@/test-mocks/partysocket'))
+/** Minimal stand-in for the browser WebSocket, installed as the global for these tests. */
+class FakeWebSocket {
+  static instances: FakeWebSocket[] = []
+  readonly url: string
+  onopen: ((e: Event) => void) | null = null
+  onmessage: ((e: MessageEvent) => void) | null = null
+  onerror: ((e: Event) => void) | null = null
+  onclose: ((e: CloseEvent) => void) | null = null
+  readonly close = vi.fn()
+
+  constructor(url: string) {
+    this.url = url
+    FakeWebSocket.instances.push(this)
+  }
+
+  static last(): FakeWebSocket {
+    const ws = FakeWebSocket.instances.at(-1)
+    if (!ws) {
+      throw new Error('no lobby socket')
+    }
+    return ws
+  }
+
+  emit(body: unknown) {
+    this.onmessage?.(new MessageEvent('message', { data: JSON.stringify(body) }))
+  }
+}
 
 const COMPACT = '(orientation: landscape) and (max-height: 500px)'
 const PORTRAIT = '(orientation: portrait) and (max-width: 600px)'
@@ -20,15 +46,22 @@ const counter = (container: HTMLElement, key: string) => {
 
 describe('Home page', () => {
   beforeEach(() => {
-    partySocketControl.reset()
+    FakeWebSocket.instances = []
+    vi.stubGlobal('WebSocket', FakeWebSocket)
     window.sessionStorage.clear()
   })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
 
-  it('connects to the singleton lobby', () => {
+  it('connects to the realtime lobby socket', () => {
     renderWithProviders(<Home />)
-    const options = partySocketControl.last().options
-    expect(options.party).toBe('lobby')
-    expect(options.room).toBeTruthy()
+    expect(FakeWebSocket.last().url).toBe('ws://127.0.0.1:8787/lobby')
+  })
+
+  it('no longer imports partysocket', () => {
+    const source = readFileSync(join(__dirname, 'page.tsx'), 'utf8')
+    expect(source).not.toMatch(/partysocket/)
   })
 
   it('shows — for every counter before the first lobby message', () => {
@@ -42,13 +75,30 @@ describe('Home page', () => {
   it('shows the counts after a lobby message', () => {
     const { container } = renderWithProviders(<Home />)
     act(() => {
-      partySocketControl.last().__emit({ lobby: 3, room: { a: 2, b: 4 } })
+      FakeWebSocket.last().emit({ t: 'lobby', lobby: 3, room: { a: 2, b: 4 } })
     })
     // online = 2 + 4 + 3, lobby = 3, rooms = 2
     expect(within(counter(container, 'online')).getByText('9', { selector: '.sr-only' }))
     expect(within(counter(container, 'lobby')).getByText('3', { selector: '.sr-only' }))
     expect(within(counter(container, 'rooms')).getByText('2', { selector: '.sr-only' }))
     expect(within(counter(container, 'online')).queryByText('—')).not.toBeInTheDocument()
+  })
+
+  it('keeps — for frames that are not lobby stats', () => {
+    const { container } = renderWithProviders(<Home />)
+    act(() => {
+      FakeWebSocket.last().emit({ lobby: 3, room: { a: 2 } })
+    })
+    expect(within(counter(container, 'online')).getByText('—')).toBeInTheDocument()
+  })
+
+  it('shows the counts in compact mode too', () => {
+    const { container } = renderWithProviders(<Home />, { media: { [COMPACT]: true } })
+    act(() => {
+      FakeWebSocket.last().emit({ t: 'lobby', lobby: 0, room: { a: 1 } })
+    })
+    expect(within(counter(container, 'online')).getByText('1', { selector: '.sr-only' }))
+    expect(within(counter(container, 'rooms')).getByText('1', { selector: '.sr-only' }))
   })
 
   it('renders the hero title', () => {

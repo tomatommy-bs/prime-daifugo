@@ -1,11 +1,10 @@
 'use client'
 
-import { CONFIG } from '@/constants/config'
-import { PARTYKIT_HOST } from '@/constants/env'
 import { NumberGlyph } from '@/design/NumberGlyph'
 import { IconModRing, IconTherefore } from '@/design/icons'
 import { DUR, EASE } from '@/design/motion'
 import { useLayoutMode } from '@/design/use-layout-mode'
+import { useLobbyStats } from '@/lib/use-lobby-stats'
 import { Button } from '@mantine/core'
 import {
   IconArrowRight,
@@ -15,16 +14,9 @@ import {
   IconSpeakerphone,
 } from '@tabler/icons-react'
 import { m } from 'framer-motion'
-import _ from 'lodash'
 import Link from 'next/link'
-import usePartySocket from 'partysocket/react'
-import { type ReactNode, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Hairline, HomeHero, type HomeHeroVariant, useHomeIntro } from './_ui/home-hero'
-
-type LobbyInfo = {
-  lobby: number
-  room: Record<string, number>
-}
 
 const URLS = {
   rules: 'https://primeqk.themedia.jp/pages/4500251/rules',
@@ -39,31 +31,24 @@ const ICON = { stroke: 1.5, size: '1.25em' } as const
 const CTA_DELAY = 4 * (DUR.md + DUR.sm) * 0.7
 
 export default function Home() {
-  const [lobbyInfo, setLobbyInfo] = useState<LobbyInfo | null>(null)
-  usePartySocket({
-    host: PARTYKIT_HOST,
-    party: 'lobby',
-    room: CONFIG.SINGLETON_LOBBY_ROOM_ID,
-    onMessage: (e) => {
-      setLobbyInfo(JSON.parse(e.data))
-    },
-  })
+  // null until the first lobby frame: the counters show "—" instead of a fake 0.
+  const stats = useLobbyStats()
   const mode = useLayoutMode()
   const intro = useHomeIntro()
   const play = intro === 'play'
-
-  // null until the first lobby message: the counters show "—" instead of a fake 0.
-  const nRooms = lobbyInfo ? Object.keys(lobbyInfo.room ?? {}).length : null
-  const nOnline = lobbyInfo
-    ? _.sum(Object.values(lobbyInfo.room ?? {})) + (lobbyInfo.lobby ?? 0)
-    : null
-  const nLobby = lobbyInfo ? (lobbyInfo.lobby ?? 0) : null
 
   const variant: HomeHeroVariant =
     mode === 'compact' ? 'compact' : mode === 'portrait' ? 'portrait' : 'stack'
   const compact = variant === 'compact'
 
-  const counters = <LobbyCounters online={nOnline} lobby={nLobby} rooms={nRooms} inline={compact} />
+  const counters = (
+    <LobbyCounters
+      online={stats?.online ?? null}
+      lobby={stats?.lobby ?? null}
+      rooms={stats?.rooms ?? null}
+      inline={compact}
+    />
+  )
   const actions = <HomeActions play={play} short={compact} />
   const links = <FooterLinks play={play} scrim={!compact} />
 

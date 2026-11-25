@@ -10,6 +10,9 @@ const cookies = vi.hoisted(() => ({
 }))
 vi.mock('js-cookie', () => ({ default: cookies }))
 
+const session = vi.hoisted(() => ({ getOrCreateSid: vi.fn(() => 'S'.repeat(43)) }))
+vi.mock('@/lib/session-id', () => session)
+
 const nav = vi.hoisted(() => ({
   params: new URLSearchParams(),
   push: vi.fn(),
@@ -28,6 +31,7 @@ describe('Login page', () => {
   beforeEach(() => {
     cookies.get.mockReturnValue(undefined)
     cookies.set.mockClear()
+    session.getOrCreateSid.mockClear()
     nav.params = new URLSearchParams()
     nav.push.mockClear()
     fakeLocation.pathname = '/login'
@@ -111,5 +115,38 @@ describe('Login page', () => {
     fireEvent.submit(nameInput().closest('form') as HTMLFormElement)
     expect(cookies.set).not.toHaveBeenCalled()
     expect(nav.push).not.toHaveBeenCalled()
+    expect(session.getOrCreateSid).not.toHaveBeenCalled()
+  })
+
+  it('ensures the session id after setting the name cookie, before navigating', () => {
+    nav.params = new URLSearchParams({ callback: '/room/7' })
+    const order: string[] = []
+    cookies.set.mockImplementation(() => order.push('name'))
+    session.getOrCreateSid.mockImplementation(() => {
+      order.push(`sid:${fakeLocation.pathname}`)
+      return 'S'.repeat(43)
+    })
+    renderWithProviders(<Page />)
+    fireEvent.change(nameInput(), { target: { value: 'alice' } })
+    fireEvent.click(submitButton())
+    expect(order).toEqual(['name', 'sid:/login'])
+    expect(fakeLocation.pathname).toBe('/room/7')
+    cookies.set.mockReset()
+  })
+
+  it('ensures the session id when there is no callback too', () => {
+    renderWithProviders(<Page />)
+    fireEvent.change(nameInput(), { target: { value: 'alice' } })
+    fireEvent.click(submitButton())
+    expect(session.getOrCreateSid).toHaveBeenCalledTimes(1)
+    expect(nav.push).toHaveBeenCalledWith('/')
+  })
+
+  it('applies the shared name rule (surrounding spaces do not count)', () => {
+    renderWithProviders(<Page />)
+    fireEvent.change(nameInput(), { target: { value: '  ab  ' } })
+    expect(submitButton()).toBeDisabled()
+    fireEvent.change(nameInput(), { target: { value: ' abc ' } })
+    expect(submitButton()).toBeEnabled()
   })
 })
