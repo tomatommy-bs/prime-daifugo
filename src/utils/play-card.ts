@@ -1,4 +1,3 @@
-import assert from 'assert'
 import { type CardId, type CardSuit, getCardNum, getCardSuit, isCardId } from '@/game-card/src'
 import { allBasesPrime, isWellFormedFact, parseFact } from '@/game/factor'
 import type { FactCardId } from '@/interface/common'
@@ -119,8 +118,10 @@ export const evalFactCardIds = (cards: FactCardId[]): number => {
     const index = processedCards.lastIndexOf('^')
     const base = processedCards[index - 1]
     const power = processedCards[index + 1]
-    assert(_.isNumber(base))
-    assert(_.isNumber(power))
+    // `node:assert` is not available in the browser (Storybook / Vite)
+    if (!_.isNumber(base) || !_.isNumber(power)) {
+      throw new Error('invalid fact card ids')
+    }
     processedCards.splice(index - 1, 3, base ** power)
   }
 
