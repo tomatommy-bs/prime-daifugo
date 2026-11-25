@@ -32,10 +32,11 @@ export const metadata: Metadata = {
   // No site-wide robots meta: it would be baked into prerendered pages at build time. Previews
   // and local servers are kept out of search results per request instead (`X-Robots-Tag` in
   // the middleware, `Disallow: /` in robots.txt); private pages set their own `noindex`.
+  // No `url` here: every page would inherit `og:url` = home, including the 404 page. Public
+  // pages set their own through `pageMetadata`, and the home page sets `/`.
   openGraph: {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    url: '/',
     type: 'website',
     locale: 'ja_JP',
     siteName: SITE_NAME,

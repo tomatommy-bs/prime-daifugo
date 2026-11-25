@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { metadata as laboCalc } from './labo/calc/layout'
 import { metadata as gallery } from './labo/gallery/layout'
 import { metadata as login } from './login/layout'
+import { metadata as notFound } from './not-found'
 import { metadata as home } from './page'
 import { generateMetadata as room } from './room/[id]/layout'
 import { metadata as newRoom } from './room/new/page'
@@ -49,6 +50,9 @@ describe('route metadata', () => {
       locale: 'ja_JP',
       siteName: '素数大富豪',
     })
+    // error pages must not inherit og:url = home
+    expect(root.openGraph).not.toHaveProperty('url')
+    expect(root.twitter).toMatchObject({ site: '@TomaTommy123' })
     // indexability is decided per request (middleware, robots.txt), not baked into pages
     expect(root.robots).toBeUndefined()
   })
@@ -57,6 +61,16 @@ describe('route metadata', () => {
     expect(titleOf(home)).toBe('素数大富豪 - 素数で遊ぶオンライン対戦カードゲーム')
     expect(home.alternates?.canonical).toBe('/')
     expect(home.robots).toBeUndefined()
+    expect(home.openGraph).toMatchObject({ url: '/', type: 'website' })
+    expect(home.openGraph?.images).toEqual([
+      expect.objectContaining({ url: '/opengraph-image?v=1' }),
+    ])
+  })
+
+  it('titles the 404 page in Japanese and leaves robots to Next.js', () => {
+    expect(notFound.title).toBe('ページが見つかりません')
+    expect(notFound.robots).toBeUndefined()
+    expect(notFound.openGraph).toBeUndefined()
   })
 
   it.each([
