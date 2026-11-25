@@ -27,6 +27,9 @@ Notes:
 - `next.config.mjs` fails a build with `VERCEL_ENV=production` when `NEXT_PUBLIC_REALTIME_URL` is
   missing or points at `localhost`/`127.0.0.1`. Preview builds are not guarded, so check the Preview
   value by hand.
+- The default (dev) env in `worker/wrangler.jsonc` is named `prime-daifugo-rt-dev`, so a
+  `wrangler deploy` without `--env production` creates that separate Worker and never overwrites
+  production with the dev `ALLOWED_ORIGINS`. Delete it from the dashboard if it gets created.
 - Named wrangler environments do not inherit `vars` or bindings. `env.production` repeats the
   Durable Object bindings and every var; change both blocks together.
 - The Worker has one optional secret, `ROOMS_SECRET`. When set, `POST /rooms` must carry it in
@@ -156,9 +159,23 @@ Use two devices (or a laptop and a phone) on different networks if possible.
 
 ## 7. Manual phone checklist (before release; local dev on the LAN is enough)
 
-Run `npm run dev` with `ALLOWED_ORIGINS` including the laptop's LAN origin (for example
-`--var ALLOWED_ORIGINS:http://192.168.1.10:3000` on `npm run dev:server`, and
-`NEXT_PUBLIC_REALTIME_URL=http://192.168.1.10:8787` for `next dev`).
+`npm run dev` cannot be used for this: `wrangler dev` listens on loopback only unless given
+`--ip 0.0.0.0`, and `concurrently` passes no extra flags to `npm:dev:server`. Run the two servers
+in separate terminals instead (replace `192.168.1.10` with the laptop's LAN address, e.g.
+`ipconfig getifaddr en0`):
+
+```bash
+# terminal 1: the Worker on every interface; --var replaces the whole list, so keep localhost
+npm run dev:server -- --ip 0.0.0.0 --var ALLOWED_ORIGINS:http://localhost:3000,http://192.168.1.10:3000
+# terminal 2: Next.js pointed at the LAN Worker (add `-- -H 0.0.0.0` if it is not reachable)
+NEXT_PUBLIC_REALTIME_URL=http://192.168.1.10:8787 npm run dev:web
+```
+
+Instead of `--var`, the origin list can go in `worker/.dev.vars` (gitignored) as
+`ALLOWED_ORIGINS=http://localhost:3000,http://192.168.1.10:3000`. Open
+`http://192.168.1.10:3000` on the phones (same Wi-Fi). Check from a phone that
+`http://192.168.1.10:8787/healthz` answers `ok` first; if not, allow incoming connections for
+`workerd` in the macOS firewall.
 
 - [ ] **iOS Safari, background 2 min:** in a game, switch to another app for 2 minutes and come back.
       The tab reconnects at once (visibility trigger). If it was away less than the 120 s grace, the
@@ -172,6 +189,17 @@ Run `npm run dev` with `ALLOWED_ORIGINS` including the laptop's LAN origin (for 
 - [ ] **Airplane mode 10 s** on each phone, as in §6.
 - [ ] **Duplicate tab:** open the room URL in a second tab on the same phone. The first tab shows
       別のタブで開かれています, and このタブで再開 takes the seat back.
+
+## 7.1 Offline start check (RQ-O5, once per release)
+
+`npm run dev` must start and play with no network and no Cloudflare account.
+
+- [ ] In a fresh clone, run `npm ci` while online (dependencies cannot come from nowhere).
+- [ ] Turn Wi-Fi off (and unplug Ethernet), then run `npm run dev`. Both `web` and `rt` start
+      without errors or hangs; `curl http://127.0.0.1:8787/healthz` answers `ok`.
+- [ ] Open `http://localhost:3000` in two browser profiles with different names, create a room,
+      join it from the other profile and play a few moves (draw, pass, submit).
+- [ ] Turn the network back on.
 
 ---
 

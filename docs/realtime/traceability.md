@@ -117,7 +117,7 @@ Property tests (`property` › move-only sequences keep every invariant; › seq
 | RQ-O2 | One public URL; production build fails if unset or localhost | `src/constants/next-config.test.ts` › next.config.mjs production guard (RQ-O2) (all); CI builds with the committed `.env.development` default |
 | RQ-O3 | $0 at hobby traffic; no always-on instance, no per-second writes | Design check: the reducer only wakes at `min(deadline, grace, gcAt)` (`src/session/timers.test.ts` › wakeAt…), no per-second ticks (RQ-T5), hibernatable sockets (`worker/src/room-do.ts`), Biome bans timers in `worker/src/**` |
 | RQ-O4 | Game state survives eviction and deploys | `L3 room` › a restart on the same persist dir keeps the game and floors the deadline at now + 10 s; `E2E game` › a Worker restart mid-game keeps every seat, hand and the turn |
-| RQ-O5 | `npm run dev` offline with no account; `dev:web` / `dev:server` exist | E2E runs the whole stack locally (`wrangler dev --local` + `next dev`) with no Cloudflare account; offline start recorded in `docs/realtime/spike-notes.md` (outbound traffic sent to a dead proxy); fully network-off start is on the manual checklist in `docs/realtime/runbook.md` |
+| RQ-O5 | `npm run dev` offline with no account; `dev:web` / `dev:server` exist | E2E runs the whole stack locally (`wrangler dev --local` + `next dev`) with no Cloudflare account; offline start recorded in `docs/realtime/spike-notes.md` (outbound traffic sent to a dead proxy); the fully network-off start is the manual check in `docs/realtime/runbook.md` §7.1 (not automated) |
 | RQ-O6 | `npm test` fast, browser-free, no network; screens and Storybook tests need no backend | B: `npm test` (jsdom/node only, ~25 s); `npm run screens` (96 screenshots, only `next dev`); `npm run test:storybook` (21 files, 133 tests, no backend) |
 | RQ-O7 | CI: biome, tsc (app + worker), tests, build, Storybook build, worker dry run; E2E opt-in | `.github/workflows/ci.yml` (`test` job; `integration` and `e2e` jobs only on `workflow_dispatch` or the `e2e` label) |
 | RQ-O8 | No secrets committed | `.env.development` holds only `NEXT_PUBLIC_REALTIME_URL=http://127.0.0.1:8787`; `worker/.dev.vars` is gitignored (`.dev.vars.example` has no secrets) |
@@ -126,5 +126,5 @@ Property tests (`property` › move-only sequences keep every invariant; › seq
 
 These need real devices or a network-off machine and are listed in [`runbook.md`](./runbook.md):
 
-- `npm run dev` from a fresh clone with networking fully disabled (RQ-O5).
+- `npm run dev` from a fresh clone with networking fully disabled (RQ-O5): runbook §7.1.
 - Two phones on the LAN: iOS Safari in the background for 2 min, Android tab discard, airplane mode for 10 s; each keeps seat and hand (RQ-S1, RQ-S4, RQ-S5, RQ-C8). The automated equivalents are the E2E reload, blip and restart scenarios and the simulator's sleep and half-open scenarios.

@@ -1,8 +1,10 @@
 {
   // Cloudflare Worker for the realtime backend (docs/realtime/rebuild-spec.md §2, §10, §11).
   // Local: `npm run dev:server` (offline, no account). Deploy: documented only; never from CI tasks.
+  // The default (dev) env has its own name, so a deploy that forgets `--env production` creates a
+  // separate `prime-daifugo-rt-dev` Worker instead of replacing production with the dev vars.
   "$schema": "../node_modules/wrangler/config-schema.json",
-  "name": "prime-daifugo-rt",
+  "name": "prime-daifugo-rt-dev",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-01",
   "workers_dev": true,

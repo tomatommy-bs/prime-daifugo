@@ -661,7 +661,7 @@ The pure board modules switch to these types (client R2 option a):
 ## 11. Deployment (documented only; **do not deploy as part of this work**)
 
 1. **Cloudflare (Worker).**
-   - Recommended: **Workers Builds** (Git integration) on `main`, running `npx wrangler deploy -c worker/wrangler.jsonc`.
+   - Recommended: **Workers Builds** (Git integration) on `main`, running `npx wrangler deploy -c worker/wrangler.jsonc --env production`. The default (dev) env is named `prime-daifugo-rt-dev`, so a deploy without `--env production` can never replace the production Worker with the dev `ALLOWED_ORIGINS`.
    - Manual alternative: `npm run deploy:server`.
    - Production `vars` set in `wrangler.jsonc` `env.production`: `ALLOWED_ORIGINS=https://<prod-domain>,https://<project>-*.vercel.app`. Grace values stay at their defaults.
    - The migration tag `v1` declares `new_sqlite_classes: ["RoomDO","LobbyDO"]`. The Free plan requires SQLite-backed classes.
