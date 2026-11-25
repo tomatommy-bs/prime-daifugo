@@ -1,5 +1,5 @@
 import { renderWithProviders } from '@/test-utils'
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { RoomHeader } from './RoomHeader'
 
@@ -62,5 +62,56 @@ describe('RoomHeader', () => {
     fireEvent.click(screen.getByRole('button', { name: '部屋メニュー' }))
     fireEvent.click(await screen.findByRole('switch', { name: 'カードの値を表示' }))
     expect(window.localStorage.getItem('showCardValues')).toBe('true')
+  })
+
+  describe('退出 (onLeave)', () => {
+    it('has no 退出 button without onLeave', () => {
+      renderWithProviders(<RoomHeader roomId="1" url={null} size="M" onSizeChange={vi.fn()} />)
+      expect(screen.queryByRole('button', { name: '退出' })).toBeNull()
+    })
+
+    it('asks for confirmation before calling onLeave', async () => {
+      const onLeave = vi.fn()
+      renderWithProviders(
+        <RoomHeader roomId="1" url={null} size="M" onSizeChange={vi.fn()} onLeave={onLeave} />,
+      )
+      fireEvent.click(screen.getByRole('button', { name: '退出' }))
+      const dialog = await screen.findByRole('dialog', { name: '部屋から退出しますか？' })
+      expect(onLeave).not.toHaveBeenCalled()
+      fireEvent.click(within(dialog).getByRole('button', { name: '退出する' }))
+      expect(onLeave).toHaveBeenCalledOnce()
+    })
+
+    it('cancelling the dialog does not leave', async () => {
+      const onLeave = vi.fn()
+      renderWithProviders(
+        <RoomHeader roomId="1" url={null} size="M" onSizeChange={vi.fn()} onLeave={onLeave} />,
+      )
+      fireEvent.click(screen.getByRole('button', { name: '退出' }))
+      const dialog = await screen.findByRole('dialog', { name: '部屋から退出しますか？' })
+      fireEvent.click(within(dialog).getByRole('button', { name: 'キャンセル' }))
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(onLeave).not.toHaveBeenCalled()
+    })
+
+    it('collapsed: 退出 sits in the ⋯ menu and still confirms', async () => {
+      const onLeave = vi.fn()
+      renderWithProviders(
+        <RoomHeader
+          roomId="1"
+          url={null}
+          size="M"
+          onSizeChange={vi.fn()}
+          collapsed={true}
+          onLeave={onLeave}
+        />,
+      )
+      expect(screen.queryByRole('button', { name: '退出' })).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: '部屋メニュー' }))
+      fireEvent.click(await screen.findByRole('button', { name: '退出' }))
+      const dialog = await screen.findByRole('dialog', { name: '部屋から退出しますか？' })
+      fireEvent.click(within(dialog).getByRole('button', { name: '退出する' }))
+      expect(onLeave).toHaveBeenCalledOnce()
+    })
   })
 })

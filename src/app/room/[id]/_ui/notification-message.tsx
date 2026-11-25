@@ -11,10 +11,11 @@ import { Expr } from '@/design/Expr'
 import { NumberGlyph } from '@/design/NumberGlyph'
 import type { CardId } from '@/game-card/src'
 import type { FactCardId } from '@/interface/common'
+import type { SubmitResultCode } from '@/shared/protocol'
 import { concatCardNumbers } from '@/utils/play-card'
 import type React from 'react'
 import { type ReactNode, isValidElement } from 'react'
-import type { LogEntry, SubmitResultCode } from './board/types'
+import type { LogEntry } from './board/types'
 
 const GROTHENDIECK_PRIME: number = WORLD_CONFIG.GROTHENDIECK_PRIME
 

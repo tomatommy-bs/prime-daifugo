@@ -1,4 +1,4 @@
-import { DEFAULT_RULE, makePresence, renderWithProviders } from '@/test-utils'
+import { DEFAULT_RULE, makeSessionPresence, renderWithProviders } from '@/test-utils'
 import { act, fireEvent, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { FLASH_HOLD_MS, WaitingRoom, waitingSeatAngle } from './waiting-room'
@@ -30,7 +30,7 @@ describe('WaitingRoom', () => {
   })
 
   it('disables ゲーム開始 with fewer than 2 ready players', () => {
-    const presence = makePresence([
+    const presence = makeSessionPresence([
       { name: 'alice', status: 'ready' },
       { name: 'bob', status: 'not-ready' },
     ])
@@ -44,7 +44,7 @@ describe('WaitingRoom', () => {
 
   it('explains that two players are needed when alone', () => {
     renderWithProviders(
-      <WaitingRoom rule={DEFAULT_RULE} presence={makePresence([{ name: 'alice' }])} />,
+      <WaitingRoom rule={DEFAULT_RULE} presence={makeSessionPresence([{ name: 'alice' }])} />,
     )
     expect(startButton()).toBeDisabled()
     expect(screen.getByText('2人以上で開始')).toBeInTheDocument()
@@ -52,7 +52,7 @@ describe('WaitingRoom', () => {
 
   it('enables ゲーム開始 with 2 ready players and passes the rule', () => {
     const onGameStart = vi.fn()
-    const presence = makePresence(['alice', 'bob'])
+    const presence = makeSessionPresence(['alice', 'bob'])
     renderWithProviders(
       <WaitingRoom rule={DEFAULT_RULE} presence={presence} onGameStart={onGameStart} />,
     )
@@ -72,7 +72,7 @@ describe('WaitingRoom', () => {
     const { container } = renderWithProviders(
       <WaitingRoom
         rule={DEFAULT_RULE}
-        presence={makePresence(['alice'])}
+        presence={makeSessionPresence(['alice'])}
         onChangeRule={onChangeRule}
       />,
     )
@@ -84,7 +84,11 @@ describe('WaitingRoom', () => {
     const onChangeRule = vi.fn()
     const rule = { ...DEFAULT_RULE, initNumCards: 4, maxSubmitNumCards: 52, timeLimit: 15 }
     const { container } = renderWithProviders(
-      <WaitingRoom rule={rule} presence={makePresence(['alice'])} onChangeRule={onChangeRule} />,
+      <WaitingRoom
+        rule={rule}
+        presence={makeSessionPresence(['alice'])}
+        onChangeRule={onChangeRule}
+      />,
     )
     fireEvent.click(within(row(container, 'timeLimit')).getByRole('radio', { name: '60' }))
     expect(onChangeRule).toHaveBeenLastCalledWith({ timeLimit: 60 })
@@ -101,7 +105,7 @@ describe('WaitingRoom', () => {
     const { container } = renderWithProviders(
       <WaitingRoom
         rule={{ ...DEFAULT_RULE, halfEvenNumbers: true }}
-        presence={makePresence(['alice'])}
+        presence={makeSessionPresence(['alice'])}
         onChangeRule={onChangeRule}
       />,
     )
@@ -113,7 +117,7 @@ describe('WaitingRoom', () => {
     const { container } = renderWithProviders(
       <WaitingRoom
         rule={{ initNumCards: 8, maxSubmitNumCards: 52, timeLimit: 300, halfEvenNumbers: true }}
-        presence={makePresence(['alice'])}
+        presence={makeSessionPresence(['alice'])}
       />,
     )
     expect(within(row(container, 'timeLimit')).getByRole('radio', { name: '300' })).toBeChecked()
@@ -128,7 +132,7 @@ describe('WaitingRoom', () => {
 
   it('writes the rules as axioms', () => {
     const { container } = renderWithProviders(
-      <WaitingRoom rule={DEFAULT_RULE} presence={makePresence(['alice'])} />,
+      <WaitingRoom rule={DEFAULT_RULE} presence={makeSessionPresence(['alice'])} />,
     )
     expect(screen.getByRole('heading', { name: /公理/ })).toBeInTheDocument()
     expect(row(container, 'timeLimit')).toHaveTextContent('t ∈')
@@ -138,7 +142,7 @@ describe('WaitingRoom', () => {
 
   it('calls onSetReady from 準備OK when not ready', () => {
     const onSetReady = vi.fn()
-    const presence = makePresence([{ name: 'alice', status: 'not-ready' }])
+    const presence = makeSessionPresence([{ name: 'alice', status: 'not-ready' }])
     renderWithProviders(
       <WaitingRoom
         rule={DEFAULT_RULE}
@@ -154,7 +158,7 @@ describe('WaitingRoom', () => {
 
   it('calls onUnsetReady from 取消 when ready', () => {
     const onUnsetReady = vi.fn()
-    const presence = makePresence([{ name: 'alice', status: 'ready' }])
+    const presence = makeSessionPresence([{ name: 'alice', status: 'ready' }])
     renderWithProviders(
       <WaitingRoom
         rule={DEFAULT_RULE}
@@ -169,7 +173,7 @@ describe('WaitingRoom', () => {
   })
 
   it('places seats on the ring with ready, idle, self and empty residues', () => {
-    const presence = makePresence([
+    const presence = makeSessionPresence([
       { id: 'a', name: 'alice', status: 'ready' },
       { id: 'b', name: 'bob', status: 'not-ready' },
       { id: 'c', name: 'carol', status: 'ready' },
@@ -199,9 +203,34 @@ describe('WaitingRoom', () => {
     expect(container.textContent).toContain('ℤ/4ℤ')
   })
 
+  it('shows a disconnected member as ◌ (再接続中) and keeps their seat', () => {
+    const presence = makeSessionPresence([
+      { id: 'a', name: 'alice' },
+      { id: 'b', name: 'bob', connected: false },
+    ])
+    renderWithProviders(<WaitingRoom rule={DEFAULT_RULE} presence={presence} />)
+    const seats = within(screen.getByRole('list', { name: /座席/ })).getAllByRole('listitem')
+    expect(seats[1]).toHaveAccessibleName('① bob 準備OK（再接続中）')
+    expect(seats[1]).toHaveAttribute('data-connected', 'false')
+    expect(seats[1]).toHaveTextContent('◌')
+    expect(seats[1].querySelector('circle[stroke-dasharray]')).toBeInTheDocument()
+    expect(seats[0]).not.toHaveAttribute('data-connected')
+    expect(seats[0]).not.toHaveTextContent('◌')
+  })
+
+  it('does not count a ready but disconnected member toward the start gate', () => {
+    const presence = makeSessionPresence([{ name: 'alice' }, { name: 'bob', connected: false }])
+    renderWithProviders(<WaitingRoom rule={DEFAULT_RULE} presence={presence} />)
+    expect(startButton()).toBeDisabled()
+    expect(screen.getByText('あと 1 人の準備で開始')).toBeInTheDocument()
+  })
+
   it('grows the ring beyond 4 players', () => {
     renderWithProviders(
-      <WaitingRoom rule={DEFAULT_RULE} presence={makePresence(['a1', 'b2', 'c3', 'd4', 'e5'])} />,
+      <WaitingRoom
+        rule={DEFAULT_RULE}
+        presence={makeSessionPresence(['a1', 'b2', 'c3', 'd4', 'e5'])}
+      />,
     )
     expect(screen.getAllByRole('listitem')).toHaveLength(5)
     expect(screen.getByRole('list', { name: '座席（ℤ/5ℤ）' })).toBeInTheDocument()
@@ -209,7 +238,7 @@ describe('WaitingRoom', () => {
 
   it('highlights a changed rule row with a diff chip', () => {
     vi.useFakeTimers()
-    const presence = makePresence(['alice'])
+    const presence = makeSessionPresence(['alice'])
     const { container, rerender } = renderWithProviders(
       <WaitingRoom rule={DEFAULT_RULE} presence={presence} />,
     )
@@ -226,7 +255,7 @@ describe('WaitingRoom', () => {
 
   it('stacks the panes in portrait', () => {
     const { container } = renderWithProviders(
-      <WaitingRoom rule={DEFAULT_RULE} presence={makePresence(['alice'])} />,
+      <WaitingRoom rule={DEFAULT_RULE} presence={makeSessionPresence(['alice'])} />,
       { media: { [PORTRAIT]: true } },
     )
     const root = container.querySelector<HTMLElement>('[data-layout]')
@@ -236,7 +265,7 @@ describe('WaitingRoom', () => {
 
   it('carries data-motion for reduced motion', () => {
     const { container } = renderWithProviders(
-      <WaitingRoom rule={DEFAULT_RULE} presence={makePresence(['alice'])} />,
+      <WaitingRoom rule={DEFAULT_RULE} presence={makeSessionPresence(['alice'])} />,
       { reducedMotion: true },
     )
     expect(container.querySelector('[data-layout]')).toHaveAttribute('data-motion', 'reduced')

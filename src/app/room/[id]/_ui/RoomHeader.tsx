@@ -6,11 +6,14 @@
  * so the 36px top bar belongs to the SeatLine.
  *
  * `RoomChromeContext` lets the board (which only receives `{id, size, onLogNotification}`)
- * report its room status / player count and ask for the log toggle (`L`).
+ * report its room status / player count, ask for the log toggle (`L`) and hand the page its
+ * `leave` action for the header 「退出」 button (spec §3.6).
  */
 import { IconTherefore } from '@/design/icons'
 import {
   ActionIcon,
+  Button,
+  Modal,
   Popover,
   SegmentedControl,
   Switch,
@@ -19,8 +22,8 @@ import {
   useMantineColorScheme,
 } from '@mantine/core'
 import { useLocalStorage } from '@mantine/hooks'
-import { IconDots, IconSunMoon } from '@tabler/icons-react'
-import { createContext } from 'react'
+import { IconDoorExit, IconDots, IconSunMoon } from '@tabler/icons-react'
+import { createContext, useState } from 'react'
 import { QRButton } from './QRButton'
 
 export type CardSize = 'S' | 'M' | 'L'
@@ -34,6 +37,8 @@ export type BoardInfo = {
 export type RoomChrome = {
   onBoardInfo?: (info: BoardInfo) => void
   toggleLog?: () => void
+  /** the board registers its session `leave` action (null on unmount) */
+  setLeave?: (leave: (() => Promise<void>) | null) => void
 }
 
 export const RoomChromeContext = createContext<RoomChrome>({})
@@ -51,6 +56,8 @@ export type RoomHeaderProps = {
   collapsed?: boolean
   /** open the QR popover on mount (page: `mode !== 'compact'`) */
   qrDefaultOpened?: boolean
+  /** adds the 「退出」 button; called once the confirmation dialog is accepted */
+  onLeave?: () => void
 }
 
 const SIZES: CardSize[] = ['S', 'M', 'L']
@@ -107,6 +114,62 @@ function RoomTitle({ roomId, n }: { roomId: string; n?: number }) {
   )
 }
 
+/** 「退出」: opens the confirmation dialog (an explicit leave forfeits a running game, §3.6). */
+function LeaveButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-[44px] items-center gap-fib-1 rounded-[var(--r-2)] px-fib-3 font-semibold text-ink hover:bg-surface"
+    >
+      <IconDoorExit size="1.25em" stroke={1.5} className="text-ink-muted" />
+      退出
+    </button>
+  )
+}
+
+/**
+ * Lives at the header root (not inside the ⋯ popover), so closing the popover on the first
+ * click outside it does not unmount the dialog.
+ */
+function LeaveConfirm({
+  opened,
+  onClose,
+  onLeave,
+}: {
+  opened: boolean
+  onClose: () => void
+  onLeave: () => void
+}) {
+  return (
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      title="部屋から退出しますか？"
+      centered={true}
+      classNames={{ content: '!bg-surface', header: '!bg-surface' }}
+    >
+      <p className="m-0 text-ink-muted" style={{ fontSize: 'var(--fs--1)' }}>
+        ゲーム中に退出すると、その回は棄権になります。
+      </p>
+      <div className="mt-fib-4 flex justify-end gap-fib-2">
+        <Button variant="default" onClick={onClose}>
+          キャンセル
+        </Button>
+        <Button
+          color="red"
+          onClick={() => {
+            onClose()
+            onLeave()
+          }}
+        >
+          退出する
+        </Button>
+      </div>
+    </Modal>
+  )
+}
+
 function LogButton({ onOpenLog, label }: { onOpenLog: () => void; label: boolean }) {
   return label ? (
     <button
@@ -133,12 +196,17 @@ export function RoomHeader({
   n,
   collapsed = false,
   qrDefaultOpened = false,
+  onLeave,
 }: RoomHeaderProps) {
   const [showValues, setShowValues] = useLocalStorage<boolean>({
     key: SHOW_VALUES_KEY,
     defaultValue: false,
     getInitialValueInEffect: true,
   })
+  const [confirmLeave, setConfirmLeave] = useState(false)
+  const leaveConfirm = onLeave ? (
+    <LeaveConfirm opened={confirmLeave} onClose={() => setConfirmLeave(false)} onLeave={onLeave} />
+  ) : null
 
   if (collapsed) {
     return (
@@ -172,10 +240,12 @@ export function RoomHeader({
                   テーマ
                   <ThemeToggle />
                 </div>
+                {onLeave ? <LeaveButton onClick={() => setConfirmLeave(true)} /> : null}
               </div>
             </Popover.Dropdown>
           </Popover>
         </div>
+        {leaveConfirm}
       </div>
     )
   }
@@ -190,9 +260,11 @@ export function RoomHeader({
       <SizeControl size={size} onSizeChange={onSizeChange} />
       <div className="flex-1" />
       <ThemeToggle />
+      {onLeave ? <LeaveButton onClick={() => setConfirmLeave(true)} /> : null}
       {onOpenLog ? <LogButton onOpenLog={onOpenLog} label={true} /> : null}
       {/* NavBurger (☰) is a fixed affix from the root layout: keep its slot free */}
       <div aria-hidden="true" className="w-[44px] shrink-0" data-slot="nav-burger" />
+      {leaveConfirm}
     </header>
   )
 }

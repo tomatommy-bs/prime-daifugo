@@ -1,108 +1,14 @@
+/**
+ * Room-page hooks. `useMyField` is the local tray model (hand / submit tray / factor tokens);
+ * server data comes from `useRoomSession` (spec §9), not from here.
+ */
 import { GAME_CONFIG } from '@/constants/config'
-import type { ROOM_STATUS } from '@/constants/status'
 import type { CardId } from '@/game-card/src'
-import type { FactCardId, PrimeDaifugoSetupData } from '@/interface/common'
-import type { Ctx } from '@/partykit/room/logic/game-rule'
-import type { PrimeDaifugoGameState } from '@/partykit/room/logic/game-rule/game-state'
+import type { FactCardId } from '@/interface/common'
 import { compareCard, extractCardIdsFromFactCardIds } from '@/utils/play-card'
 import { useSetState } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import _ from 'lodash'
-import * as serverToClient from '../../../interface/server-to-client'
-
-type GameEventParams = {
-  gameState: PrimeDaifugoGameState
-  ctx: Ctx
-  commander: {
-    id: string
-    name: string
-  }
-}
-
-type RoomEventHandlers = {
-  onChat?: (params: { message: string; from: string }) => void
-  onPresence?: (params: { presence: serverToClient.PresenceEvent['presence'] }) => void
-  onStartGame?: (params: { gameState: PrimeDaifugoGameState; ctx: Ctx }) => void
-  onChangeRule?: (params: { rule: Partial<PrimeDaifugoSetupData> }) => void
-  onGameEvent?: (params: GameEventParams) => void
-  onDraw?: (params: GameEventParams) => void
-  onPass?: (params: GameEventParams) => void
-  onSubmit?: (
-    params: GameEventParams & {
-      submissionResult: serverToClient.SubmissionResult
-    },
-  ) => void
-  onEndGame?: (
-    params: GameEventParams & {
-      winner: string
-    },
-  ) => void
-  onSyncGameState?: (params: Omit<GameEventParams, 'commander'>) => void
-  onRoomStatus?: (params: { status: (typeof ROOM_STATUS)[keyof typeof ROOM_STATUS] }) => void
-  onTimeCount?: (params: { leftTime: number }) => void
-}
-
-export const useMessageHandler = (props: RoomEventHandlers) => {
-  const onMessage = (payload: string) => {
-    const data = serverToClient.serverToClientSchema.parse(JSON.parse(payload))
-
-    switch (data.event) {
-      case 'chat':
-        props.onChat?.({
-          message: data.message,
-          from: data.from,
-        })
-        break
-      case 'presence':
-        props.onPresence?.(data)
-        break
-      case 'system': {
-        if (data.action === 'change-rule') {
-          props.onChangeRule?.({
-            rule: data.rule,
-          })
-          return
-        }
-
-        if (data.action !== 'sync') {
-          props.onGameEvent?.(data)
-        }
-        switch (data.action) {
-          case 'game-start':
-            break
-          case 'draw':
-            props.onDraw?.(data)
-            break
-          case 'pass':
-            props.onPass?.(data)
-            break
-          case 'submit':
-            props.onSubmit?.(data)
-            break
-          case 'game-end':
-            props.onEndGame?.(data)
-            break
-          case 'sync':
-            props.onSyncGameState?.(data)
-            break
-          default:
-            throw new Error(data satisfies never)
-        }
-        break
-      }
-      case 'room-status':
-        props.onRoomStatus?.(data)
-        break
-      case 'left-time':
-        props.onTimeCount?.(data)
-        break
-      default:
-        throw new Error(data satisfies never)
-    }
-  }
-
-  return { onMessage }
-}
 
 export const useMyField = (args: {
   all: CardId[]
@@ -185,7 +91,8 @@ export const useMyField = (args: {
   }
 
   const setHandCardIds = (handCardIds: CardId[]) => {
-    const sortedHandCardIds = handCardIds.sort(compareCard)
+    // copy: the caller's array (session state) must not be sorted in place
+    const sortedHandCardIds = [...handCardIds].sort(compareCard)
     setState({ handCardIds: sortedHandCardIds, submitCardIds: [], factCardIds: [], mode: 'basic' })
   }
 

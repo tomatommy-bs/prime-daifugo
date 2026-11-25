@@ -5,9 +5,12 @@
  * - `cardSizeOption` (localStorage, unchanged key) sets `data-card-size` on the board root.
  * - During play on compact screens the header collapses into the `⋯` menu.
  * - The log is a ProofLog: a 320px sidebar in `wide`, a Drawer elsewhere (`L` toggles it).
+ * - 「退出」 (header): once confirmed, the board's session `leave` runs, then the page goes to
+ *   `/` (rebuild spec §3.6). A reload never leaves.
  */
 import { useLayoutMode } from '@/design/use-layout-mode'
 import { useLocalStorage } from '@mantine/hooks'
+import { useRouter } from 'next/navigation'
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type BoardInfo, RoomChromeContext, RoomHeader } from './_ui/RoomHeader'
 import { type LogEntry, ProofLog, useBoardShortcuts } from './_ui/board'
@@ -52,7 +55,23 @@ const Page = ({ params: { id } }: Props) => {
   useBoardShortcuts({ l: toggleLog })
 
   const [info, setInfo] = useState<BoardInfo>({ status: null, n: 0 })
-  const chrome = useMemo(() => ({ onBoardInfo: setInfo, toggleLog }), [toggleLog])
+  const [leave, setLeave] = useState<(() => Promise<void>) | null>(null)
+  const chrome = useMemo(
+    () => ({
+      onBoardInfo: setInfo,
+      toggleLog,
+      // wrapped: a bare function passed to setState would be called as an updater
+      setLeave: (fn: (() => Promise<void>) | null) => setLeave(() => fn),
+    }),
+    [toggleLog],
+  )
+  const router = useRouter()
+  const onLeave = leave
+    ? async () => {
+        await leave()
+        router.push('/')
+      }
+    : undefined
   // phones (landscape and portrait) give the 36px bar to the SeatLine while playing
   const collapsed = (mode === 'compact' || mode === 'portrait') && info.status === 'playing'
   const wideLog = mode === 'wide' && sidebar
@@ -73,6 +92,7 @@ const Page = ({ params: { id } }: Props) => {
           n={info.n || undefined}
           collapsed={collapsed}
           qrDefaultOpened={mode !== 'compact'}
+          onLeave={onLeave}
         />
         <div
           className="grid min-h-0 flex-1"

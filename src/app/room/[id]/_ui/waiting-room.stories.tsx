@@ -1,11 +1,11 @@
 import type { PrimeDaifugoSetupData } from '@/interface/common'
-import type * as serverToClient from '@/interface/server-to-client'
 import type { Meta, StoryObj } from '@storybook/react'
 import { expect, fn, userEvent, within } from '@storybook/test'
 import { useState } from 'react'
+import type { SessionPresence } from '../session/types'
 import { WaitingRoom } from './waiting-room'
 
-type PresenceEntry = serverToClient.PresenceEvent['presence'][number]
+type PresenceEntry = SessionPresence
 
 const RULE: PrimeDaifugoSetupData = {
   initNumCards: 11,
@@ -15,22 +15,27 @@ const RULE: PrimeDaifugoSetupData = {
 }
 
 const PLAYERS: PresenceEntry[] = [
-  { id: 'a', name: 'alice', status: 'ready' },
-  { id: 'b', name: 'bob', status: 'ready' },
-  { id: 'c', name: 'carol', status: 'not-ready' },
-  { id: 'd', name: 'ramanujan', status: 'not-ready' },
+  { id: 'a', name: 'alice', status: 'ready', role: 'player', connected: true },
+  { id: 'b', name: 'bob', status: 'ready', role: 'player', connected: true },
+  { id: 'c', name: 'carol', status: 'not-ready', role: 'player', connected: true },
+  { id: 'd', name: 'ramanujan', status: 'not-ready', role: 'player', connected: true },
 ]
 
 /** A live harness: ready toggles and rule changes round-trip like the server echo. */
 function Harness({
   count,
   selfIndex,
+  awayIds = [],
 }: {
   count: number
   selfIndex: number | null
+  /** members whose socket dropped (within grace): shown as ◌ */
+  awayIds?: string[]
 }) {
   const [rule, setRule] = useState(RULE)
-  const [presence, setPresence] = useState(PLAYERS.slice(0, count))
+  const [presence, setPresence] = useState(
+    PLAYERS.slice(0, count).map((p) => (awayIds.includes(p.id) ? { ...p, connected: false } : p)),
+  )
   const self = selfIndex === null ? undefined : presence[selfIndex]
   const setStatus = (status: PresenceEntry['status']) =>
     setPresence((list) => list.map((p) => (p.id === self?.id ? { ...p, status } : p)))
@@ -104,5 +109,15 @@ export const Observer: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.queryByText('あなた')).not.toBeInTheDocument()
+  },
+}
+
+export const Reconnecting: Story = {
+  args: { count: 3, selfIndex: 0, awayIds: ['b'] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('listitem', { name: /bob.*（再接続中）/ })).toBeInTheDocument()
+    // bob is ready but away: only alice counts toward the start gate
+    await expect(canvas.getByRole('button', { name: /ゲーム開始/ })).toBeDisabled()
   },
 }

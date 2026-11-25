@@ -5,25 +5,25 @@ import { NumberGlyph } from '@/design/NumberGlyph'
 import { DUR, EASE, SPRING, useMotionMode, useMotionPreset } from '@/design/motion'
 import { useLayoutMode } from '@/design/use-layout-mode'
 import type { PrimeDaifugoSetupData } from '@/interface/common'
-import type * as serverToClient from '@/interface/server-to-client'
 import { Button, SegmentedControl } from '@mantine/core'
 import { IconArrowRight, IconCheck, IconX } from '@tabler/icons-react'
 import { AnimatePresence, m } from 'framer-motion'
 import { type FC, type ReactNode, useEffect, useRef, useState } from 'react'
 import ClientRoomManager from '../room-manager'
+import type { SessionPresence } from '../session/types'
 import { RULE_ORDER, formatRuleValue } from './board/rule-diff'
 
 interface Props {
   rule: PrimeDaifugoSetupData
   onChangeRule?: (rule: Partial<PrimeDaifugoSetupData>) => void
-  presence: serverToClient.PresenceEvent['presence']
-  myPresence?: serverToClient.PresenceEvent['presence'][number]
+  presence: SessionPresence[]
+  myPresence?: SessionPresence
   onGameStart?: (args: PrimeDaifugoSetupData) => void
   onSetReady?: () => void
   onUnsetReady?: () => void
 }
 
-type PresenceEntry = serverToClient.PresenceEvent['presence'][number]
+type PresenceEntry = SessionPresence
 type RuleKey = keyof PrimeDaifugoSetupData
 
 /** Players needed to start (mirrors `ClientRoomManager.canStartGame`, used for copy only). */
@@ -338,14 +338,17 @@ function SeatNode({
   const preset = useMotionPreset()
   const ready = player.status === 'ready'
   const status = ready ? '準備OK' : '準備中'
+  // a dropped socket keeps the seat during the grace period (spec §3.5): shown as ◌
+  const away = player.connected === false
 
   return (
     <li
       className="absolute -translate-x-1/2 -translate-y-[22px]"
       style={style}
-      aria-label={`${residue(k)} ${player.name}${isSelf ? '（あなた）' : ''} ${status}`}
+      aria-label={`${residue(k)} ${player.name}${isSelf ? '（あなた）' : ''} ${status}${away ? '（再接続中）' : ''}`}
       data-seat={player.id}
       data-ready={ready ? 'true' : 'false'}
+      data-connected={away ? 'false' : undefined}
       data-self={isSelf ? 'true' : undefined}
     >
       <m.div
@@ -357,7 +360,7 @@ function SeatNode({
         transition={preset.reduced ? { duration: DUR.sm } : SPRING.soft}
         className="flex flex-col items-center gap-fib-1"
       >
-        <SeatGlyph ready={ready} isSelf={isSelf} reduced={preset.reduced} />
+        <SeatGlyph ready={ready} isSelf={isSelf} away={away} reduced={preset.reduced} />
         <span
           className="flex items-center gap-fib-1 whitespace-nowrap font-semibold leading-tight"
           style={{ fontSize: 'var(--fs--1)' }}
@@ -369,6 +372,11 @@ function SeatNode({
             style={{ background: `var(--seat-${k % 4})` }}
           />
           <span className="num shrink-0 text-ink-muted">{residue(k)}</span>
+          {away ? (
+            <span data-away="" className="num shrink-0 text-ink-muted">
+              ◌
+            </span>
+          ) : null}
           <span className="max-w-[6em] truncate">{player.name}</span>
           {/* inline, so the top seat's label never reaches the ring's centre caption */}
           {isSelf ? (
@@ -428,10 +436,13 @@ function EmptySeat({ k, style }: { k: number; style: Position }) {
 function SeatGlyph({
   ready,
   isSelf,
+  away = false,
   reduced,
 }: {
   ready: boolean
   isSelf: boolean
+  /** disconnected, within grace: dashed ◌ outline */
+  away?: boolean
   reduced: boolean
 }) {
   const draw = (delay: number) =>
@@ -449,6 +460,7 @@ function SeatGlyph({
       viewBox="0 0 44 44"
       aria-hidden="true"
       data-glyph={ready ? 'ready' : 'idle'}
+      style={away ? { opacity: 0.55 } : undefined}
     >
       {isSelf ? (
         <>
@@ -477,6 +489,7 @@ function SeatGlyph({
         fill="var(--surface)"
         stroke="var(--border-strong)"
         strokeWidth={1.5}
+        strokeDasharray={away ? '3 4' : undefined}
       />
       {ready ? (
         <>
@@ -521,12 +534,14 @@ function SeatGlyph({
 function ReadyBar({ presence, canStart }: { presence: PresenceEntry[]; canStart: boolean }) {
   const total = presence.length
   const ready = presence.filter((p) => p.status === 'ready').length
+  // only connected ready members count toward the start gate (RQ-S12)
+  const counted = presence.filter((p) => p.status === 'ready' && p.connected).length
   const ticks = Math.max(total, MIN_READY)
   const reason = canStart
     ? 'ゲームを開始できます'
     : total < MIN_READY
       ? `${MIN_READY}人以上で開始`
-      : `あと ${MIN_READY - ready} 人の準備で開始`
+      : `あと ${Math.max(1, MIN_READY - counted)} 人の準備で開始`
 
   return (
     <div className="flex w-full flex-col gap-fib-1">

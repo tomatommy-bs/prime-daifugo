@@ -1,154 +1,15 @@
 /**
- * Characterization tests: pin the CURRENT behaviour of hooks.ts before the redesign.
+ * Characterization tests for `useMyField` (the local tray model).
  */
 import type { CardId } from '@/game-card/src'
-import { makeCtx, makeGameState, makePresence, serverMsg } from '@/test-utils'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useMessageHandler, useMyField } from './hooks'
+import { useMyField } from './hooks'
 
 const showMock = vi.hoisted(() => vi.fn())
 vi.mock('@mantine/notifications', () => ({
   notifications: { show: showMock },
 }))
-
-const handlerNames = [
-  'onChat',
-  'onPresence',
-  'onStartGame',
-  'onChangeRule',
-  'onGameEvent',
-  'onDraw',
-  'onPass',
-  'onSubmit',
-  'onEndGame',
-  'onSyncGameState',
-  'onRoomStatus',
-  'onTimeCount',
-] as const
-
-type HandlerName = (typeof handlerNames)[number]
-
-const setup = () => {
-  const calls: HandlerName[] = []
-  const handlers = Object.fromEntries(
-    handlerNames.map((name) => [name, vi.fn(() => calls.push(name))]),
-  ) as Record<HandlerName, ReturnType<typeof vi.fn>>
-  const { result } = renderHook(() => useMessageHandler(handlers))
-  const send = (payload: unknown) => result.current.onMessage(JSON.stringify(payload))
-  return { handlers, calls, send, onMessage: result.current.onMessage }
-}
-
-const calledOnly = (handlers: Record<HandlerName, ReturnType<typeof vi.fn>>) =>
-  handlerNames.filter((name) => handlers[name].mock.calls.length > 0)
-
-describe('useMessageHandler', () => {
-  it('dispatches chat to onChat only', () => {
-    const { handlers, send } = setup()
-    send(serverMsg.chat('hello', 'p2'))
-    expect(calledOnly(handlers)).toEqual(['onChat'])
-    expect(handlers.onChat).toHaveBeenCalledWith({ message: 'hello', from: 'p2' })
-  })
-
-  it('dispatches presence to onPresence', () => {
-    const { handlers, send } = setup()
-    const presence = makePresence(['alice', 'bob'])
-    send(serverMsg.presence(presence))
-    expect(calledOnly(handlers)).toEqual(['onPresence'])
-    expect(handlers.onPresence).toHaveBeenCalledWith({ event: 'presence', presence })
-  })
-
-  it('dispatches room-status to onRoomStatus', () => {
-    const { handlers, send } = setup()
-    send(serverMsg.roomStatus('waitingNextRound'))
-    expect(calledOnly(handlers)).toEqual(['onRoomStatus'])
-    expect(handlers.onRoomStatus.mock.calls[0][0]).toMatchObject({ status: 'waitingNextRound' })
-  })
-
-  it('dispatches left-time to onTimeCount', () => {
-    const { handlers, send } = setup()
-    send(serverMsg.leftTime(42))
-    expect(calledOnly(handlers)).toEqual(['onTimeCount'])
-    expect(handlers.onTimeCount.mock.calls[0][0]).toMatchObject({ leftTime: 42 })
-  })
-
-  it('game-start reaches onGameEvent only (onStartGame is never called)', () => {
-    const { handlers, send } = setup()
-    send(serverMsg.gameStart())
-    expect(calledOnly(handlers)).toEqual(['onGameEvent'])
-  })
-
-  it.each([
-    ['draw', serverMsg.draw(), 'onDraw'],
-    ['pass', serverMsg.pass(), 'onPass'],
-    [
-      'submit',
-      serverMsg.submit({ submitCardSet: { submit: ['2S'], factor: [] }, result: null }),
-      'onSubmit',
-    ],
-    ['game-end', serverMsg.gameEnd({ winner: 'alice' }), 'onEndGame'],
-  ] as const)('%s runs onGameEvent first, then %s', (_name, msg, handler) => {
-    const { handlers, calls, send } = setup()
-    send(msg)
-    expect(calls).toEqual(['onGameEvent', handler])
-    expect(handlers.onGameEvent.mock.calls[0][0]).toMatchObject({
-      gameState: msg.gameState,
-      ctx: msg.ctx,
-      commander: { id: 'p1', name: 'player1' },
-    })
-  })
-
-  it('passes submissionResult and winner through', () => {
-    const { handlers, send } = setup()
-    send(
-      serverMsg.submit({
-        submitCardSet: { submit: ['2S', '2H'], factor: [] },
-        result: 'BASE_IS_NOT_PRIME',
-      }),
-    )
-    expect(handlers.onSubmit.mock.calls[0][0].submissionResult).toEqual({
-      submitCardSet: { submit: ['2S', '2H'], factor: [] },
-      result: 'BASE_IS_NOT_PRIME',
-    })
-    send(serverMsg.gameEnd({ winner: 'bob' }))
-    expect(handlers.onEndGame.mock.calls[0][0].winner).toBe('bob')
-  })
-
-  it('does NOT call onGameEvent on sync', () => {
-    const { handlers, send } = setup()
-    const gameState = makeGameState()
-    const ctx = makeCtx()
-    send(serverMsg.sync({ gameState, ctx }))
-    expect(calledOnly(handlers)).toEqual(['onSyncGameState'])
-    expect(handlers.onSyncGameState.mock.calls[0][0]).toMatchObject({ gameState, ctx })
-  })
-
-  it('does NOT call onGameEvent on change-rule', () => {
-    const { handlers, send } = setup()
-    send(serverMsg.changeRule({ timeLimit: 15 }))
-    expect(calledOnly(handlers)).toEqual(['onChangeRule'])
-    expect(handlers.onChangeRule).toHaveBeenCalledWith({ rule: { timeLimit: 15 } })
-  })
-
-  it('rejects invalid JSON by throwing, without calling any handler', () => {
-    const { handlers, onMessage } = setup()
-    expect(() => onMessage('{not json')).toThrow()
-    expect(calledOnly(handlers)).toEqual([])
-  })
-
-  it('rejects schema-invalid payloads by throwing, without calling any handler', () => {
-    const { handlers, onMessage } = setup()
-    expect(() => onMessage(JSON.stringify({ event: 'nope' }))).toThrow()
-    expect(() => onMessage(JSON.stringify({ event: 'left-time', leftTime: 'x' }))).toThrow()
-    expect(calledOnly(handlers)).toEqual([])
-  })
-
-  it('tolerates missing optional handlers', () => {
-    const { result } = renderHook(() => useMessageHandler({}))
-    expect(() => result.current.onMessage(JSON.stringify(serverMsg.draw()))).not.toThrow()
-    expect(() => result.current.onMessage(JSON.stringify(serverMsg.sync()))).not.toThrow()
-  })
-})
 
 describe('useMyField', () => {
   beforeEach(() => {
