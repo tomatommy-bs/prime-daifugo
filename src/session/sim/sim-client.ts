@@ -1,8 +1,8 @@
 /**
  * Simulated browser tab (spec §12.1). It owns a reconnecting socket (backoff, terminal close
  * codes, liveness, resume triggers — spec §3.4) and a pluggable client model that applies frames
- * by the seq/epoch rules of §6.4. The default `minimalClientModel` is a few lines; integration
- * swaps in the real `clientReduce` through the `ClientModel` interface.
+ * by the seq/epoch rules of §6.4. The default `minimalClientModel` is a few lines; the real
+ * `clientReduce` plugs in through the `ClientModel` interface (`real-engine.fuzz.test.ts`).
  */
 import type { Rng } from '../../game/types'
 import { CLOSE, PV, TERMINAL_CLOSE_CODES } from '../../shared/ids'
@@ -18,6 +18,11 @@ export interface ClientModel<S> {
   lastSeq(state: S): number | null
   epoch(state: S): string | null
   view(state: S): View | null
+  /**
+   * Optional extra check for a caught-up client, given the server's view for its pid (e.g. the
+   * real client reducer's UI bundle equals the bundle derived from that view). Throws on mismatch.
+   */
+  checkCaughtUp?(state: S, expected: View, pid: string): void
 }
 
 export type MinimalClientState = {

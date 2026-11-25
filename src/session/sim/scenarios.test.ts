@@ -1,9 +1,10 @@
 /**
  * Scripted simulator scenarios (spec §12.1). Every scenario runs the real reducer and view behind
- * the in-memory host, with invariants checked after every clock step. The engine is injected:
- * integration adds the real engine to `KITS`.
+ * the in-memory host, with invariants checked after every clock step. Every scenario runs with
+ * both the fake engine and the real rules engine.
  */
 import { describe, expect, it } from 'vitest'
+import { engine as realEngine } from '../../game/engine'
 import type { CardId, GameEngine } from '../../game/types'
 import { fakeEngine } from '../testing/fake-engine'
 import { DEFAULT_ROOM_CONFIG } from '../types'
@@ -11,7 +12,10 @@ import { cardMultiset } from './invariants'
 import { SimWorld } from './world'
 
 type Kit = { name: string; engine: GameEngine }
-const KITS: Kit[] = [{ name: 'fake engine', engine: fakeEngine }]
+const KITS: Kit[] = [
+  { name: 'fake engine', engine: fakeEngine },
+  { name: 'real engine', engine: realEngine },
+]
 
 const CFG = DEFAULT_ROOM_CONFIG
 const T = 60_000 // default rule timeLimit

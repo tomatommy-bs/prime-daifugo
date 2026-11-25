@@ -158,6 +158,7 @@ export class SimWorld<S = MinimalClientState> {
         continue
       }
       checkClientView(c.pid, c.view, state, this.view)
+      c.impl.checkCaughtUp?.(c.model, this.view(state, c.pid), c.pid)
       checked += 1
     }
     return checked
