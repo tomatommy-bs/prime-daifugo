@@ -1,11 +1,20 @@
 'use client'
-import {} from '@/utils/play-card'
-import { Badge, Group, SegmentedControl, Stack, Text } from '@mantine/core'
+/**
+ * The room page (§6.4): RoomHeader, the board and the proof log.
+ * - SSR-safe: the invite URL is read from `window` in an effect, never during render.
+ * - `cardSizeOption` (localStorage, unchanged key) sets `data-card-size` on the board root.
+ * - During play on compact screens the header collapses into the `⋯` menu.
+ * - The log is a ProofLog: a 320px sidebar in `wide`, a Drawer elsewhere (`L` toggles it).
+ */
+import { useLayoutMode } from '@/design/use-layout-mode'
 import { useLocalStorage } from '@mantine/hooks'
-import { type ReactNode, useState } from 'react'
-import { QRButton } from './_ui/QRButton'
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type BoardInfo, RoomChromeContext, RoomHeader } from './_ui/RoomHeader'
+import { ProofLog } from './_ui/board'
+import { useBoardShortcuts } from './_ui/board/ActionBar'
+import type { LogEntry } from './_ui/board/types'
 import { GameBoard } from './_ui/game-board'
-import {} from './hooks'
+import { logKindOf } from './_ui/notification-message'
 
 interface Props {
   params: Record<'id', string>
@@ -13,43 +22,82 @@ interface Props {
 }
 
 const Page = ({ params: { id } }: Props) => {
+  const mode = useLayoutMode()
   const [compSizeOption, setCompSizeOption] = useLocalStorage<'S' | 'M' | 'L'>({
     key: 'cardSizeOption',
     defaultValue: 'M',
   })
-  const [logs, setLogs] = useState<ReactNode[]>([`ここにログが表示されます. RoomID: ${id}`])
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    setUrl(window.location.href)
+  }, [])
+
+  const [logs, setLogs] = useState<LogEntry[]>(() => [
+    { id: 'log-0', node: `ここにログが表示されます. RoomID: ${id}`, kind: 'system' },
+  ])
+  const seq = useRef(0)
+  const onLogNotification = useCallback((node: ReactNode) => {
+    seq.current += 1
+    const entry: LogEntry = { id: `log-${seq.current}`, node, kind: logKindOf(node) }
+    setLogs((prev) => [entry, ...prev])
+  }, [])
+
+  const [logOpen, setLogOpen] = useState(false)
+  const [sidebar, setSidebar] = useState(true)
+  const toggleLog = useCallback(() => {
+    if (mode === 'wide') {
+      setSidebar((v) => !v)
+    } else {
+      setLogOpen((v) => !v)
+    }
+  }, [mode])
+  useBoardShortcuts({ l: toggleLog })
+
+  const [info, setInfo] = useState<BoardInfo>({ status: null, n: 0 })
+  const chrome = useMemo(() => ({ onBoardInfo: setInfo, toggleLog }), [toggleLog])
+  const collapsed = mode === 'compact' && info.status === 'playing'
+  const wideLog = mode === 'wide' && sidebar
 
   return (
-    <div className="py-2">
-      <Group p={'xs'} align="center">
-        <h1>
-          <Badge variant="dot">RoomID: {id}</Badge>
-        </h1>
-        <QRButton url={window.location.href} popoverProps={{ defaultOpened: true }} />
-
-        <SegmentedControl
-          size="xs"
-          data={['S', 'M', 'L']}
-          color="blue"
-          value={compSizeOption}
-          onChange={(e) => setCompSizeOption(e as 'S' | 'M' | 'L')}
+    <RoomChromeContext.Provider value={chrome}>
+      <div
+        data-card-size={compSizeOption}
+        data-layout-mode={mode}
+        className="flex h-dvh min-h-0 flex-col overflow-hidden bg-bg"
+      >
+        <RoomHeader
+          roomId={id}
+          url={url}
+          size={compSizeOption}
+          onSizeChange={setCompSizeOption}
+          onOpenLog={toggleLog}
+          n={info.n || undefined}
+          collapsed={collapsed}
+          qrDefaultOpened={mode !== 'compact'}
         />
-      </Group>
-
-      <GameBoard
-        id={id}
-        size={compSizeOption}
-        onLogNotification={(logMsg) => setLogs((prev) => [logMsg, ...prev])}
-      />
-      <Stack className="bg-gray-500/20 p-2 rounded-sm mt-2 gap-0 resize-y overflow-y-scroll">
-        {logs.map((log, index) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-          <Text key={`${log}-${index}`} size="xs" c="lightgray">
-            {log}
-          </Text>
-        ))}
-      </Stack>
-    </div>
+        <div
+          className="grid min-h-0 flex-1"
+          style={{ gridTemplateColumns: wideLog ? 'minmax(0, 1fr) 320px' : 'minmax(0, 1fr)' }}
+        >
+          <main className="min-h-0 overflow-auto py-fib-1 compact:py-0">
+            <GameBoard id={id} size={compSizeOption} onLogNotification={onLogNotification} />
+          </main>
+          {wideLog ? (
+            <aside className="min-h-0 border-l border-line">
+              <ProofLog entries={logs} variant="sidebar" />
+            </aside>
+          ) : null}
+        </div>
+        {mode !== 'wide' ? (
+          <ProofLog
+            entries={logs}
+            variant="drawer"
+            opened={logOpen}
+            onClose={() => setLogOpen(false)}
+          />
+        ) : null}
+      </div>
+    </RoomChromeContext.Provider>
   )
 }
 
