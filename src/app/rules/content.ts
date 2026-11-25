@@ -5,6 +5,13 @@
  */
 import type { Faq, HowToStep } from '@/lib/structured-data'
 import { ALLOWED_RULES, DEFAULT_RULE } from '@/shared/rule-options'
+import {
+  LARGEST_TWO_CARD_PRIME,
+  LAST_CARD_RANKS,
+  ONE_CARD_PRIMES,
+  TWO_CARD_PRIMES,
+  rankWithValue,
+} from './primes'
 
 /** The h1 and the breadcrumb's page name. */
 export const RULES_TITLE = '素数大富豪のルールと遊び方'
@@ -32,6 +39,7 @@ export const SECTIONS = [
   { id: 'end', title: '勝敗' },
   { id: 'time', title: '制限時間と通信切れ' },
   { id: 'options', title: 'ルールオプション' },
+  { id: 'primes', title: '覚えておくと便利な素数とコツ' },
   { id: 'differences', title: '公式ルールとの違い・このアプリでの決まり' },
   { id: 'how-to-play', title: 'オンラインでの遊び方' },
   { id: 'faq', title: 'よくある質問' },
@@ -66,6 +74,20 @@ export const HOW_TO_STEPS: readonly HowToStep[] = [
   },
 ]
 
+const largest = LARGEST_TWO_CARD_PRIME
+
+/** Strategy tips, shown in the 'primes' section and summarised in the FAQ. */
+export const PRIME_TIPS = {
+  oneCard: `1 枚で出せる素数は ${ONE_CARD_PRIMES.map(rankWithValue).join('・')} の ${ONE_CARD_PRIMES.length} つです。K は 1 枚で出せる一番大きな素数です。`,
+  twoCard: `2 枚でつくれる素数は ${TWO_CARD_PRIMES.length} 個あり、一番大きいのは ${largest.cards.join(' と ')} を並べた ${largest.value} です。`,
+  lastCard: `2 枚以上並べるときは、最後のカードを ${LAST_CARD_RANKS.join('・')} のどれかにします。ほかのカードで終わると、2 か 5 で割り切れてしまいます。`,
+  digitSum:
+    '各桁の数字を足した和が 3 の倍数なら、その数は 3 で割り切れるので素数ではありません（例：5・7 の 57 は 5 + 7 = 12）。',
+  shed: '合成数出しが成功すると、式に使ったカードも手札から減ります。手札が多いときに一気に減らすチャンスです。',
+  grothendieck:
+    '57 を出すとすぐに場が流れ、自分から出し直せます。場が空のときや、場が 57 より小さい 2 枚のときに使えます。',
+} as const
+
 export const FAQS: readonly Faq[] = [
   {
     question: '素数大富豪とはどんなゲームですか？',
@@ -86,6 +108,14 @@ export const FAQS: readonly Faq[] = [
     question: 'ひとりで練習できますか？',
     answer:
       '対戦は2人からです。ひとりのときは「素数判定ラボ」で、カードを並べた数（約16桁まで）が素数かどうかや素因数分解を確かめられます。ランダムマッチとトレーニングは準備中です。',
+  },
+  {
+    question: '覚えておくと便利な素数はありますか？',
+    answer: `${PRIME_TIPS.oneCard}${PRIME_TIPS.twoCard}まずはこの 2 つを覚えると、出せる手がすぐに見つかります。`,
+  },
+  {
+    question: '勝つためのコツはありますか？',
+    answer: `${PRIME_TIPS.lastCard}${PRIME_TIPS.shed}${PRIME_TIPS.grothendieck}`,
   },
   {
     question: '57 はなぜ出せるのですか？',

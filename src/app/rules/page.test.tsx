@@ -66,7 +66,9 @@ describe('/rules', () => {
       'href',
       '/room/new',
     )
-    expect(screen.getByRole('link', { name: /素数判定ラボ/ })).toHaveAttribute('href', '/labo/calc')
+    for (const link of screen.getAllByRole('link', { name: /素数判定ラボ/ })) {
+      expect(link).toHaveAttribute('href', '/labo/calc')
+    }
     expect(screen.getByRole('link', { name: 'ホーム' })).toHaveAttribute('href', '/')
   })
 
@@ -117,5 +119,14 @@ describe('/rules content', () => {
   it('links the 57 exception to its section', () => {
     renderWithProviders(<RulesPage />)
     expect(screen.getByRole('link', { name: '57 切り' })).toHaveAttribute('href', '#grothendieck')
+  })
+
+  it('lists the one- and two-card primes computed by the engine', () => {
+    renderWithProviders(<RulesPage />)
+    const one = screen.getByRole('list', { name: '1 枚で出せる素数' })
+    expect(within(one).getAllByRole('listitem')).toHaveLength(6)
+    const two = screen.getByRole('list', { name: '2 枚でつくれる素数' })
+    expect(within(two).getAllByRole('listitem')).toHaveLength(38)
+    expect(within(two).getByText('1213')).toBeInTheDocument()
   })
 })

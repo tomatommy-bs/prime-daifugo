@@ -10,12 +10,14 @@ import {
   DEFAULTS,
   FAQS,
   HOW_TO_STEPS,
+  PRIME_TIPS,
   RULES_CRUMBS,
   RULES_DESCRIPTION,
   RULES_DOC_TITLE,
   SECTIONS,
   type SectionId,
 } from './content'
+import { type CardPrime, ONE_CARD_PRIMES, TWO_CARD_PRIMES } from './primes'
 
 export const metadata = pageMetadata({
   // already starts with the site name, so no ` | 素数大富豪` suffix
@@ -132,7 +134,7 @@ export default function RulesPage() {
 
           <Toc />
 
-          <Section id="overview" n={1}>
+          <Section id="overview">
             <P>
               2〜4人で遊ぶ対戦カードゲームです。手番の人は、手札のカードを並べてできる数が素数なら、その数を場に出せます。次の人がカードを出すときは、場と同じ枚数で、場の数より大きな素数にする必要があります。
             </P>
@@ -141,7 +143,7 @@ export default function RulesPage() {
             </P>
           </Section>
 
-          <Section id="cards" n={2}>
+          <Section id="cards">
             <P>ジョーカーを除いた52枚のトランプを使います。カードの数字は次のとおりです。</P>
             <Dl
               items={[
@@ -168,7 +170,7 @@ export default function RulesPage() {
             </Note>
           </Section>
 
-          <Section id="setup" n={3}>
+          <Section id="setup">
             <Ul>
               <li>
                 ルームで<strong>準備OK</strong>
@@ -182,7 +184,7 @@ export default function RulesPage() {
             </Ul>
           </Section>
 
-          <Section id="turn" n={4}>
+          <Section id="turn">
             <P>自分の手番では、次の3つの行動ができます。</P>
             <Dl
               items={[
@@ -202,7 +204,7 @@ export default function RulesPage() {
             />
           </Section>
 
-          <Section id="submit" n={5}>
+          <Section id="submit">
             <P>出すカードは、次の条件をすべて満たす必要があります。</P>
             <Ol>
               <li>枚数は最大提出枚数（初期設定では{DEFAULTS.maxSubmitNumCards}枚）以下。</li>
@@ -234,7 +236,7 @@ export default function RulesPage() {
             />
           </Section>
 
-          <Section id="factor" n={6}>
+          <Section id="factor">
             <P>
               素数でない数（合成数）でも、<strong>素因数分解の式</strong>
               を手札のカードで添えれば出せます。これを合成数出しといいます。
@@ -276,7 +278,7 @@ export default function RulesPage() {
             </P>
           </Section>
 
-          <Section id="penalty" n={7}>
+          <Section id="penalty">
             <P>
               判定に失敗すると、出したカードは手札に戻り、山札からカードを引いて手番が終わります。
             </P>
@@ -292,7 +294,7 @@ export default function RulesPage() {
             <Note>山札が足りないときは、残っている分だけ引きます。</Note>
           </Section>
 
-          <Section id="flow" n={8}>
+          <Section id="flow">
             <P>
               誰かがカードを出したあと、ほかの全員がパス（または失敗）して手番がその人に戻ってくると、
               <strong>場が流れます</strong>
@@ -300,7 +302,7 @@ export default function RulesPage() {
             </P>
           </Section>
 
-          <Section id="grothendieck" n={9}>
+          <Section id="grothendieck">
             <P>
               <span className="num font-bold text-gold">57</span> は 3 × 19
               なので素数ではありませんが、「グロタンディーク素数」として特別に出せます。
@@ -316,7 +318,7 @@ export default function RulesPage() {
             </Note>
           </Section>
 
-          <Section id="end" n={10}>
+          <Section id="end">
             <P>
               手札を最初になくした人が勝ちです。57
               切りで上がっても勝ちになります。順位はつけず、勝者は 1
@@ -327,7 +329,7 @@ export default function RulesPage() {
             </P>
           </Section>
 
-          <Section id="time" n={11}>
+          <Section id="time">
             <Ul>
               <li>
                 1 手番の制限時間は {ALLOWED_RULES.timeLimit.join('・')} 秒から選べます（初期設定{' '}
@@ -348,7 +350,7 @@ export default function RulesPage() {
             </Ul>
           </Section>
 
-          <Section id="options" n={12}>
+          <Section id="options">
             <P>待合室では、参加者なら誰でもルールを変更できます（ホストはいません）。</P>
             <Dl
               items={[
@@ -376,7 +378,40 @@ export default function RulesPage() {
             </Note>
           </Section>
 
-          <Section id="differences" n={13}>
+          <Section id="primes">
+            <P>
+              素数大富豪では、よく使う素数を覚えておくと手番で迷わなくなります。どれもこのサイトの判定と同じ方法で計算した一覧です。
+            </P>
+            <h3 className="m-0 text-[length:var(--fs-0)] font-bold leading-[1.618]">
+              1 枚で出せる素数
+            </h3>
+            <PrimeList primes={ONE_CARD_PRIMES} label="1 枚で出せる素数" />
+            <P>{PRIME_TIPS.oneCard}</P>
+            <h3 className="m-0 text-[length:var(--fs-0)] font-bold leading-[1.618]">
+              2 枚でつくれる素数
+            </h3>
+            <PrimeList primes={TWO_CARD_PRIMES} label="2 枚でつくれる素数" />
+            <P>{PRIME_TIPS.twoCard}</P>
+            <h3 className="m-0 text-[length:var(--fs-0)] font-bold leading-[1.618]">コツ</h3>
+            <Ul>
+              <li>{PRIME_TIPS.lastCard}</li>
+              <li>{PRIME_TIPS.digitSum}</li>
+              <li>{PRIME_TIPS.shed}</li>
+              <li>{PRIME_TIPS.grothendieck}</li>
+            </Ul>
+            <Note>
+              思いついた数が素数かどうかは、
+              <Link
+                href="/labo/calc"
+                className="mx-fib-1 text-ink underline decoration-line underline-offset-4"
+              >
+                素数判定ラボ
+              </Link>
+              で確かめられます。
+            </Note>
+          </Section>
+
+          <Section id="differences">
             <P>
               このアプリは
               <a
@@ -417,7 +452,7 @@ export default function RulesPage() {
             <Note>公式ルールの細かな点は、上のリンク先で確認してください。</Note>
           </Section>
 
-          <Section id="how-to-play" n={14}>
+          <Section id="how-to-play">
             <ol className="m-0 flex list-none flex-col gap-fib-3 p-0">
               {HOW_TO_STEPS.map((step, i) => (
                 <li key={step.name} className="grid grid-cols-[auto_1fr] gap-x-fib-3">
@@ -453,7 +488,7 @@ export default function RulesPage() {
             </div>
           </Section>
 
-          <Section id="faq" n={15}>
+          <Section id="faq">
             <dl className="m-0 flex flex-col gap-fib-4">
               {FAQS.map((faq) => (
                 <div
@@ -533,8 +568,11 @@ function Toc() {
   )
 }
 
-function Section({ id, n, children }: { id: SectionId; n: number; children: ReactNode }) {
-  const title = SECTIONS.find((s) => s.id === id)?.title ?? id
+/** A numbered section; its number and title come from `SECTIONS`, so the TOC always agrees. */
+function Section({ id, children }: { id: SectionId; children: ReactNode }) {
+  const index = SECTIONS.findIndex((s) => s.id === id)
+  const title = SECTIONS[index]?.title ?? id
+  const n = index + 1
   return (
     <section
       id={id}
@@ -594,6 +632,25 @@ function Dl({ items }: { items: readonly (readonly [string, string])[] }) {
         </div>
       ))}
     </dl>
+  )
+}
+
+/** Primes as mono chips; court cards and the ace show the rank that makes them. */
+function PrimeList({ primes, label }: { primes: readonly CardPrime[]; label: string }) {
+  return (
+    <ul aria-label={label} className="m-0 flex list-none flex-wrap gap-fib-1 p-0">
+      {primes.map((p) => (
+        <li
+          key={p.value}
+          className="num rounded-[var(--r-1)] border border-line bg-surface px-fib-2 py-[2px] font-bold text-prime"
+        >
+          {p.value}
+          {p.cards.length === 1 && p.cards[0] !== String(p.value) ? (
+            <span className="ml-fib-1 font-normal text-ink-muted">{p.cards[0]}</span>
+          ) : null}
+        </li>
+      ))}
+    </ul>
   )
 }
 
