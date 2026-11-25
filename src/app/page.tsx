@@ -2,6 +2,7 @@ import { JsonLdScript } from '@/components/json-ld'
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE } from '@/lib/site'
 import { publisherJsonLd, videoGameJsonLd, websiteJsonLd } from '@/lib/structured-data'
 import type { Metadata } from 'next'
+import { HomeAbout } from './_ui/home-about'
 import { HomeView } from './_ui/home-view'
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default function Home() {
     <>
       <JsonLdScript data={[websiteJsonLd(), publisherJsonLd(), videoGameJsonLd()]} />
       <HomeView />
+      <HomeAbout />
     </>
   )
 }

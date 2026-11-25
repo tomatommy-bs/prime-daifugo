@@ -102,7 +102,11 @@ describe('Home page', () => {
   it('links ルーム作成 to /room/new and the lab to /labo/calc', () => {
     renderWithProviders(<Home />)
     expect(screen.getByRole('link', { name: /ルーム作成/ })).toHaveAttribute('href', '/room/new')
-    expect(screen.getByRole('link', { name: /素数判定ラボ/ })).toHaveAttribute('href', '/labo/calc')
+    const menu = screen.getByRole('navigation', { name: 'ゲームメニュー' })
+    expect(within(menu).getByRole('link', { name: /素数判定ラボ/ })).toHaveAttribute(
+      'href',
+      '/labo/calc',
+    )
   })
 
   it('renders disabled features as disabled buttons that are not links', () => {
@@ -188,5 +192,32 @@ describe('Home page', () => {
     first.unmount()
     const second = renderWithProviders(<Home />, { reducedMotion: false })
     expect(second.container.querySelector('[data-intro]')).toHaveAttribute('data-intro', 'static')
+  })
+
+  it('links the rules from the lede with a descriptive anchor', () => {
+    const { container } = renderWithProviders(<Home />)
+    const lede = container.querySelector('[data-home-lede]') as HTMLElement
+    expect(within(lede).getByRole('link', { name: '素数大富豪のルールと遊び方' })).toHaveAttribute(
+      'href',
+      '/rules',
+    )
+  })
+
+  it('marks loading counters busy without placeholder text', () => {
+    const { container } = renderWithProviders(<Home />)
+    expect(container.textContent).not.toContain('取得中')
+    expect(container.querySelectorAll('dd[aria-busy="true"]')).toHaveLength(3)
+  })
+
+  it('explains the game below the first screen with links into the rules', () => {
+    renderWithProviders(<Home />)
+    expect(screen.getByRole('heading', { level: 2, name: '素数大富豪とは' })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(3)
+    const nav = screen.getByRole('navigation', { name: 'ルールとラボ' })
+    expect(
+      within(nav)
+        .getAllByRole('link')
+        .map((a) => a.getAttribute('href')),
+    ).toEqual(['/rules', '/rules#primes', '/rules#faq', '/labo/calc'])
   })
 })

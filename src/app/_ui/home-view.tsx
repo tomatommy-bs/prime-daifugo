@@ -108,7 +108,11 @@ export function HomeView() {
 function HomeLede() {
   return (
     <p data-home-lede="" className="m-0 text-ink-muted" style={{ fontSize: 'var(--fs--1)' }}>
-      トランプを並べて素数をつくり、場より大きな素数を出し合う対戦カードゲーム。登録不要・無料で、ブラウザから友だちと2〜4人で遊べます。
+      トランプを並べて素数をつくり、場より大きな素数を出し合う対戦カードゲーム。登録不要・無料で、ブラウザから友だちと2〜4人で遊べます。はじめての人は「
+      <Link href="/rules" className="text-ink underline decoration-line underline-offset-4">
+        素数大富豪のルールと遊び方
+      </Link>
+      」へ。
     </p>
   )
 }
@@ -141,12 +145,8 @@ function LobbyCounters({ online, lobby, rooms, inline }: CountersProps) {
                 : '',
             ].join(' ')}
           >
-            <dd className="m-0 order-1">
-              <NumberGlyph
-                value={item.value}
-                size={2}
-                srLabel={item.value === null ? '取得中' : undefined}
-              />
+            <dd className="m-0 order-1" aria-busy={item.value === null}>
+              <NumberGlyph value={item.value} size={2} />
             </dd>
             <dt className="order-2 text-ink-muted" style={{ fontSize: 'var(--fs--1)' }}>
               {item.label}
@@ -169,13 +169,8 @@ function LobbyCounters({ online, lobby, rooms, inline }: CountersProps) {
           <dt className="font-semibold text-ink-muted" style={{ fontSize: 'var(--fs--1)' }}>
             {item.label}
           </dt>
-          <dd className="m-0">
-            <NumberGlyph
-              value={item.value}
-              size={4}
-              tone={item.value === null ? 'muted' : 'ink'}
-              srLabel={item.value === null ? '取得中' : undefined}
-            />
+          <dd className="m-0" aria-busy={item.value === null}>
+            <NumberGlyph value={item.value} size={4} tone={item.value === null ? 'muted' : 'ink'} />
           </dd>
         </div>
       ))}
