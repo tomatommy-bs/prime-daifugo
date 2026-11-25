@@ -281,9 +281,9 @@ export function ResultOverlay({ result, onDone }: ResultOverlayProps) {
   return (
     <AnimatePresence>
       {result ? (
-        <m.output
+        // Not a live region: the board's LiveRegion announces the result once (§9.4).
+        <m.div
           key={`${result.kind}-${result.value}-${result.submitter}`}
-          aria-live="polite"
           data-result={result.kind}
           data-motion={mode}
           onClick={() => doneRef.current?.()}
@@ -294,11 +294,13 @@ export function ResultOverlay({ result, onDone }: ResultOverlayProps) {
           transition={{ duration: full ? DUR.md : DUR.sm, ease: EASE.out }}
         >
           <m.div
-            className="flex max-w-full flex-col items-center gap-fib-2 rounded-[var(--r-3)] px-fib-4 py-fib-3"
+            // opaque, so field cards never show through the factor tree; tighter on compact
+            // phones so the popover stays inside the 132px field row, under the seat line
+            data-result-plate=""
+            className="flex max-w-full flex-col items-center gap-fib-2 rounded-[var(--r-3)] px-fib-4 py-fib-3 compact:gap-fib-1 compact:py-fib-1"
             style={{
-              background: 'color-mix(in srgb, var(--surface-raised) 92%, transparent)',
+              background: 'var(--surface-raised)',
               boxShadow: 'var(--shadow-2)',
-              backdropFilter: 'blur(2px)',
             }}
             initial={full ? { y: 8, scale: 0.96 } : false}
             animate={{ y: 0, scale: 1 }}
@@ -329,7 +331,7 @@ export function ResultOverlay({ result, onDone }: ResultOverlayProps) {
               </m.span>
             ) : null}
           </m.div>
-        </m.output>
+        </m.div>
       ) : null}
     </AnimatePresence>
   )

@@ -131,6 +131,14 @@ describe('ActionBar', () => {
     expect(document.querySelector('[data-kbd="D"]')).not.toBeNull()
   })
 
+  it('Kbd hint text is not faded (the label colour already meets 4.5:1)', () => {
+    setup({ showKbd: true })
+    for (const kbd of document.querySelectorAll<HTMLElement>('[data-kbd]')) {
+      expect(kbd.className).not.toMatch(/\bopacity-/)
+      expect(kbd.style.opacity).toBe('')
+    }
+  })
+
   it('no Kbd hints without a fine pointer', () => {
     setup()
     expect(document.querySelector('[data-kbd]')).toBeNull()

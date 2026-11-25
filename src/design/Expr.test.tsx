@@ -13,6 +13,13 @@ describe('Expr', () => {
     expect(container.querySelectorAll('[data-token="num"]')).toHaveLength(2)
     expect(container.querySelector('[data-token="times"]')?.textContent).toBe(TIMES)
   })
+  it('raises exponents to the top of the flex row (flex items ignore vertical-align)', () => {
+    const { container } = renderWithProviders(<Expr tokens={['2S', '^', '4H', '*', '7C']} />)
+    const sup = container.querySelector<HTMLElement>('sup[data-token="exp"]')
+    expect(sup?.style.alignSelf).toBe('flex-start')
+    expect(sup?.style.fontSize).toBe('0.6em')
+  })
+
   it('joins adjacent number cards', () => {
     expect(typesetExpr(['AS', '3H', '*', 'JD'])).toEqual([
       { kind: 'num', value: '13', exponent: false, index: 0 },

@@ -172,7 +172,8 @@ function ActionButton({
           size="xs"
           aria-hidden="true"
           data-kbd={kbd}
-          className="num !border-current !bg-transparent !text-current opacity-60"
+          // full-strength currentColor, thinner border: a 60% opacity hint fell to 2.7–3.7:1
+          className="num !border-current/60 !bg-transparent !text-current font-normal"
         >
           {kbd}
         </Kbd>

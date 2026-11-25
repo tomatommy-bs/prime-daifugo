@@ -79,6 +79,13 @@ export function exprAriaLabel(tokens: FactCardId[]): string {
   return words.join(' ')
 }
 
+/**
+ * Exponents: the row is an `inline-flex items-baseline`, and flex items ignore
+ * `vertical-align`, so a plain `<sup>` sat on the baseline (2⁴ read as 2₄). Each exponent
+ * aligns to the top of the row instead, at 0.6 of the base size.
+ */
+export const EXPONENT_STYLE = { fontSize: '0.6em', top: 0, alignSelf: 'flex-start' } as const
+
 /** A typeset factor expression (§3). `role="math"` with a Japanese `aria-label`. */
 export function Expr({ tokens, highlightIndex, className = '' }: ExprProps) {
   const mode = useMotionMode()
@@ -104,8 +111,8 @@ export function Expr({ tokens, highlightIndex, className = '' }: ExprProps) {
           return (
             <sup
               key={key}
-              className="text-factor opacity-50"
-              style={{ fontSize: 'var(--fs--2)' }}
+              className="self-start text-factor leading-none opacity-50"
+              style={EXPONENT_STYLE}
               data-token="pow-pending"
             >
               □
@@ -128,10 +135,10 @@ export function Expr({ tokens, highlightIndex, className = '' }: ExprProps) {
             <m.sup
               key={key}
               layout={layout}
-              className="text-factor"
-              style={{ fontSize: 'var(--fs--2)' }}
+              className="self-start text-factor leading-none"
               data-token="exp"
               {...box}
+              style={{ ...EXPONENT_STYLE, ...box.style }}
             >
               {t.value}
             </m.sup>

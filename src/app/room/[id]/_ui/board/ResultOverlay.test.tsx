@@ -166,10 +166,12 @@ describe('ResultOverlay', () => {
     expect(onDone).toHaveBeenCalledTimes(1)
   })
 
-  it('announces politely', () => {
+  it('is not a second live region (the board LiveRegion announces results) and is opaque', () => {
     const { container } = renderWithProviders(<ResultOverlay result={view({})} />)
-    expect(overlay(container).tagName).toBe('OUTPUT')
-    expect(overlay(container)).toHaveAttribute('aria-live', 'polite')
+    expect(overlay(container).tagName).not.toBe('OUTPUT')
+    expect(container.querySelector('[aria-live]')).toBeNull()
+    const plate = container.querySelector<HTMLElement>('[data-result-plate]')
+    expect(plate?.style.background).toBe('var(--surface-raised)')
   })
 
   it('reduced motion: no shimmer, data-motion="reduced", information kept', () => {
