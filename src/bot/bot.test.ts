@@ -183,3 +183,38 @@ describe('decideBotAction', () => {
     expect(wins).toBeGreaterThanOrEqual(4)
   })
 })
+
+describe('weak card limit', () => {
+  it('never plays more than two cards', () => {
+    for (let seed = 1; seed <= 20; seed += 1) {
+      const rng = mulberry32(seed)
+      let core: GameCore = setup(seed, ['w', 'n'])
+      for (let moves = 0; moves < 300 && core.winner === null; moves += 1) {
+        const by = core.currentPlayer
+        const action = decideBotAction(core, by, by === 'w' ? 'weak' : 'normal', rng)
+        if (by === 'w' && action.type === 'submit') {
+          expect(action.submit.length).toBeLessThanOrEqual(2)
+          expect(action.factor).toEqual([])
+        }
+        const r = engine.applyMove(core, by, action, rng)
+        if (!r.ok) {
+          throw new Error('illegal')
+        }
+        core = r.core
+      }
+    }
+  })
+
+  it('cannot follow a three-card field: draws, then passes', () => {
+    const core = setup(5, ['a', 'b'])
+    const c: GameCore = {
+      ...core,
+      players: { ...core.players, a: { hand: ['AS', '3S', '7S', 'KS', '9S'], drawRight: false } },
+      currentPlayer: 'a',
+      field: [['AH', 'AC', '3H']],
+    }
+    for (let seed = 1; seed <= 20; seed += 1) {
+      expect(decideBotAction(c, 'a', 'weak', mulberry32(seed)).type).toBe('pass')
+    }
+  })
+})

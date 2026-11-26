@@ -170,7 +170,7 @@ describe('bot turns', () => {
     for (const level of ['weak', 'normal', 'strong'] as const) {
       const d = botFirst(level)
       let steps = 0
-      while (d.state.status === 'playing' && steps < 400) {
+      while (d.state.status === 'playing' && steps < 3000) {
         if (d.current === 'a') {
           d.cmd('a', { type: 'pass', turn: d.turn })
         } else {

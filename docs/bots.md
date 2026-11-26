@@ -30,7 +30,7 @@ cannot beat a field of 5 or more cards.
 
 | Level | Policy |
 |---|---|
-| よわい `weak` | A random prime play. 25% of the time it overlooks every play (it draws, then passes). 10% of the time it submits a composite that looks prime and takes the penalty: the composite is odd, does not end in 5, and its digit sum is not a multiple of 3. |
+| よわい `weak` | A random prime play of at most 2 cards, so it cannot follow a field of 3 or more cards. 25% of the time it overlooks every play (it draws, then passes). 10% of the time it submits a composite of at most 2 cards that looks prime, and takes the penalty: the composite is odd, does not end in 5, and its digit sum is not a multiple of 3. |
 | ふつう `normal` | Greedy. Each play is scored as described under "Greedy score" below. |
 | つよい `strong` | The greedy shortlist (top 6, plus pass when following), evaluated by Monte Carlo playouts (see "Monte Carlo playouts" below). |
 
