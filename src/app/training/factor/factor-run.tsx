@@ -267,7 +267,7 @@ function FactorQuestionView({ question: q, answered, onAnswer }: QuestionProps<F
           </Button>
           <Button
             size="md"
-            className="ml-auto"
+            className="ml-auto portrait-phone:ml-0 portrait-phone:basis-full"
             disabled={composite.length === 0 || expression.length === 0}
             onClick={submit}
             aria-keyshortcuts="Enter"

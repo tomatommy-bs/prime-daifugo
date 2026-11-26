@@ -105,7 +105,7 @@ function RoomTitle({ roomId, n }: { roomId: string; n?: number }) {
         </span>
       ) : null}
       <span className="truncate">
-        <span className="text-ink-muted font-semibold">Room </span>
+        <span className="text-ink-muted font-semibold portrait-phone:sr-only">Room </span>
         <span className="num" data-room-id="">
           {roomId}
         </span>
@@ -120,10 +120,11 @@ function LeaveButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex h-[44px] items-center gap-fib-1 rounded-[var(--r-2)] px-fib-3 font-semibold text-ink hover:bg-surface"
+      className="flex h-[44px] shrink-0 items-center gap-fib-1 whitespace-nowrap rounded-[var(--r-2)] px-fib-3 font-semibold text-ink hover:bg-surface portrait-phone:px-fib-2"
     >
       <IconDoorExit size="1.25em" stroke={1.5} className="text-ink-muted" />
-      退出
+      {/* phones: icon only (the name stays for screen readers), so the bar fits 375px */}
+      <span className="portrait-phone:sr-only">退出</span>
     </button>
   )
 }
@@ -175,10 +176,10 @@ function LogButton({ onOpenLog, label }: { onOpenLog: () => void; label: boolean
     <button
       type="button"
       onClick={onOpenLog}
-      className="flex h-[44px] items-center gap-fib-1 rounded-[var(--r-2)] px-fib-3 font-semibold text-ink hover:bg-surface"
+      className="flex h-[44px] shrink-0 items-center gap-fib-1 whitespace-nowrap rounded-[var(--r-2)] px-fib-3 font-semibold text-ink hover:bg-surface portrait-phone:px-fib-2"
     >
       <IconTherefore className="text-mod" />
-      ログ
+      <span className="portrait-phone:sr-only">ログ</span>
     </button>
   ) : (
     <ActionIcon variant="subtle" color="gray" size={44} aria-label="ログ" onClick={onOpenLog}>
@@ -259,7 +260,10 @@ export function RoomHeader({
       {url ? <QRButton url={url} popoverProps={{ defaultOpened: qrDefaultOpened }} /> : null}
       <SizeControl size={size} onSizeChange={onSizeChange} />
       <div className="flex-1" />
-      <ThemeToggle />
+      {/* phones: the ☰ menu already switches the theme; keep the bar to one line */}
+      <span className="contents portrait-phone:hidden">
+        <ThemeToggle />
+      </span>
       {onLeave ? <LeaveButton onClick={() => setConfirmLeave(true)} /> : null}
       {onOpenLog ? <LogButton onOpenLog={onOpenLog} label={true} /> : null}
       {/* NavBurger (☰) is a fixed affix from the root layout: keep its slot free */}

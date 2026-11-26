@@ -77,7 +77,7 @@ export default function Page() {
         rightSectionPointerEvents="all"
         rightSection={
           name.length > 0 ? (
-            <CloseButton aria-label="クリア" onClick={() => setName('')} size="md" />
+            <CloseButton aria-label="クリア" onClick={() => setName('')} size="lg" />
           ) : null
         }
         styles={{

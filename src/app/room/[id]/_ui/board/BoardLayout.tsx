@@ -63,9 +63,10 @@ export const GRID: Record<LayoutMode, Grid> = {
     rowGap: 'var(--sp-2)',
   },
   portrait: {
+    // the top bar is two lines on phones: whose turn (beside the fixed room menu), then seats
     columns: '72px minmax(0, 1fr)',
-    rows: '36px minmax(132px, 1fr) auto auto 55px',
-    factorRows: '36px minmax(96px, auto) minmax(132px, 1fr) auto 55px',
+    rows: '72px minmax(96px, 1fr) auto auto 55px',
+    factorRows: '72px minmax(96px, auto) minmax(96px, 1fr) auto 55px',
     areas: ['top top', 'deck field', 'tray tray', 'hand hand', 'rail rail'],
     columnGap: 'var(--sp-3)',
     rowGap: 'var(--sp-2)',
@@ -216,14 +217,39 @@ export function BoardTopBar({ mode, seats, n, timer, isMyTurn, reserveRight }: B
       ? seats.some((s) => s.isActive && !s.observer && s.timeLimit !== undefined)
       : seats.some((s) => !s.observer && s.timeLimit !== undefined)
   const ownTimer = seatClock ? null : timer
+  const active = seats.find((s) => s.isActive && !s.observer)
+  let turn = '—'
+  if (isMyTurn) {
+    turn = 'あなたの番です'
+  } else if (active) {
+    turn = `${active.name} の番`
+  }
+  if (mode === 'portrait') {
+    // Phones: the seat line gets the full width on its own line, so every opponent's hand
+    // count is visible; the first line (beside the fixed ∴ ⋯ ☰) says whose turn it is.
+    return (
+      <div data-top-bar="seats" className="flex h-full w-full min-w-0 flex-col">
+        <div
+          className="flex h-[36px] min-w-0 items-center gap-fib-2 text-ink-muted"
+          style={reserveRight ? { paddingRight: 140 } : undefined}
+          data-top-bar-turn=""
+        >
+          <span
+            className={`truncate ${isMyTurn ? 'font-semibold text-ink' : ''}`}
+            style={{ fontSize: 'var(--fs--1)' }}
+            aria-hidden="true"
+          >
+            {turn}
+          </span>
+          {ownTimer ? <div className="shrink-0">{ownTimer}</div> : null}
+        </div>
+        <div className="min-w-0 overflow-hidden">
+          <SeatLine seats={seats} n={n} />
+        </div>
+      </div>
+    )
+  }
   if (mode === 'wide') {
-    const active = seats.find((s) => s.isActive && !s.observer)
-    let turn = '—'
-    if (isMyTurn) {
-      turn = 'あなたの番です'
-    } else if (active) {
-      turn = `${active.name} の番`
-    }
     return (
       <div className="flex w-full items-center gap-fib-3 text-ink-muted" data-top-bar="status">
         {/* ℤ/nℤ already heads the RoomHeader above this bar in wide */}

@@ -441,7 +441,10 @@ function SeatNode({
           {player.bot !== undefined ? (
             <IconRobot stroke={1.5} size="1.1em" className="shrink-0 text-ink-muted" />
           ) : null}
-          <span className="max-w-[6em] truncate">{player.name}</span>
+          {/* a bot's level goes on its own line, so `CPU1（ふつう）` is never cut on a phone */}
+          <span className="max-w-[6em] truncate">
+            {player.bot !== undefined ? player.name.replace(/（.*）$/, '') : player.name}
+          </span>
           {/* inline, so the top seat's label never reaches the ring's centre caption */}
           {isSelf ? (
             <span
@@ -455,17 +458,29 @@ function SeatNode({
             </span>
           ) : null}
         </span>
-        {onRemove ? (
-          <ActionIcon
-            size="sm"
-            variant="subtle"
-            color="ink"
-            onClick={onRemove}
-            aria-label={`${player.name} を外す`}
-            data-remove-bot={player.id}
-          >
-            <IconX stroke={1.5} size="1em" />
-          </ActionIcon>
+        {player.bot !== undefined ? (
+          // the level and the remove button share one line under the name
+          <span className="-mt-fib-1 flex items-center" data-bot-level="">
+            <span
+              aria-hidden="true"
+              className="whitespace-nowrap text-ink-muted"
+              style={{ fontSize: 'var(--fs--1)' }}
+            >
+              {BOT_LEVEL_LABEL[player.bot]}
+            </span>
+            {onRemove ? (
+              <ActionIcon
+                size={36}
+                variant="subtle"
+                color="ink"
+                onClick={onRemove}
+                aria-label={`${player.name} を外す`}
+                data-remove-bot={player.id}
+              >
+                <IconX stroke={1.5} size="1em" />
+              </ActionIcon>
+            ) : null}
+          </span>
         ) : null}
       </m.div>
     </li>

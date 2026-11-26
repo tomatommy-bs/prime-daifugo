@@ -1,4 +1,5 @@
 'use client'
+import { setRotateHintSuppressed } from '@/app/_ui/rotate-hint'
 /**
  * The room page (§6.4): RoomHeader, the board and the proof log.
  * - SSR-safe: the invite URL is read from `window` in an effect, never during render.
@@ -74,6 +75,11 @@ const Page = ({ params: { id } }: Props) => {
     : undefined
   // phones (landscape and portrait) give the 36px bar to the SeatLine while playing
   const collapsed = (mode === 'compact' || mode === 'portrait') && info.status === 'playing'
+  // the landscape hint is for play: the waiting room and the results read fine in portrait
+  useEffect(() => {
+    setRotateHintSuppressed(info.status !== 'playing')
+    return () => setRotateHintSuppressed(false)
+  }, [info.status])
   const wideLog = mode === 'wide' && sidebar
 
   return (
