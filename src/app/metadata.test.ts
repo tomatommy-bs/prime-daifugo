@@ -12,6 +12,10 @@ import { metadata as home } from './page'
 import { generateMetadata as room } from './room/[id]/layout'
 import { metadata as newRoom } from './room/new/page'
 import { metadata as rules } from './rules/page'
+import { metadata as trainingBeat } from './training/beat/page'
+import { metadata as trainingFactor } from './training/factor/page'
+import { metadata as training } from './training/page'
+import { metadata as trainingPrime } from './training/prime/page'
 
 vi.mock('@/design/fonts', () => ({
   geistSans: { variable: 'font-sans' },
@@ -76,6 +80,10 @@ describe('route metadata', () => {
   it.each([
     ['/rules', rules, '素数大富豪のルールと遊び方｜無料でオンライン対戦'],
     ['/labo/calc', laboCalc, '素数判定ラボ'],
+    ['/training', training, 'トレーニング'],
+    ['/training/prime', trainingPrime, '素数判定トレーニング'],
+    ['/training/beat', trainingBeat, '素数づくりトレーニング'],
+    ['/training/factor', trainingFactor, '合成数出しトレーニング'],
   ] as const)('%s is canonical and indexable', (path, meta, title) => {
     expect(titleOf(meta)).toBe(title)
     expect(meta.alternates?.canonical).toBe(path)

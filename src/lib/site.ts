@@ -14,7 +14,7 @@ export const SITE_NAME = '素数大富豪'
 export const SITE_NAME_EN = 'Prime Daifugo'
 export const SITE_TITLE = '素数大富豪 - 素数で遊ぶオンライン対戦カードゲーム'
 export const SITE_DESCRIPTION =
-  '素数大富豪（Prime Daifugo）は、トランプを並べて素数をつくり、場より大きな素数を出し合うカードゲームです。登録不要・無料で、ブラウザから友だちと2〜4人でオンライン対戦できます。ルール解説と素数判定ラボもあります。'
+  '素数大富豪（Prime Daifugo）は、トランプを並べて素数をつくり、場より大きな素数を出し合うカードゲームです。登録不要・無料で、ブラウザから友だちと2〜4人でオンライン対戦できます。ルール解説、素数判定ラボ、ひとりで練習できるトレーニングもあります。'
 export const SITE_KEYWORDS = [
   '素数大富豪',
   '素数大富豪 オンライン',
@@ -36,7 +36,15 @@ export const EXTERNAL_URLS = {
 } as const
 
 /** The public, indexable pages (the sitemap lists exactly these). */
-export const PUBLIC_PATHS = ['/', '/rules', '/labo/calc'] as const
+export const PUBLIC_PATHS = [
+  '/',
+  '/rules',
+  '/labo/calc',
+  '/training',
+  '/training/prime',
+  '/training/beat',
+  '/training/factor',
+] as const
 export type PublicPath = (typeof PUBLIC_PATHS)[number]
 
 /**
@@ -47,6 +55,10 @@ export const PAGE_UPDATED: Record<PublicPath, string> = {
   '/': '2026-11-25',
   '/rules': '2026-11-25',
   '/labo/calc': '2026-11-25',
+  '/training': '2026-11-26',
+  '/training/prime': '2026-11-26',
+  '/training/beat': '2026-11-26',
+  '/training/factor': '2026-11-26',
 }
 
 /** Absolute URL on the canonical origin. */

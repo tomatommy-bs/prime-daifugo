@@ -47,7 +47,15 @@ describe('site', () => {
   })
 
   it('lists the public content pages', () => {
-    expect(PUBLIC_PATHS).toEqual(['/', '/rules', '/labo/calc'])
+    expect(PUBLIC_PATHS).toEqual([
+      '/',
+      '/rules',
+      '/labo/calc',
+      '/training',
+      '/training/prime',
+      '/training/beat',
+      '/training/factor',
+    ])
   })
 
   it('builds indexable page metadata with a canonical link and the share card', () => {

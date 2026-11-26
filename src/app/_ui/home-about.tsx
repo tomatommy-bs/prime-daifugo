@@ -20,7 +20,8 @@ const LINKS = [
   { href: '/rules', label: 'ルールと遊び方を読む' },
   { href: '/rules#primes', label: '覚えておくと便利な素数' },
   { href: '/rules#faq', label: 'よくある質問' },
-  { href: '/labo/calc', label: '素数判定ラボで練習する' },
+  { href: '/training', label: 'トレーニングでひとり練習する' },
+  { href: '/labo/calc', label: '素数判定ラボで数を確かめる' },
 ] as const
 
 /**
