@@ -1,7 +1,7 @@
 /**
  * Bot players: one turn decision from the engine state, at three levels.
  *
- * - `weak`: a random prime play; sometimes overlooks a play, and sometimes submits a composite
+ * - `weak`: a random prime play of at most two cards; sometimes overlooks a play, and sometimes submits a composite
  *   that looks prime (odd, not ending in 5, digit sum not a multiple of 3) and takes the penalty.
  * - `normal`: greedy. Shed as many cards as possible, cut with 57, beat the field with the lowest
  *   number that works (the highest when an opponent is about to go out), and keep a hand that can
@@ -19,16 +19,7 @@ import type { CardId, FactCardId, GameCore, Move, Pid, Rng } from '../game/types
 import { BOT_LEVELS, type BotLevel } from '../shared/bot'
 import { mulberry32, randomInt, shuffle } from '../shared/rng'
 import { type PlayContext, type RankPlay, compositePlays, primePlays, toCards } from './moves'
-import {
-  MAX_BOT_CARDS,
-  fits,
-  giveRanks,
-  rankCounts,
-  rankTables,
-  spell,
-  strength,
-  takeRanks,
-} from './ranks'
+import { fits, giveRanks, rankCounts, rankTables, spell, strength, takeRanks } from './ranks'
 
 export { BOT_LEVELS, type BotLevel }
 
@@ -41,6 +32,8 @@ export type BotAction =
 export const WEAK_BLUNDER_RATE = 0.1
 /** `weak`: chance to overlook every play and draw or pass instead. */
 export const WEAK_OVERLOOK_RATE = 0.25
+/** `weak`: never plays more than this many cards (a longer field is out of its reach). */
+export const WEAK_MAX_CARDS = 2
 /** `strong`: shortlist size, determinized deals per decision, playout length in moves. */
 export const STRONG_SHORTLIST = 6
 export const STRONG_DEALS = 8
@@ -126,11 +119,11 @@ function rankedPlays(seat: Seat, withComposites: boolean): RankPlay[] {
   return scored.map((s) => s.play)
 }
 
-/** A composite of the right size above the field that a careless eye would take for a prime. */
+/** A composite of the right size (at most `WEAK_MAX_CARDS`) above the field that a careless eye would take for a prime. */
 function primeLookalike(seat: Seat, rng: Rng): RankPlay | null {
   const { ctx } = seat
   const k = ctx.top?.length ?? 1 + randomInt(rng, Math.min(2, ctx.hand.length))
-  if (k > MAX_BOT_CARDS || k > ctx.hand.length) {
+  if (k > WEAK_MAX_CARDS || k > ctx.hand.length) {
     return null
   }
   const floor = ctx.top === null ? 0 : spell(ctx.top.map(cardValue))
@@ -161,7 +154,7 @@ function decideWeak(core: GameCore, pid: Pid, rng: Rng): BotAction {
       return submitOf(seat.ctx.hand, fake)
     }
   }
-  const plays = primePlays(seat.ctx)
+  const plays = primePlays(seat.ctx).filter((p) => p.ranks.length <= WEAK_MAX_CARDS)
   if (plays.length === 0 || rng.next() < WEAK_OVERLOOK_RATE) {
     return noPlay(seat)
   }
