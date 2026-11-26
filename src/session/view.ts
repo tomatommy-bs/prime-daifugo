@@ -9,7 +9,8 @@ import type { ViewFor } from './types'
 export const viewFor: ViewFor = (state, pid) => {
   const members = byJoinedAt(state.members).map((id) => {
     const m = state.members[id]
-    return { id, name: m.name, ready: m.ready, role: m.role, connected: m.connected }
+    const row = { id, name: m.name, ready: m.ready, role: m.role, connected: m.connected }
+    return m.bot === undefined ? row : { ...row, bot: m.bot }
   })
   let game: ViewGame | null = null
   if (state.game !== null) {

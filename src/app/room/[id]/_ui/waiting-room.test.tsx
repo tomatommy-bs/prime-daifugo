@@ -271,3 +271,43 @@ describe('WaitingRoom', () => {
     expect(container.querySelector('[data-layout]')).toHaveAttribute('data-motion', 'reduced')
   })
 })
+
+describe('WaitingRoom bots', () => {
+  it('adds a bot of the chosen level', () => {
+    const onAddBot = vi.fn()
+    renderWithProviders(
+      <WaitingRoom
+        rule={DEFAULT_RULE}
+        presence={makeSessionPresence(['alice'])}
+        onAddBot={onAddBot}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'CPU（つよい）を追加' }))
+    expect(onAddBot).toHaveBeenCalledWith('strong')
+  })
+
+  it('marks bot seats, lets them be removed, and stops at three bots', () => {
+    const onRemoveBot = vi.fn()
+    const presence = makeSessionPresence([
+      { name: 'alice', status: 'not-ready' },
+      { id: 'bot-1', name: 'CPU1（よわい）', bot: 'weak' },
+      { id: 'bot-2', name: 'CPU2（ふつう）', bot: 'normal' },
+      { id: 'bot-3', name: 'CPU3（つよい）', bot: 'strong' },
+    ])
+    const { container } = renderWithProviders(
+      <WaitingRoom
+        rule={DEFAULT_RULE}
+        presence={presence}
+        onAddBot={vi.fn()}
+        onRemoveBot={onRemoveBot}
+      />,
+    )
+    expect(container.querySelector('[data-seat="bot-2"]')).toHaveAttribute('data-bot', 'normal')
+    fireEvent.click(screen.getByRole('button', { name: 'CPU2（ふつう） を外す' }))
+    expect(onRemoveBot).toHaveBeenCalledWith('bot-2')
+    expect(screen.queryByRole('button', { name: /alice を外す/ })).toBeNull()
+    expect(screen.getByRole('button', { name: 'CPU（よわい）を追加' })).toBeDisabled()
+    // bots alone cannot start a game: a human must be ready too
+    expect(startButton()).toBeDisabled()
+  })
+})

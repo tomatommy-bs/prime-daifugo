@@ -72,6 +72,7 @@ export const START_REJECT_MESSAGES: Partial<Record<AckFailure, string>> = {
   'not-enough-ready': '準備OKのプレイヤーが2人以上必要です',
   'bad-status': 'ゲームはすでに進行中です',
   'rate-limited': SUBMIT_REJECT_FALLBACK,
+  'too-many-bots': SUBMIT_REJECT_FALLBACK,
   timeout: SUBMIT_REJECT_FALLBACK,
 }
 
@@ -462,6 +463,8 @@ const GameBoard: React.FC<Props> = ({ id, size: compSizeOption = 'M', ...props }
                 onGameStart={handleGameStart}
                 onSetReady={() => actions.setReady()}
                 onUnsetReady={() => actions.unsetReady()}
+                onAddBot={(level) => actions.addBot(level)}
+                onRemoveBot={(pid) => actions.removeBot(pid)}
               />
             ) : (
               <B.BoardLayout

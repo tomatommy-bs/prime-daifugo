@@ -86,6 +86,8 @@ export function createDisconnectedSession(): RoomSession {
       draw: disconnected,
       pass: disconnected,
       submit: disconnected,
+      addBot: disconnected,
+      removeBot: disconnected,
       leave: () => Promise.resolve(),
       reconnect: () => undefined,
     },
@@ -570,6 +572,8 @@ export class RoomSessionController {
         submit: [...set.submit],
         factor: [...set.factor],
       })),
+    addBot: (level) => this.sendCmd({ type: 'add-bot', level }),
+    removeBot: (pid) => this.sendCmd({ type: 'remove-bot', pid }),
     leave: () => this.leave(),
     reconnect: () => this.reconnect(),
   }
