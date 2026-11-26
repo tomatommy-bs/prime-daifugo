@@ -87,9 +87,10 @@ describe('mode 2: beat the field', () => {
     expect(values).not.toContain(11)
   })
 
-  it.each(LEVELS)('%s: every question has answers, all of which the judge accepts', (level) => {
+  it.each(LEVELS)('%s: every listed answer is accepted and the list is complete', (level) => {
     const rng = mulberry32(3)
-    for (let i = 0; i < 15; i += 1) {
+    let none = 0
+    for (let i = 0; i < 30; i += 1) {
       const q = beatQuestion(rng, level)
       const { k, hand } = BEAT_LEVELS[level]
       expect(q.hand).toHaveLength(hand)
@@ -98,7 +99,9 @@ describe('mode 2: beat the field', () => {
       expect(q.fieldValue).not.toBe(57)
       // the field is laid out from cards outside the hand
       expect(q.field.some((c) => q.hand.includes(c))).toBe(false)
-      expect(q.solutions.length).toBeGreaterThan(0)
+      if (q.solutions.length === 0) {
+        none += 1
+      }
       for (const s of q.solutions) {
         expect(judgeBeat(q, s.cards)).toEqual({ ok: true, value: s.value })
       }
@@ -106,6 +109,9 @@ describe('mode 2: beat the field', () => {
       const all = playableFromHand(q.hand, k).filter((s) => s.value > q.fieldValue)
       expect(q.solutions.map((s) => s.value)).toEqual(all.map((s) => s.value))
     }
+    // some questions are 解なし, most are not
+    expect(none).toBeGreaterThan(0)
+    expect(none).toBeLessThan(15)
   })
 
   it('rejects a wrong count, a composite and a smaller prime', () => {
@@ -152,7 +158,10 @@ describe('mode 3: composite play', () => {
     for (let i = 0; i < 10; i += 1) {
       const q = factorQuestion(rng, level)
       expect(q.hand).toHaveLength(FACTOR_LEVELS[level].hand)
-      expect(q.patterns.length).toBeGreaterThan(0)
+      // 解なし questions really have no play
+      expect(q.patterns.map((p) => p.key)).toEqual(
+        findPatterns(q.hand, FACTOR_LEVELS[level].maxCards).map((p) => p.key),
+      )
       for (const p of q.patterns) {
         expect(judgeFactor(p.composite, p.expression)).toEqual({
           ok: true,

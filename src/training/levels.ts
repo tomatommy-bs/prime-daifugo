@@ -17,6 +17,9 @@ export const LEVEL_LABEL: Record<Level, string> = {
 /** Questions per run (a 10-question time attack). */
 export const QUESTIONS_PER_RUN = 10
 
+/** Share of 素数づくり / 合成数出し questions that have no answer (the right reply is 解なし). */
+export const NO_ANSWER_RATE = 0.2
+
 export type ModeInfo = {
   mode: Mode
   path: `/training/${Mode}`

@@ -14,7 +14,7 @@ import {
 import type { Level } from '@/training/levels'
 import { ActionIcon, Button, Kbd, SegmentedControl } from '@mantine/core'
 import { useHotkeys } from '@mantine/hooks'
-import { IconBackspace, IconFlag } from '@tabler/icons-react'
+import { IconBackspace, IconBan, IconFlag } from '@tabler/icons-react'
 import { useState } from 'react'
 import { HandPicker, RankChips, Tray, TrayCard, fromCard } from '../_ui/cards'
 import { Feedback } from '../_ui/feedback'
@@ -27,7 +27,10 @@ const makeQuestion = (rng: Rng, level: Level) => factorQuestion(rng, level)
 
 type Target = 'composite' | 'expression'
 
-type Outcome = { kind: 'answer'; verdict: FactorVerdict } | { kind: 'give-up' }
+type Outcome =
+  | { kind: 'answer'; verdict: FactorVerdict }
+  | { kind: 'give-up' }
+  | { kind: 'no-answer' }
 
 const REASON: Record<Extract<FactorVerdict, { ok: false }>['reason'], string> = {
   'no-composite': '出す合成数を並べてください。',
@@ -83,6 +86,13 @@ function FactorQuestionView({ question: q, answered, onAnswer }: QuestionProps<F
     setOutcome({ kind: 'give-up' })
     onAnswer(false)
   }
+  const sayNoAnswer = () => {
+    if (answered) {
+      return
+    }
+    setOutcome({ kind: 'no-answer' })
+    onAnswer(q.patterns.length === 0)
+  }
   useHotkeys(
     answered
       ? []
@@ -93,6 +103,7 @@ function FactorQuestionView({ question: q, answered, onAnswer }: QuestionProps<F
           ['x', () => addOperator('*')],
           ['shift+8', () => addOperator('*')],
           ['shift+6', () => addOperator('^')],
+          ['n', sayNoAnswer],
         ],
   )
 
@@ -223,6 +234,19 @@ function FactorQuestionView({ question: q, answered, onAnswer }: QuestionProps<F
             わからない
           </Button>
           <Button
+            variant="default"
+            onClick={sayNoAnswer}
+            aria-keyshortcuts="n"
+            leftSection={<IconBan stroke={1.5} size="1.1em" />}
+            rightSection={
+              <Kbd size="xs" className="hidden fine:inline-block">
+                N
+              </Kbd>
+            }
+          >
+            解なし
+          </Button>
+          <Button
             size="md"
             className="ml-auto"
             disabled={composite.length === 0 || expression.length === 0}
@@ -241,13 +265,26 @@ function FactorQuestionView({ question: q, answered, onAnswer }: QuestionProps<F
 
       {answered && outcome !== null ? (
         <Feedback
-          correct={outcome.kind === 'answer' && outcome.verdict.ok}
+          correct={
+            outcome.kind === 'no-answer'
+              ? q.patterns.length === 0
+              : outcome.kind === 'answer' && outcome.verdict.ok
+          }
           title={outcome.kind === 'give-up' ? '答え' : undefined}
         >
+          {q.patterns.length === 0 ? (
+            <p className="m-0" data-no-answer="">
+              <span className="font-bold">解なし</span>：この手札では、{q.maxCards}{' '}
+              枚以下の合成数で合成数出しはできません。
+            </p>
+          ) : null}
+          {outcome.kind === 'no-answer' && q.patterns.length > 0 ? (
+            <p className="m-0">解はあります。</p>
+          ) : null}
           {outcome.kind === 'answer' && !outcome.verdict.ok ? (
             <p className="m-0">{REASON[outcome.verdict.reason]}</p>
           ) : null}
-          <Patterns q={q} highlight={userKey} />
+          {q.patterns.length > 0 ? <Patterns q={q} highlight={userKey} /> : null}
         </Feedback>
       ) : null}
     </section>
