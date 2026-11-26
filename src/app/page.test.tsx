@@ -109,16 +109,22 @@ describe('Home page', () => {
     )
   })
 
-  it('renders disabled features as disabled buttons that are not links', () => {
+  it('renders ランダムマッチ as a disabled button that is not a link', () => {
     renderWithProviders(<Home />)
-    for (const name of [/ランダムマッチ/, /トレーニング/]) {
-      const button = screen.getByRole('button', { name })
-      expect(button).toBeDisabled()
-      expect(button.closest('a')).toBeNull()
-    }
-    expect(screen.queryByRole('link', { name: /ランダムマッチ|トレーニング/ })).toBeNull()
+    const button = screen.getByRole('button', { name: /ランダムマッチ/ })
+    expect(button).toBeDisabled()
+    expect(button.closest('a')).toBeNull()
+    expect(screen.queryByRole('link', { name: /ランダムマッチ/ })).toBeNull()
     expect(document.querySelector('a[href="/room/random"]')).toBeNull()
-    expect(document.querySelector('a[href="/labo/training"]')).toBeNull()
+  })
+
+  it('links トレーニング to /training from the game menu', () => {
+    renderWithProviders(<Home />)
+    const menu = screen.getByRole('navigation', { name: 'ゲームメニュー' })
+    expect(within(menu).getByRole('link', { name: /トレーニング/ })).toHaveAttribute(
+      'href',
+      '/training',
+    )
   })
 
   it('links ゲームルール to the on-site rules page', () => {
@@ -218,6 +224,6 @@ describe('Home page', () => {
       within(nav)
         .getAllByRole('link')
         .map((a) => a.getAttribute('href')),
-    ).toEqual(['/rules', '/rules#primes', '/rules#faq', '/labo/calc'])
+    ).toEqual(['/rules', '/rules#primes', '/rules#faq', '/training', '/labo/calc'])
   })
 })

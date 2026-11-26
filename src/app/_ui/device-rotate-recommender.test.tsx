@@ -21,11 +21,14 @@ describe('DeviceRotateRecommender', () => {
     nav.pathname = '/'
   })
 
-  it.each(['/rules', '/labo/calc'])('stays hidden on %s, which works in portrait', (path) => {
-    nav.pathname = path
-    renderWithProviders(<DeviceRotateRecommender />)
-    expect(screen.queryByRole('region', DIALOG)).not.toBeInTheDocument()
-  })
+  it.each(['/rules', '/labo/calc', '/training', '/training/factor'])(
+    'stays hidden on %s, which works in portrait',
+    (path) => {
+      nav.pathname = path
+      renderWithProviders(<DeviceRotateRecommender />)
+      expect(screen.queryByRole('region', DIALOG)).not.toBeInTheDocument()
+    },
+  )
 
   it('shows the Japanese banner when the device should rotate', async () => {
     renderWithProviders(<DeviceRotateRecommender />)

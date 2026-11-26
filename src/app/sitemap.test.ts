@@ -9,6 +9,10 @@ describe('sitemap.xml', () => {
       'https://www.prime-daifugo.jp/',
       'https://www.prime-daifugo.jp/rules',
       'https://www.prime-daifugo.jp/labo/calc',
+      'https://www.prime-daifugo.jp/training',
+      'https://www.prime-daifugo.jp/training/prime',
+      'https://www.prime-daifugo.jp/training/beat',
+      'https://www.prime-daifugo.jp/training/factor',
     ])
     for (const entry of entries) {
       expect(entry.lastModified).toMatch(/^\d{4}-\d{2}-\d{2}$/)
