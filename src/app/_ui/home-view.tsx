@@ -9,6 +9,7 @@ import { useLobbyStats } from '@/lib/use-lobby-stats'
 import { Button } from '@mantine/core'
 import {
   IconArrowRight,
+  IconBarbell,
   IconBook,
   IconBrandX,
   IconMessageReport,
@@ -219,6 +220,17 @@ function HomeActions({ play, short }: { play: boolean; short: boolean }) {
           ランダムマッチ · 準備中
         </Button>
       </Reveal>
+      <Reveal play={play} delay={CTA_DELAY + 0.051}>
+        <Button
+          component={Link}
+          href="/training"
+          fullWidth={true}
+          variant="default"
+          rightSection={<IconBarbell {...ICON} />}
+        >
+          トレーニング
+        </Button>
+      </Reveal>
       <Reveal play={play} delay={CTA_DELAY + 0.068}>
         <div className="grid grid-cols-2 gap-fib-3">
           <Button
@@ -268,16 +280,6 @@ function FooterLinks({ play, scrim = false }: { play: boolean; scrim?: boolean }
         <a className={linkClass} href={URLS.x} target="_blank" rel="noopener noreferrer">
           <IconBrandX {...ICON} />X ↗
         </a>
-        <Button
-          disabled={true}
-          variant="subtle"
-          size="compact-sm"
-          mih={44}
-          // a quiet text-like item beside the footer links, still a real disabled button
-          styles={{ root: { background: 'transparent', fontWeight: 400 } }}
-        >
-          トレーニング · 準備中
-        </Button>
       </nav>
     </Reveal>
   )
