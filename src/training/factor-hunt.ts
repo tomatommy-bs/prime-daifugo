@@ -1,3 +1,4 @@
+import { FULL_DECK } from '@/game/cards'
 /**
  * Mode 3: composite play (合成数出し, RQ-R13, RQ-R16). From one hand, lay out a composite
  * number and a factor expression for it with other cards of the same hand.
@@ -8,6 +9,7 @@
  */
 import { checkFact, parseFact } from '@/game/factor'
 import type { FactCardId } from '@/interface/common'
+import { numbersFromPool } from './beat-field'
 import {
   type CardId,
   type Rng,
@@ -16,10 +18,11 @@ import {
   deal,
   isPrimeSmall,
   permutations,
+  pick,
   primePowers,
   sortHand,
 } from './cards'
-import { FACTOR_LEVELS, type Level } from './levels'
+import { FACTOR_LEVELS, type Level, NO_ANSWER_RATE } from './levels'
 
 /** One way to play: the composite cards and the expression tokens (cards and operators). */
 export type FactorPattern = {
@@ -30,7 +33,17 @@ export type FactorPattern = {
   key: string
 }
 
-export type FactorQuestion = { hand: CardId[]; maxCards: number; patterns: FactorPattern[] }
+/**
+ * The field holds a `k`-card number; a play needs a `k`-card composite above it.
+ * `patterns`: every such play, ascending; empty = 解なし.
+ */
+export type FactorQuestion = {
+  hand: CardId[]
+  k: number
+  field: CardId[]
+  fieldValue: number
+  patterns: FactorPattern[]
+}
 
 /** A term `base^exp` of an expression (`exp = 1` when there is no `^`). */
 type Term = { base: number; exp: number }
@@ -143,11 +156,15 @@ export function patternKey(value: number, terms: readonly Term[]): string {
   return `${value} = ${sorted.map(termText).join(' * ')}`
 }
 
-/** Every distinct composite play in `hand` with a composite of at most `maxCards` cards. */
-export function findPatterns(hand: readonly CardId[], maxCards: number): FactorPattern[] {
+/** Every distinct composite play in `hand` with a composite of `minCards`..`maxCards` cards. */
+export function findPatterns(
+  hand: readonly CardId[],
+  maxCards: number,
+  minCards = 1,
+): FactorPattern[] {
   const found = new Map<string, FactorPattern>()
   const triedComposites = new Set<string>()
-  for (let size = 1; size <= Math.min(maxCards, hand.length - 1); size += 1) {
+  for (let size = minCards; size <= Math.min(maxCards, hand.length - 1); size += 1) {
     for (const composite of permutations(hand, size)) {
       const value = concat(composite)
       const spelledAs = composite.map(cardValue).join(',')
@@ -192,14 +209,57 @@ export function findPatterns(hand: readonly CardId[], maxCards: number): FactorP
   return [...found.values()].sort((a, b) => a.value - b.value || a.key.localeCompare(b.key))
 }
 
-/** A fresh hand with at least one composite play. */
+/** Field numbers: anything but 57 (a 57 flows the field at once). */
+const notGrothendieck = (n: number) => n !== 57
+
+/**
+ * A fresh question: a hand and a field of `k` cards (one of the level's sizes) laid out from
+ * cards outside the hand.
+ * - With probability `NO_ANSWER_RATE` no `k`-card composite play of the hand beats the field
+ *   (解なし); the field is usually just at or above the hand's best. After half the deals the
+ *   generator settles for an answerable question.
+ * - Otherwise the field is usually chosen so that only one or two composites beat it.
+ */
 export function factorQuestion(rng: Rng, level: Level): FactorQuestion {
-  const { hand: handSize, maxCards } = FACTOR_LEVELS[level]
+  const { hand: handSize, sizes } = FACTOR_LEVELS[level]
+  let noAnswer = rng.next() < NO_ANSWER_RATE
   for (let attempt = 0; attempt < MAX_DEALS; attempt += 1) {
+    if (attempt === MAX_DEALS / 2) {
+      noAnswer = false
+    }
+    const k = pick(rng, sizes)
     const hand = deal(rng, handSize)
-    const patterns = findPatterns(hand, maxCards)
-    if (patterns.length > 0) {
-      return { hand: sortHand(hand), maxCards, patterns }
+    const all = findPatterns(hand, k, k)
+    const best = all.reduce((m, p) => Math.max(m, p.value), 0)
+    const handSet = new Set(hand)
+    const fields = numbersFromPool(
+      FULL_DECK.filter((c) => !handSet.has(c)),
+      k,
+      notGrothendieck,
+    )
+    let field: { value: number; cards: CardId[] } | undefined
+    if (noAnswer) {
+      const above = fields.filter((f) => f.value >= best)
+      if (above.length === 0) {
+        continue
+      }
+      field = pick(rng, rng.next() < 0.75 ? above.slice(0, 3) : above)
+    } else {
+      const below = fields.filter((f) => f.value < best)
+      if (below.length === 0) {
+        continue
+      }
+      const beaten = (v: number) => new Set(all.filter((p) => p.value > v).map((p) => p.value)).size
+      const tight = below.filter((f) => beaten(f.value) <= 2)
+      field = pick(rng, tight.length > 0 && rng.next() < 0.75 ? tight : below)
+    }
+    const fieldValue = field.value
+    return {
+      hand: sortHand(hand),
+      k,
+      field: field.cards,
+      fieldValue,
+      patterns: all.filter((p) => p.value > fieldValue),
     }
   }
   throw new Error('factorQuestion: no dealable question')
@@ -209,16 +269,33 @@ export type FactorVerdict =
   | { ok: true; value: number; key: string }
   | {
       ok: false
-      reason: 'no-composite' | 'no-expression' | 'malformed' | 'not-equal' | 'not-prime'
+      reason:
+        | 'no-composite'
+        | 'count'
+        | 'too-small'
+        | 'no-expression'
+        | 'malformed'
+        | 'not-equal'
+        | 'not-prime'
     }
 
-/** Judge an answer with the engine's own factor rules (`src/game/factor.ts`). */
+/**
+ * Judge an answer with the engine's own rules: the composite has the field's card count and is
+ * bigger (RQ-R12), then the factor expression (`src/game/factor.ts`).
+ */
 export function judgeFactor(
   composite: readonly CardId[],
   expression: readonly FactCardId[],
+  field?: { k: number; fieldValue: number },
 ): FactorVerdict {
   if (composite.length === 0) {
     return { ok: false, reason: 'no-composite' }
+  }
+  if (field && composite.length !== field.k) {
+    return { ok: false, reason: 'count' }
+  }
+  if (field && concat(composite) <= field.fieldValue) {
+    return { ok: false, reason: 'too-small' }
   }
   if (expression.length === 0) {
     return { ok: false, reason: 'no-expression' }

@@ -14,6 +14,26 @@ import { PrimeRun } from './prime/prime-run'
 
 const SEED = 7
 
+/** The first seed whose first question satisfies `ok` (questions are 解なし about 1 in 5). */
+function seedWhere<Q>(make: (rng: ReturnType<typeof mulberry32>) => Q, ok: (q: Q) => boolean) {
+  for (let seed = 1; seed < 500; seed += 1) {
+    if (ok(make(mulberry32(seed)))) {
+      return seed
+    }
+  }
+  throw new Error('no seed')
+}
+const beatSeed = (answerable: boolean) =>
+  seedWhere(
+    (r) => beatQuestion(r, 'easy'),
+    (q) => q.solutions.length > 0 === answerable,
+  )
+const factorSeed = (answerable: boolean) =>
+  seedWhere(
+    (r) => factorQuestion(r, 'easy'),
+    (q) => q.patterns.length > 0 === answerable,
+  )
+
 const press = (key: string) => fireEvent.keyDown(document.documentElement, { key })
 
 const start = () => fireEvent.click(screen.getByRole('button', { name: /スタート/ }))
@@ -92,8 +112,9 @@ describe('mode 1: prime quiz', () => {
 
 describe('mode 2: beat the field', () => {
   it('accepts the best answer laid out from the hand', () => {
-    renderWithProviders(<BeatRun rng={mulberry32(SEED)} />)
-    const q = beatQuestion(mulberry32(SEED), 'easy')
+    const seed = beatSeed(true)
+    renderWithProviders(<BeatRun rng={mulberry32(seed)} />)
+    const q = beatQuestion(mulberry32(seed), 'easy')
     start()
     expect(screen.getByText(`場は ${q.fieldValue}`)).toBeInTheDocument()
     const submit = screen.getByRole('button', { name: /出す/ })
@@ -111,8 +132,9 @@ describe('mode 2: beat the field', () => {
   })
 
   it('takes a card back when it is tapped again, and lists the answers on give-up', () => {
-    renderWithProviders(<BeatRun rng={mulberry32(SEED)} />)
-    const q = beatQuestion(mulberry32(SEED), 'easy')
+    const seed = beatSeed(true)
+    renderWithProviders(<BeatRun rng={mulberry32(seed)} />)
+    const q = beatQuestion(mulberry32(seed), 'easy')
     start()
     clickHandCard(q.hand[0])
     clickHandCard(q.hand[0])
@@ -126,10 +148,49 @@ describe('mode 2: beat the field', () => {
   })
 })
 
+describe('解なし', () => {
+  it('is right when nothing beats the field, and explains why', () => {
+    const seed = beatSeed(false)
+    renderWithProviders(<BeatRun rng={mulberry32(seed)} />)
+    start()
+    fireEvent.click(screen.getByRole('button', { name: /解なし/ }))
+    expect(feedback()).toHaveAttribute('data-feedback', 'correct')
+    expect(document.querySelector('[data-no-answer]')).not.toBeNull()
+    expect(document.querySelectorAll('[data-solution]')).toHaveLength(0)
+  })
+
+  it('is wrong when an answer exists, and the answers are listed', () => {
+    const seed = beatSeed(true)
+    renderWithProviders(<BeatRun rng={mulberry32(seed)} />)
+    start()
+    press('n')
+    expect(feedback()).toHaveAttribute('data-feedback', 'wrong')
+    expect(screen.getByText('解はあります。')).toBeInTheDocument()
+    expect(document.querySelectorAll('[data-solution]').length).toBeGreaterThan(0)
+  })
+
+  it('works in composite play too', () => {
+    const none = factorSeed(false)
+    const { unmount } = renderWithProviders(<FactorRun rng={mulberry32(none)} />)
+    start()
+    fireEvent.click(screen.getByRole('button', { name: /解なし/ }))
+    expect(feedback()).toHaveAttribute('data-feedback', 'correct')
+    expect(document.querySelector('[data-no-answer]')).not.toBeNull()
+    unmount()
+    const some = factorSeed(true)
+    renderWithProviders(<FactorRun rng={mulberry32(some)} />)
+    start()
+    fireEvent.click(screen.getByRole('button', { name: /解なし/ }))
+    expect(feedback()).toHaveAttribute('data-feedback', 'wrong')
+    expect(document.querySelectorAll('[data-pattern]').length).toBeGreaterThan(0)
+  })
+})
+
 describe('mode 3: composite play', () => {
   it('accepts a pattern built from the two trays', () => {
-    renderWithProviders(<FactorRun rng={mulberry32(SEED)} />)
-    const q = factorQuestion(mulberry32(SEED), 'easy')
+    const seed = factorSeed(true)
+    renderWithProviders(<FactorRun rng={mulberry32(seed)} />)
+    const q = factorQuestion(mulberry32(seed), 'easy')
     const pattern = q.patterns[0]
     start()
     for (const card of pattern.composite) {
@@ -155,8 +216,9 @@ describe('mode 3: composite play', () => {
   })
 
   it('explains a wrong expression', () => {
-    renderWithProviders(<FactorRun rng={mulberry32(SEED)} />)
-    const q = factorQuestion(mulberry32(SEED), 'easy')
+    const seed = factorSeed(true)
+    renderWithProviders(<FactorRun rng={mulberry32(seed)} />)
+    const q = factorQuestion(mulberry32(seed), 'easy')
     start()
     clickHandCard(q.patterns[0].composite[0])
     // an operator alone is malformed

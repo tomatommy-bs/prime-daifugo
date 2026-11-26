@@ -17,6 +17,9 @@ export const LEVEL_LABEL: Record<Level, string> = {
 /** Questions per run (a 10-question time attack). */
 export const QUESTIONS_PER_RUN = 10
 
+/** Share of 素数づくり / 合成数出し questions that have no answer (the right reply is 解なし). */
+export const NO_ANSWER_RATE = 0.2
+
 export type ModeInfo = {
   mode: Mode
   path: `/training/${Mode}`
@@ -37,12 +40,17 @@ export const BEAT_LEVELS: Record<Level, { k: number; hand: number }> = {
   hard: { k: 4, hand: 11 },
 }
 
-/** Mode 3: composite play. `hand` cards dealt; the solver looks for composites up to `maxCards`. */
-export const FACTOR_LEVELS: Record<Level, { hand: number; maxCards: number }> = {
-  easy: { hand: 6, maxCards: 2 },
-  normal: { hand: 8, maxCards: 3 },
-  hard: { hand: 10, maxCards: 4 },
+/**
+ * Mode 3: composite play. `hand` cards dealt; the field holds a number of one of `sizes` cards,
+ * and the composite must have as many cards and be bigger.
+ */
+export const FACTOR_LEVELS: Record<Level, { hand: number; sizes: readonly number[] }> = {
+  easy: { hand: 6, sizes: [1, 2] },
+  normal: { hand: 8, sizes: [2, 3] },
+  hard: { hand: 10, sizes: [3, 4] },
 }
+
+const sizesText = (sizes: readonly number[]) => `${sizes[0]}〜${sizes[sizes.length - 1]}`
 
 export const MODE_INFO: Record<Mode, ModeInfo> = {
   prime: {
@@ -71,11 +79,11 @@ export const MODE_INFO: Record<Mode, ModeInfo> = {
     mode: 'factor',
     path: '/training/factor',
     title: '合成数出しトレーニング',
-    summary: '手札から合成数とその素因数分解の式をつくります。',
+    summary: '場より大きな合成数と、その素因数分解の式を手札からつくります。',
     levels: {
-      easy: `手札 ${FACTOR_LEVELS.easy.hand} 枚`,
-      normal: `手札 ${FACTOR_LEVELS.normal.hand} 枚`,
-      hard: `手札 ${FACTOR_LEVELS.hard.hand} 枚`,
+      easy: `場 ${sizesText(FACTOR_LEVELS.easy.sizes)} 枚・手札 ${FACTOR_LEVELS.easy.hand} 枚`,
+      normal: `場 ${sizesText(FACTOR_LEVELS.normal.sizes)} 枚・手札 ${FACTOR_LEVELS.normal.hand} 枚`,
+      hard: `場 ${sizesText(FACTOR_LEVELS.hard.sizes)} 枚・手札 ${FACTOR_LEVELS.hard.hand} 枚`,
     },
   },
 }

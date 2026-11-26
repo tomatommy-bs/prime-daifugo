@@ -3,12 +3,18 @@
 import { NumberGlyph } from '@/design/NumberGlyph'
 import type { CardId } from '@/game-card/src'
 import type { Rng } from '@/shared/rng'
-import { type BeatQuestion, type BeatVerdict, beatQuestion, judgeBeat } from '@/training/beat-field'
+import {
+  type BeatQuestion,
+  type BeatVerdict,
+  beatQuestion,
+  judgeBeat,
+  playableFromHand,
+} from '@/training/beat-field'
 import { concat, primePowers } from '@/training/cards'
 import type { Level } from '@/training/levels'
 import { ActionIcon, Button, Kbd } from '@mantine/core'
 import { useHotkeys } from '@mantine/hooks'
-import { IconBackspace, IconFlag } from '@tabler/icons-react'
+import { IconBackspace, IconBan, IconFlag } from '@tabler/icons-react'
 import { useState } from 'react'
 import { CardRow, HandPicker, RankChips, Tray, TrayCard, fromCard } from '../_ui/cards'
 import { Feedback, PowerProduct } from '../_ui/feedback'
@@ -20,7 +26,10 @@ const SHOWN_SOLUTIONS = 8
 
 const makeQuestion = (rng: Rng, level: Level) => beatQuestion(rng, level)
 
-type Outcome = { kind: 'answer'; cards: CardId[]; verdict: BeatVerdict } | { kind: 'give-up' }
+type Outcome =
+  | { kind: 'answer'; cards: CardId[]; verdict: BeatVerdict }
+  | { kind: 'give-up' }
+  | { kind: 'no-answer' }
 
 function reasonText(verdict: Extract<BeatVerdict, { ok: false }>, q: BeatQuestion) {
   switch (verdict.reason) {
@@ -71,6 +80,13 @@ function BeatQuestionView({ question: q, answered, onAnswer }: QuestionProps<Bea
     setOutcome({ kind: 'give-up' })
     onAnswer(false)
   }
+  const sayNoAnswer = () => {
+    if (answered) {
+      return
+    }
+    setOutcome({ kind: 'no-answer' })
+    onAnswer(q.solutions.length === 0)
+  }
   useHotkeys(
     answered
       ? []
@@ -78,6 +94,7 @@ function BeatQuestionView({ question: q, answered, onAnswer }: QuestionProps<Bea
           ['Enter', (e) => !fromCard(e) && submit()],
           ['Backspace', () => setTray((prev) => prev.slice(0, -1))],
           ['Escape', () => setTray([])],
+          ['n', sayNoAnswer],
         ],
   )
 
@@ -131,6 +148,19 @@ function BeatQuestionView({ question: q, answered, onAnswer }: QuestionProps<Bea
           >
             わからない
           </Button>
+          <Button
+            variant="default"
+            onClick={sayNoAnswer}
+            aria-keyshortcuts="n"
+            leftSection={<IconBan stroke={1.5} size="1.1em" />}
+            rightSection={
+              <Kbd size="xs" className="hidden fine:inline-block">
+                N
+              </Kbd>
+            }
+          >
+            解なし
+          </Button>
           <ActionIcon
             onClick={() => setTray((prev) => prev.slice(0, -1))}
             aria-label="1枚戻す"
@@ -159,9 +189,17 @@ function BeatQuestionView({ question: q, answered, onAnswer }: QuestionProps<Bea
 
       {answered && outcome !== null ? (
         <Feedback
-          correct={outcome.kind === 'answer' && outcome.verdict.ok}
+          correct={
+            outcome.kind === 'no-answer'
+              ? q.solutions.length === 0
+              : outcome.kind === 'answer' && outcome.verdict.ok
+          }
           title={outcome.kind === 'give-up' ? '答え' : undefined}
         >
+          {q.solutions.length === 0 ? <NoAnswer q={q} /> : null}
+          {outcome.kind === 'no-answer' && q.solutions.length > 0 ? (
+            <p className="m-0">解はあります。</p>
+          ) : null}
           {outcome.kind === 'answer' && !outcome.verdict.ok ? (
             <p className="m-0">{reasonText(outcome.verdict, q)}</p>
           ) : null}
@@ -172,10 +210,33 @@ function BeatQuestionView({ question: q, answered, onAnswer }: QuestionProps<Bea
               最大は <span className="num font-bold text-ink">{q.solutions[0].value}</span> でした。
             </p>
           ) : null}
-          <Solutions q={q} highlight={answerValue} />
+          {q.solutions.length > 0 ? <Solutions q={q} highlight={answerValue} /> : null}
         </Feedback>
       ) : null}
     </section>
+  )
+}
+
+/** Why the question has no answer: the hand's best falls short of the field. */
+function NoAnswer({ q }: { q: BeatQuestion }) {
+  const best = playableFromHand(q.hand, q.k)[0]
+  return (
+    <div className="flex flex-col gap-fib-1" data-no-answer="">
+      <p className="m-0">
+        <span className="font-bold">解なし</span>：手札の {q.k} 枚では、場の{' '}
+        <span className="num font-bold">{q.fieldValue}</span> より大きな素数はつくれません。
+      </p>
+      <p className="m-0 text-[length:var(--fs--1)] text-ink-muted">
+        {best ? (
+          <>
+            手札でつくれる最大は <span className="num font-bold text-ink">{best.value}</span>{' '}
+            <RankChips cards={best.cards} />
+          </>
+        ) : (
+          <>手札の {q.k} 枚では、素数を 1 つもつくれません。</>
+        )}
+      </p>
+    </div>
   )
 }
 

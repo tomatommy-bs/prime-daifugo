@@ -266,7 +266,7 @@ export class RoomHost {
       exists: true,
       status: s.status,
       members: members.length,
-      connected: members.filter((m) => m.connected).length,
+      connected: members.filter((m) => m.connected && m.bot === undefined).length,
       capacity,
     }
   }

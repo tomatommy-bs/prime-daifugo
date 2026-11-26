@@ -1,6 +1,7 @@
 'use client'
 
 import { Expr } from '@/design/Expr'
+import { NumberGlyph } from '@/design/NumberGlyph'
 import { type CardId, isCardId } from '@/game-card/src'
 import type { FactCardId } from '@/interface/common'
 import type { Rng } from '@/shared/rng'
@@ -14,22 +15,36 @@ import {
 import type { Level } from '@/training/levels'
 import { ActionIcon, Button, Kbd, SegmentedControl } from '@mantine/core'
 import { useHotkeys } from '@mantine/hooks'
-import { IconBackspace, IconFlag } from '@tabler/icons-react'
+import { IconBackspace, IconBan, IconFlag } from '@tabler/icons-react'
 import { useState } from 'react'
-import { HandPicker, RankChips, Tray, TrayCard, fromCard } from '../_ui/cards'
+import { CardRow, HandPicker, RankChips, Tray, TrayCard, fromCard } from '../_ui/cards'
 import { Feedback } from '../_ui/feedback'
 import { type QuestionProps, TrainingRun } from '../_ui/training-run'
 
 /** Patterns listed after a question; the rest are summarised. */
 const SHOWN_PATTERNS = 8
+const FIELD_CARD = 'clamp(48px, 11dvh, 84px)'
 
 const makeQuestion = (rng: Rng, level: Level) => factorQuestion(rng, level)
 
 type Target = 'composite' | 'expression'
 
-type Outcome = { kind: 'answer'; verdict: FactorVerdict } | { kind: 'give-up' }
+type Outcome =
+  | { kind: 'answer'; verdict: FactorVerdict }
+  | { kind: 'give-up' }
+  | { kind: 'no-answer' }
 
-const REASON: Record<Extract<FactorVerdict, { ok: false }>['reason'], string> = {
+const reasonText = (reason: Extract<FactorVerdict, { ok: false }>['reason'], q: FactorQuestion) =>
+  reason === 'count'
+    ? `場と同じ ${q.k} 枚で合成数を出してください。`
+    : reason === 'too-small'
+      ? `出す数が場の ${q.fieldValue} 以下です。`
+      : REASON[reason]
+
+const REASON: Record<
+  Exclude<Extract<FactorVerdict, { ok: false }>['reason'], 'count' | 'too-small'>,
+  string
+> = {
   'no-composite': '出す合成数を並べてください。',
   'no-expression': '素因数分解の式を並べてください。',
   malformed: '式の形が正しくありません（× や ^ が端にある、続いている、1 を使っているなど）。',
@@ -72,7 +87,7 @@ function FactorQuestionView({ question: q, answered, onAnswer }: QuestionProps<F
     if (answered || composite.length === 0 || expression.length === 0) {
       return
     }
-    const verdict = judgeFactor(composite, expression)
+    const verdict = judgeFactor(composite, expression, q)
     setOutcome({ kind: 'answer', verdict })
     onAnswer(verdict.ok)
   }
@@ -82,6 +97,13 @@ function FactorQuestionView({ question: q, answered, onAnswer }: QuestionProps<F
     }
     setOutcome({ kind: 'give-up' })
     onAnswer(false)
+  }
+  const sayNoAnswer = () => {
+    if (answered) {
+      return
+    }
+    setOutcome({ kind: 'no-answer' })
+    onAnswer(q.patterns.length === 0)
   }
   useHotkeys(
     answered
@@ -93,6 +115,7 @@ function FactorQuestionView({ question: q, answered, onAnswer }: QuestionProps<F
           ['x', () => addOperator('*')],
           ['shift+8', () => addOperator('*')],
           ['shift+6', () => addOperator('^')],
+          ['n', sayNoAnswer],
         ],
   )
 
@@ -103,9 +126,16 @@ function FactorQuestionView({ question: q, answered, onAnswer }: QuestionProps<F
       aria-label="問題"
       className="flex flex-col gap-fib-3 rounded-[var(--r-3)] border border-line bg-surface p-fib-4 shadow-[var(--shadow-2)] compact:p-fib-3"
     >
-      <p className="m-0 text-ink-muted [text-wrap:pretty]">
-        手札から合成数を 1 つ選び、残りのカードでその素因数分解の式をつくろう
-      </p>
+      <div className="flex flex-wrap items-center gap-fib-3" data-field="">
+        <span className="text-[length:var(--fs--1)] font-bold text-ink-muted">場</span>
+        <CardRow cards={q.field} height={FIELD_CARD} label={`場のカード ${q.fieldValue}`} />
+        <NumberGlyph value={q.fieldValue} size={3} srLabel={`場は ${q.fieldValue}`} />
+        <p className="m-0 basis-full text-ink-muted [text-wrap:pretty] sm:ml-auto sm:basis-auto">
+          手札の <span className="num font-bold text-ink">{q.k}</span> 枚で、
+          <span className="num font-bold text-ink">{q.fieldValue}</span>{' '}
+          より大きな合成数を出し、残りのカードで素因数分解の式をつくろう
+        </p>
+      </div>
 
       <div className="grid grid-cols-[minmax(0,0.382fr)_minmax(0,0.618fr)] gap-fib-2 portrait-phone:grid-cols-1">
         <Tray
@@ -223,6 +253,19 @@ function FactorQuestionView({ question: q, answered, onAnswer }: QuestionProps<F
             わからない
           </Button>
           <Button
+            variant="default"
+            onClick={sayNoAnswer}
+            aria-keyshortcuts="n"
+            leftSection={<IconBan stroke={1.5} size="1.1em" />}
+            rightSection={
+              <Kbd size="xs" className="hidden fine:inline-block">
+                N
+              </Kbd>
+            }
+          >
+            解なし
+          </Button>
+          <Button
             size="md"
             className="ml-auto"
             disabled={composite.length === 0 || expression.length === 0}
@@ -241,13 +284,27 @@ function FactorQuestionView({ question: q, answered, onAnswer }: QuestionProps<F
 
       {answered && outcome !== null ? (
         <Feedback
-          correct={outcome.kind === 'answer' && outcome.verdict.ok}
+          correct={
+            outcome.kind === 'no-answer'
+              ? q.patterns.length === 0
+              : outcome.kind === 'answer' && outcome.verdict.ok
+          }
           title={outcome.kind === 'give-up' ? '答え' : undefined}
         >
-          {outcome.kind === 'answer' && !outcome.verdict.ok ? (
-            <p className="m-0">{REASON[outcome.verdict.reason]}</p>
+          {q.patterns.length === 0 ? (
+            <p className="m-0" data-no-answer="">
+              <span className="font-bold">解なし</span>：この手札の {q.k} 枚では、場の{' '}
+              <span className="num font-bold">{q.fieldValue}</span>{' '}
+              より大きな合成数出しはできません。
+            </p>
           ) : null}
-          <Patterns q={q} highlight={userKey} />
+          {outcome.kind === 'no-answer' && q.patterns.length > 0 ? (
+            <p className="m-0">解はあります。</p>
+          ) : null}
+          {outcome.kind === 'answer' && !outcome.verdict.ok ? (
+            <p className="m-0">{reasonText(outcome.verdict.reason, q)}</p>
+          ) : null}
+          {q.patterns.length > 0 ? <Patterns q={q} highlight={userKey} /> : null}
         </Feedback>
       ) : null}
     </section>
@@ -260,7 +317,7 @@ function Patterns({ q, highlight }: { q: FactorQuestion; highlight: string | nul
   return (
     <div className="flex flex-col gap-fib-1">
       <p className="m-0 text-[length:var(--fs--1)] text-ink-muted">
-        この手札でできる合成数出し（{q.maxCards} 枚以下の合成数、{q.patterns.length} 通り）
+        場の {q.fieldValue} を超える合成数出し（{q.k} 枚の合成数、{q.patterns.length} 通り）
       </p>
       <ul className="m-0 flex list-none flex-col gap-fib-1 p-0" aria-label="できる合成数出し">
         {shown.map((p) => (

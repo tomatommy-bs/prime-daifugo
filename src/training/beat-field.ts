@@ -16,7 +16,7 @@ import {
   pick,
   sortHand,
 } from './cards'
-import { BEAT_LEVELS, type Level } from './levels'
+import { BEAT_LEVELS, type Level, NO_ANSWER_RATE } from './levels'
 
 export type BeatSolution = { value: number; cards: CardId[] }
 
@@ -25,7 +25,7 @@ export type BeatQuestion = {
   hand: CardId[]
   field: CardId[]
   fieldValue: number
-  /** every playable value that beats the field, largest first, one card layout each */
+  /** every playable value that beats the field, largest first, one card layout each; empty = 解なし */
   solutions: BeatSolution[]
 }
 
@@ -48,9 +48,17 @@ const RANK_VALUES = Array.from({ length: 13 }, (_, i) => i + 1)
 
 /**
  * Every `k`-card prime (57 excluded: it would have flowed the field) that the cards in `pool`
- * can lay out, with one card layout each.
+ * can lay out, with one card layout each, ascending.
  */
-export function primesFromPool(pool: readonly CardId[], k: number): BeatSolution[] {
+export const primesFromPool = (pool: readonly CardId[], k: number): BeatSolution[] =>
+  numbersFromPool(pool, k, (n) => n !== GROTHENDIECK && isPrimeSmall(n))
+
+/** Every `k`-card number the cards in `pool` can lay out that passes `keep`, ascending. */
+export function numbersFromPool(
+  pool: readonly CardId[],
+  k: number,
+  keep: (n: number) => boolean,
+): BeatSolution[] {
   const byRank = new Map<number, CardId[]>()
   for (const card of pool) {
     const v = cardValue(card)
@@ -60,7 +68,7 @@ export function primesFromPool(pool: readonly CardId[], k: number): BeatSolution
   const walk = (ranks: number[]) => {
     if (ranks.length === k) {
       const value = Number(ranks.join(''))
-      if (value !== GROTHENDIECK && !found.has(value) && isPrimeSmall(value)) {
+      if (!found.has(value) && keep(value)) {
         const used = new Map<number, number>()
         const cards = ranks.map((r) => {
           const n = used.get(r) ?? 0
@@ -83,15 +91,43 @@ export function primesFromPool(pool: readonly CardId[], k: number): BeatSolution
   return [...found.entries()].sort(([a], [b]) => a - b).map(([value, cards]) => ({ value, cards }))
 }
 
+/** Fields above everything the hand can make: usually one just above its best (a near miss). */
+function unbeatable(rng: Rng, k: number, hand: CardId[], playable: BeatSolution[]) {
+  const handSet = new Set(hand)
+  const best = playable[0]?.value ?? 0
+  const fields = primesFromPool(
+    FULL_DECK.filter((c) => !handSet.has(c)),
+    k,
+  ).filter((f) => f.value > best)
+  if (fields.length === 0) {
+    return null
+  }
+  const near = fields.slice(0, 3)
+  return pick(rng, rng.next() < 0.75 ? near : fields)
+}
+
 /**
- * A fresh question with at least one answer. The field is usually chosen so that only one or
- * two values beat it, so the player has to find the strong hand rather than any prime.
+ * A fresh question. With probability `NO_ANSWER_RATE` nothing in the hand beats the field (the
+ * answer is 解なし, and the field is usually just above the hand's best). Otherwise the field is
+ * usually chosen so that only one or two values beat it, so the player has to find the strong
+ * hand rather than any prime.
  */
 export function beatQuestion(rng: Rng, level: Level): BeatQuestion {
   const { k, hand: handSize } = BEAT_LEVELS[level]
+  let noAnswer = rng.next() < NO_ANSWER_RATE
   for (let attempt = 0; attempt < MAX_DEALS; attempt += 1) {
+    if (attempt === MAX_DEALS / 2) {
+      noAnswer = false
+    }
     const hand = deal(rng, handSize)
     const playable = playableFromHand(hand, k)
+    if (noAnswer) {
+      const field = unbeatable(rng, k, hand, playable)
+      if (field === null) {
+        continue
+      }
+      return { k, hand: sortHand(hand), field: field.cards, fieldValue: field.value, solutions: [] }
+    }
     if (playable.length === 0) {
       continue
     }

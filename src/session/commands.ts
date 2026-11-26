@@ -3,11 +3,12 @@
  * (RQ-S18). A rejected command emits nothing and leaves the state reference-equal.
  */
 import type { EngineReject, Move } from '../game/types'
+import { BOT_PID_PREFIX, type BotLevel, botName } from '../shared/bot'
 import type { Cmd, RejectReason } from '../shared/protocol'
 import { shuffle } from '../shared/rng'
 import { parseRulePatch } from '../shared/rule-options'
-import { endGame, forfeitIfSeated, gameOf, removeMember, setCore } from './game-ops'
-import { readyCandidates } from './members'
+import { endGame, forfeitIfSeated, gameOf, removeMember, scheduleBot, setCore } from './game-ops'
+import { botPids, memberCapacity, newMember, readyCandidates } from './members'
 import { turnDurationMs } from './timers'
 import type { Tx } from './tx'
 import type { Pid, SessionInput } from './types'
@@ -64,6 +65,10 @@ function run(tx: Tx, pid: Pid, cmd: Cmd): Outcome {
       return move(tx, pid, cmd.turn, { type: 'pass' })
     case 'submit':
       return move(tx, pid, cmd.turn, { type: 'submit', submit: cmd.submit, factor: cmd.factor })
+    case 'add-bot':
+      return addBot(tx, cmd.level)
+    case 'remove-bot':
+      return removeBot(tx, cmd.pid)
     default:
       return leave(tx, pid)
   }
@@ -73,6 +78,48 @@ function run(tx: Tx, pid: Pid, cmd: Cmd): Outcome {
 function leave(tx: Tx, pid: Pid): Outcome {
   forfeitIfSeated(tx, pid, 'leave')
   removeMember(tx, pid)
+  return OK
+}
+
+/**
+ * Seat a bot (between games only). Bots leave at least one seat for a human and count towards
+ * the member capacity. The bot is ready at once; its pid is the lowest free `bot-<n>`.
+ */
+function addBot(tx: Tx, level: BotLevel): Outcome {
+  const { config, now } = tx.deps
+  if (tx.s.status === 'playing') {
+    return reject('bad-status')
+  }
+  if (
+    botPids(tx.s).length >= config.maxSeats - 1 ||
+    Object.keys(tx.s.members).length >= memberCapacity(config)
+  ) {
+    return reject('too-many-bots')
+  }
+  let n = 1
+  while (tx.s.members[`${BOT_PID_PREFIX}${n}`]) {
+    n += 1
+  }
+  const s = tx.mut()
+  s.members[`${BOT_PID_PREFIX}${n}`] = {
+    ...newMember(botName(n, level), 0, now, s.status === 'waiting' ? 'player' : 'observer'),
+    ready: true,
+    readyAt: now,
+    bot: level,
+  }
+  tx.emit({ type: 'presence' })
+  return OK
+}
+
+/** Remove a bot seat (between games only). */
+function removeBot(tx: Tx, botPid: Pid): Outcome {
+  if (tx.s.status === 'playing') {
+    return reject('bad-status')
+  }
+  if (tx.s.members[botPid]?.bot === undefined) {
+    return reject('invalid-move')
+  }
+  removeMember(tx, botPid)
   return OK
 }
 
@@ -125,11 +172,12 @@ function start(tx: Tx, pid: Pid, expectedVersion: number): Outcome {
   if (tx.s.status === 'playing') {
     return reject('bad-status')
   }
-  const candidates = readyCandidates(tx.s)
-  if (candidates.length < 2) {
+  const candidates = readyCandidates(tx.s).slice(0, deps.config.maxSeats)
+  // at least two seats, and at least one of them human (humans come first)
+  if (candidates.length < 2 || tx.s.members[candidates[0]].bot !== undefined) {
     return reject('not-enough-ready')
   }
-  const seats = shuffle(candidates.slice(0, deps.config.maxSeats), deps.rng)
+  const seats = shuffle(candidates, deps.rng)
   const setup = deps.engine.setup(seats, tx.s.rule, deps.rng)
   if (!setup.ok) {
     return reject(setup.reason === 'deck-too-small' ? 'bad-rule' : 'not-enough-ready')
@@ -146,12 +194,13 @@ function start(tx: Tx, pid: Pid, expectedVersion: number): Outcome {
     deadline: deps.now + turnDurationMs(s, setup.core, deps.config),
     endReason: null,
   }
+  scheduleBot(tx)
   tx.emit({ type: 'game-started', by: pid, round: s.game.round })
   return OK
 }
 
-/** RQ-R8, RQ-T6: draw/pass/submit with the turn guard, then the engine. */
-function move(tx: Tx, pid: Pid, turn: number, mv: Move): Outcome {
+/** RQ-R8, RQ-T6: draw/pass/submit with the turn guard, then the engine. Also used by bots. */
+export function move(tx: Tx, pid: Pid, turn: number, mv: Move): Outcome {
   const { deps } = tx
   if (tx.s.status !== 'playing' || tx.s.game === null) {
     return reject('bad-status')

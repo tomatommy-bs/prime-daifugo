@@ -27,7 +27,8 @@
     "test/**/*.ts",
     "../src/shared/**/*.ts",
     "../src/game/**/*.ts",
-    "../src/session/**/*.ts"
+    "../src/session/**/*.ts",
+    "../src/bot/**/*.ts"
   ],
   // Tests of the shared layers run under the root (DOM) config with vitest globals.
   "exclude": ["../src/**/*.test.ts", "../src/**/*.test.tsx"]
