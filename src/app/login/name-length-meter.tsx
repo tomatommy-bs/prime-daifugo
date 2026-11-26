@@ -1,21 +1,26 @@
 'use client'
 
 import { SPRING, useMotionMode } from '@/design/motion'
+import { NAME_MAX_LENGTH, NAME_MIN_LENGTH } from '@/shared/name'
 import { m } from 'framer-motion'
 
 export type NameLengthMeterProps = {
   /** current number of characters */
   length: number
-  /** shortest valid length (default 3) */
+  /** shortest valid length (default NAME_MIN_LENGTH) */
   min?: number
-  /** longest valid length; also the number of ticks (default 10) */
+  /** longest valid length; also the number of ticks (default NAME_MAX_LENGTH) */
   max?: number
   className?: string
 }
 
 export type NameLengthState = 'empty' | 'short' | 'ok' | 'long'
 
-export const nameLengthState = (length: number, min = 3, max = 10): NameLengthState => {
+export const nameLengthState = (
+  length: number,
+  min = NAME_MIN_LENGTH,
+  max = NAME_MAX_LENGTH,
+): NameLengthState => {
   if (length <= 0) {
     return 'empty'
   }
@@ -35,7 +40,12 @@ export const nameLengthState = (length: number, min = 3, max = 10): NameLengthSt
  *   reads without colour.
  * - Filled ticks are `--mod`; out of range they turn `--danger` and the readout gains ✗.
  */
-export function NameLengthMeter({ length, min = 3, max = 10, className }: NameLengthMeterProps) {
+export function NameLengthMeter({
+  length,
+  min = NAME_MIN_LENGTH,
+  max = NAME_MAX_LENGTH,
+  className,
+}: NameLengthMeterProps) {
   const mode = useMotionMode()
   const state = nameLengthState(length, min, max)
   const bad = state === 'short' || state === 'long'

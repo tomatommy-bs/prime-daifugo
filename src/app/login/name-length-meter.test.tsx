@@ -10,8 +10,7 @@ describe('nameLengthState', () => {
   it.each([
     [0, 'empty'],
     [1, 'short'],
-    [2, 'short'],
-    [3, 'ok'],
+    [2, 'ok'],
     [10, 'ok'],
     [11, 'long'],
   ] as const)('%i characters → %s', (length, state) => {
@@ -34,7 +33,7 @@ describe('NameLengthMeter', () => {
   it('draws the ticks below the minimum hollow and dashed while empty', () => {
     const { container } = renderWithProviders(<NameLengthMeter length={0} />)
     const below = container.querySelectorAll<HTMLElement>('[data-tick="below-min"]')
-    expect(below).toHaveLength(2)
+    expect(below).toHaveLength(1)
     for (const tick of below) {
       expect(tick.style.border).toContain('dashed')
     }
@@ -44,7 +43,7 @@ describe('NameLengthMeter', () => {
   })
 
   it('marks a too-short name with --danger and ✗', () => {
-    const { container } = renderWithProviders(<NameLengthMeter length={2} />)
+    const { container } = renderWithProviders(<NameLengthMeter length={1} />)
     expect(screen.getByRole('meter')).toHaveAttribute('data-state', 'short')
     expect(screen.getByText('✗')).toBeInTheDocument()
     const filled = container.querySelector<HTMLElement>('[data-tick="filled"]')

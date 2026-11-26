@@ -474,7 +474,7 @@ PORTRAIT: single column, the same order.
 │  ∎ 素数大富豪                                   (--fs-2)    │
 │  名前を入力してください                                       │
 │  名前 [ alice_______________ ✕ ]                             │ ← CloseButton clears (replaces fake 🗑️)
-│  ▮▮▮▮▮▯▯▯▯▯  5 / 10   3〜10 文字                              │ ← NameLengthMeter: ticks 1–2 hollow-dashed,
+│  ▮▮▮▮▮▯▯▯▯▯  5 / 10   2〜10 文字                              │ ← NameLengthMeter: ticks 1–2 hollow-dashed,
 │  [            はじめる  →            ] (prime, disabled if invalid) │   filled ticks --mod, out of range → --danger + ✗
 └──────────────────────────────────────────────────────────────┘
 ```

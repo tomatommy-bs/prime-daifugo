@@ -72,7 +72,7 @@ describe('connect', () => {
   it('rejects a bad name with bye 4003 and changes nothing', () => {
     const d = new Driver()
     const before = d.state
-    const r = d.connect('a', 'ab')
+    const r = d.connect('a', 'x')
     expect(r.state).toBe(before)
     expect(r.events).toEqual([])
     expect(r.directives).toEqual([
