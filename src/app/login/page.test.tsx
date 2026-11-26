@@ -60,12 +60,12 @@ describe('Login page', () => {
 
   it('tracks the meter and disables the button when the name is invalid', () => {
     renderWithProviders(<Page />)
-    fireEvent.change(nameInput(), { target: { value: 'ab' } })
-    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '2')
+    fireEvent.change(nameInput(), { target: { value: 'a' } })
+    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '1')
     expect(screen.getByRole('meter')).toHaveAttribute('data-state', 'short')
     expect(submitButton()).toBeDisabled()
 
-    fireEvent.change(nameInput(), { target: { value: 'abc' } })
+    fireEvent.change(nameInput(), { target: { value: 'ab' } })
     expect(submitButton()).toBeEnabled()
 
     fireEvent.change(nameInput(), { target: { value: 'abcdefghijk' } })
@@ -144,9 +144,9 @@ describe('Login page', () => {
 
   it('applies the shared name rule (surrounding spaces do not count)', () => {
     renderWithProviders(<Page />)
-    fireEvent.change(nameInput(), { target: { value: '  ab  ' } })
+    fireEvent.change(nameInput(), { target: { value: '  a  ' } })
     expect(submitButton()).toBeDisabled()
-    fireEvent.change(nameInput(), { target: { value: ' abc ' } })
+    fireEvent.change(nameInput(), { target: { value: ' ab ' } })
     expect(submitButton()).toBeEnabled()
   })
 })

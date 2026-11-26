@@ -128,9 +128,9 @@ describe('middleware', () => {
     })
 
     it.each([
-      ['too short', 'ab'],
+      ['too short', 'a'],
       ['too long', 'abcdefghijk'],
-      ['blank after trimming', '   ab   '],
+      ['blank after trimming', '   a   '],
     ])('redirects when the name is %s', (_label, name) => {
       const res = middleware(request('/room/new', { name }))
       expect(res.status).toBe(307)
@@ -139,7 +139,7 @@ describe('middleware', () => {
       )
     })
 
-    it.each(['abc', 'abcdefghij', '  alice  '])('passes %j through', (name) => {
+    it.each(['ab', 'abc', 'abcdefghij', '  alice  '])('passes %j through', (name) => {
       const res = middleware(request('/room/1234', { name }))
       expect(res.headers.get('location')).toBeNull()
       expect(res.headers.get('x-middleware-next')).toBe('1')

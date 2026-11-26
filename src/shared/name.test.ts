@@ -6,13 +6,16 @@ describe('isValidName', () => {
     ['abc', true],
     ['alice', true],
     ['abcdefghij', true],
-    ['ab', false],
+    ['ab', true],
+    ['a', false],
     ['', false],
     ['abcdefghijk', false],
     ['あいう', true],
-    ['あい', false],
+    ['あい', true],
+    ['あ', false],
     ['  abc  ', true],
-    ['  ab  ', false],
+    ['  ab  ', true],
+    ['  a  ', false],
     ['   ', false],
     [' abcdefghij ', true],
     ['abcdefghijk ', false],
@@ -24,7 +27,8 @@ describe('isValidName', () => {
   it('counts UTF-16 code units like the old middleware (name.length)', () => {
     // one astral emoji is two code units
     expect(isValidName('😀a')).toBe(true)
-    expect(isValidName('😀')).toBe(false)
+    expect(isValidName('😀')).toBe(true)
+    expect(isValidName('a')).toBe(false)
     expect(isValidName('😀😀😀😀😀')).toBe(true)
     expect(isValidName('😀😀😀😀😀a')).toBe(false)
   })
@@ -34,7 +38,7 @@ describe('isValidName', () => {
   })
 
   it('exposes the bounds', () => {
-    expect([NAME_MIN_LENGTH, NAME_MAX_LENGTH]).toEqual([3, 10])
+    expect([NAME_MIN_LENGTH, NAME_MAX_LENGTH]).toEqual([2, 10])
   })
 })
 
