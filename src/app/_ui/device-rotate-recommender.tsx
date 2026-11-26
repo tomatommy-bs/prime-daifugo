@@ -6,6 +6,7 @@ import { useSessionStorage } from '@mantine/hooks'
 import { IconDeviceMobileRotated } from '@tabler/icons-react'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useRotateHintSuppressed } from './rotate-hint'
 
 /**
  * Pages built for portrait phones: the rules read top to bottom, the lab stacks its readout
@@ -24,6 +25,7 @@ const isReadingPath = (pathname: string | null): boolean =>
 const DeviceRotateRecommender: React.FC = () => {
   const { shouldRotate } = useShouldRotate({})
   const pathname = usePathname()
+  const suppressed = useRotateHintSuppressed()
 
   const [shouldShow, setShouldShow] = useSessionStorage({
     key: 'shouldShowRotateRecommender',
@@ -46,7 +48,7 @@ const DeviceRotateRecommender: React.FC = () => {
     setDismissed(true)
   }
 
-  if (!(shouldShow && shouldRotate) || dismissed || isReadingPath(pathname)) {
+  if (!(shouldShow && shouldRotate) || dismissed || suppressed || isReadingPath(pathname)) {
     return null
   }
 
