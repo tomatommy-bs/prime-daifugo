@@ -19,7 +19,7 @@ import {
   primePowers,
   sortHand,
 } from './cards'
-import { FACTOR_LEVELS, type Level } from './levels'
+import { FACTOR_LEVELS, type Level, NO_ANSWER_RATE } from './levels'
 
 /** One way to play: the composite cards and the expression tokens (cards and operators). */
 export type FactorPattern = {
@@ -30,6 +30,7 @@ export type FactorPattern = {
   key: string
 }
 
+/** `patterns` empty: no composite play (解なし). */
 export type FactorQuestion = { hand: CardId[]; maxCards: number; patterns: FactorPattern[] }
 
 /** A term `base^exp` of an expression (`exp = 1` when there is no `^`). */
@@ -192,13 +193,21 @@ export function findPatterns(hand: readonly CardId[], maxCards: number): FactorP
   return [...found.values()].sort((a, b) => a.value - b.value || a.key.localeCompare(b.key))
 }
 
-/** A fresh hand with at least one composite play. */
+/**
+ * A fresh hand. With probability `NO_ANSWER_RATE` it has no composite play (the answer is 解なし);
+ * such hands are rare with many cards, so after half the deals the generator settles for a hand
+ * with plays.
+ */
 export function factorQuestion(rng: Rng, level: Level): FactorQuestion {
   const { hand: handSize, maxCards } = FACTOR_LEVELS[level]
+  let noAnswer = rng.next() < NO_ANSWER_RATE
   for (let attempt = 0; attempt < MAX_DEALS; attempt += 1) {
+    if (attempt === MAX_DEALS / 2) {
+      noAnswer = false
+    }
     const hand = deal(rng, handSize)
     const patterns = findPatterns(hand, maxCards)
-    if (patterns.length > 0) {
+    if (noAnswer ? patterns.length === 0 : patterns.length > 0) {
       return { hand: sortHand(hand), maxCards, patterns }
     }
   }
