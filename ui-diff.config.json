@@ -1,0 +1,120 @@
+{
+  "startCommand": "NEXT_PUBLIC_REALTIME_URL=http://127.0.0.1:8799 npx next dev --port {port}",
+  "baseUrl": "http://localhost:{port}",
+  "routes": [
+    "/",
+    "/login",
+    "/rules",
+    "/training",
+    "/training/beat",
+    "/training/factor"
+  ],
+  "globalFiles": [],
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "name": "phone-se",
+      "width": 375,
+      "height": 667,
+      "deviceScaleFactor": 2,
+      "isMobile": true,
+      "hasTouch": true
+    },
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844,
+      "deviceScaleFactor": 2,
+      "isMobile": true,
+      "hasTouch": true
+    }
+  ],
+  "themes": [
+    {
+      "name": "light",
+      "colorScheme": "light"
+    }
+  ],
+  "capture": {
+    "mask": [
+      "span.num.ml-auto",
+      "[data-seat-clock]"
+    ],
+    "maxHeight": 8000
+  },
+  "flows": [
+    {
+      "name": "beat question",
+      "route": "/training/beat",
+      "steps": [
+        {
+          "click": "button:has-text('スタート')"
+        },
+        {
+          "wait": 800,
+          "checkpoint": "question"
+        }
+      ]
+    },
+    {
+      "name": "factor question",
+      "route": "/training/factor",
+      "steps": [
+        {
+          "click": "button:has-text('スタート')"
+        },
+        {
+          "wait": 800,
+          "checkpoint": "question"
+        }
+      ]
+    },
+    {
+      "name": "room with cpu",
+      "route": "/room/new",
+      "viewports": [
+        "phone-se",
+        "mobile"
+      ],
+      "steps": [
+        {
+          "type": "input[name='name']",
+          "text": "alice"
+        },
+        {
+          "click": "button[type='submit']"
+        },
+        {
+          "wait": "button[aria-label='CPU（ふつう）を追加']"
+        },
+        {
+          "click": "button[aria-label='CPU（ふつう）を追加']"
+        },
+        {
+          "click": "button[aria-label='CPU（よわい）を追加']"
+        },
+        {
+          "wait": "[data-seat='bot-2']",
+          "checkpoint": "waiting room"
+        },
+        {
+          "click": "button:has-text('準備OK')"
+        },
+        {
+          "click": "button:has-text('ゲーム開始')"
+        },
+        {
+          "wait": 2500,
+          "checkpoint": "playing"
+        }
+      ]
+    }
+  ],
+  "flowLimits": {
+    "stepTimeoutMs": 15000
+  }
+}
