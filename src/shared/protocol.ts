@@ -8,6 +8,7 @@
 import type { FactCardId, PrimeDaifugoSetupData } from '@/interface/common'
 import { z } from 'zod'
 import type { SubmitResultCode as EngineSubmitResultCode } from '../game/types'
+import { BOT_LEVELS } from './bot'
 import {
   CARD_IDS,
   CLOSE,
@@ -46,6 +47,8 @@ export const FactCardIdSchema = z.union([CardIdSchema, z.literal('*'), z.literal
 export const RoomStatusSchema = z.enum(['waiting', 'playing', 'waitingNextRound'])
 export type RoomStatus = z.infer<typeof RoomStatusSchema>
 
+export const BotLevelSchema = z.enum(BOT_LEVELS)
+
 export const RoleSchema = z.enum(['player', 'observer'])
 export type Role = z.infer<typeof RoleSchema>
 
@@ -81,6 +84,7 @@ export const RejectReasonSchema = z.enum([
   'bad-rule',
   'not-member',
   'rate-limited',
+  'too-many-bots',
 ])
 export type RejectReason = z.infer<typeof RejectReasonSchema>
 
@@ -135,6 +139,8 @@ export const CmdSchema = z.discriminatedUnion('type', [
     factor: z.array(FactCardIdSchema).max(MAX_FACTOR_TOKENS),
   }),
   z.object({ type: z.literal('leave') }),
+  z.object({ type: z.literal('add-bot'), level: BotLevelSchema }),
+  z.object({ type: z.literal('remove-bot'), pid: PidSchema }),
 ])
 export type Cmd = z.infer<typeof CmdSchema>
 export type CmdType = Cmd['type']
@@ -159,6 +165,8 @@ export const ViewMemberSchema = z.object({
   ready: z.boolean(),
   role: RoleSchema,
   connected: z.boolean(),
+  /** present only for bot seats */
+  bot: BotLevelSchema.optional(),
 })
 export type ViewMember = z.infer<typeof ViewMemberSchema>
 

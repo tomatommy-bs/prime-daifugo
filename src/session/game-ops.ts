@@ -3,7 +3,7 @@
  * deadline policy (spec §5), game end, forfeit (spec §3.6) and member removal.
  */
 import type { GameCore } from '../game/types'
-import { isSeatedInRunningGame, turnDurationMs } from './timers'
+import { botActAt, isSeatedInRunningGame, turnDurationMs } from './timers'
 import type { Tx } from './tx'
 import type { GameEndReason, Pid, RoomGame, RoomState } from './types'
 
@@ -26,6 +26,19 @@ export function setCore(tx: Tx, core: GameCore): void {
   game.core = core
   if (core.winner === null && core.turn !== prevTurn) {
     game.deadline = tx.deps.now + turnDurationMs(s, core, tx.deps.config)
+    scheduleBot(tx)
+  }
+}
+
+/** (Re)arm `botAt` for the seat holding the turn (null unless a watched bot holds it). */
+export function scheduleBot(tx: Tx): void {
+  const s = tx.s
+  if (s.status !== 'playing' || s.game === null) {
+    return
+  }
+  const at = botActAt(s, s.game.core, tx.deps.now, tx.deps.rng, tx.deps.config)
+  if ((s.game.botAt ?? null) !== at) {
+    gameOf(tx.mut()).botAt = at
   }
 }
 
@@ -36,6 +49,9 @@ export function endGame(tx: Tx, reason: GameEndReason): void {
   const winner = game.core.winner as Pid
   s.status = 'waitingNextRound'
   game.deadline = null
+  if (game.botAt != null) {
+    game.botAt = null
+  }
   game.endReason = reason
   tx.emit({
     type: 'game-ended',

@@ -7,6 +7,7 @@
  */
 import type { PrimeDaifugoSetupData } from '@/interface/common'
 import type { GameCore, GameEngine, Rng } from '../game/types'
+import type { BotLevel } from '../shared/bot'
 import type { Pid } from '../shared/ids'
 import type {
   ByeReason,
@@ -40,6 +41,8 @@ export type Member = {
   lastSeen: number
   /** set when connected=false */
   graceUntil: number | null
+  /** set only for bot seats: always connected and ready, never graced, acts on `game.botAt` */
+  bot?: BotLevel
 }
 
 export type GameEndReason = 'empty-hand' | 'last-standing'
@@ -51,6 +54,8 @@ export type RoomGame = {
   /** epoch ms; null only when status !== 'playing' */
   deadline: number | null
   endReason: GameEndReason | null
+  /** epoch ms when the bot holding the turn acts; null/absent when a human holds it */
+  botAt?: number | null
 }
 
 /** Persisted room state (spec §4.1). Pure JSON. */
@@ -91,6 +96,11 @@ export type RoomConfig = {
   helloTimeoutMs: number
   maxSeats: number
   maxObservers: number
+  /** a bot's think time before it acts: uniform in [botThinkMinMs, botThinkMaxMs) */
+  botThinkMinMs: number
+  botThinkMaxMs: number
+  /** pause between a bot's draw and its next action */
+  botAfterDrawMs: number
   ringSize: number
 }
 
@@ -104,6 +114,9 @@ export const DEFAULT_ROOM_CONFIG: Readonly<RoomConfig> = Object.freeze({
   helloTimeoutMs: 10_000,
   maxSeats: 4,
   maxObservers: 8,
+  botThinkMinMs: 900,
+  botThinkMaxMs: 2200,
+  botAfterDrawMs: 700,
   ringSize: RING_SIZE,
 })
 

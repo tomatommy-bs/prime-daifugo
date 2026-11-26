@@ -35,6 +35,29 @@ export function gcTtlMs(status: RoomStatus, config: RoomConfig): number {
   return status === 'waiting' ? config.roomTtlIdleMs : config.roomTtlActiveMs
 }
 
+/**
+ * When the seat holding the turn acts, if it is a bot and some human is connected to watch;
+ * otherwise null (an unattended bot just times out like anyone else).
+ */
+export function botActAt(
+  state: RoomState,
+  core: GameCore,
+  now: number,
+  rng: { next(): number },
+  config: RoomConfig,
+): number | null {
+  const current = state.members[core.currentPlayer]
+  if (core.winner !== null || current?.bot === undefined) {
+    return null
+  }
+  const watched = Object.values(state.members).some((m) => m.bot === undefined && m.connected)
+  if (!watched) {
+    return null
+  }
+  const span = Math.max(0, config.botThinkMaxMs - config.botThinkMinMs)
+  return now + config.botThinkMinMs + Math.floor(rng.next() * span)
+}
+
 /** Next instant something is due: the running deadline, any grace expiry, or GC (spec §5). */
 export function computeWakeAt(state: RoomState): number | null {
   let wake: number | null = null
@@ -45,6 +68,7 @@ export function computeWakeAt(state: RoomState): number | null {
   }
   if (state.status === 'playing') {
     consider(state.game?.deadline)
+    consider(state.game?.botAt)
   }
   for (const member of Object.values(state.members)) {
     consider(member.graceUntil)

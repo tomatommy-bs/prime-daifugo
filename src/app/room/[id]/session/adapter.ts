@@ -46,13 +46,16 @@ export function viewToBundle(view: View, selfId: string | null): ClientGameState
 
 /** Presence rows in member order (`ready` → `'ready'`, otherwise `'not-ready'`). */
 export function viewToPresence(view: View): SessionPresence[] {
-  return view.members.map((m) => ({
-    id: m.id,
-    name: m.name,
-    status: m.ready ? 'ready' : 'not-ready',
-    role: m.role,
-    connected: m.connected,
-  }))
+  return view.members.map((m) => {
+    const row: SessionPresence = {
+      id: m.id,
+      name: m.name,
+      status: m.ready ? 'ready' : 'not-ready',
+      role: m.role,
+      connected: m.connected,
+    }
+    return m.bot === undefined ? row : { ...row, bot: m.bot }
+  })
 }
 
 const nameOf = (members: readonly ViewMember[], pid: string): string =>

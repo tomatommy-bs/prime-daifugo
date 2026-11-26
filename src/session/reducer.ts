@@ -1,3 +1,4 @@
+import { decideBotAction } from '../bot/policy'
 /**
  * Room reducer (spec §3-§6). Pure and synchronous: every session and timer decision lives here,
  * using only the injected engine, clock (`deps.now`) and RNG (`deps.rng`).
@@ -5,8 +6,8 @@
 import { CLOSE } from '../shared/ids'
 import { isValidName, normalizeName } from '../shared/name'
 import { DEFAULT_RULE } from '../shared/rule-options'
-import { handleCommand } from './commands'
-import { capAwayDeadline, forfeitIfSeated, gameOf, removeMember } from './game-ops'
+import { handleCommand, move } from './commands'
+import { capAwayDeadline, forfeitIfSeated, gameOf, removeMember, scheduleBot } from './game-ops'
 import { connectedCount, memberCapacity, newMember } from './members'
 import { graceMsFor, turnDurationMs } from './timers'
 import { Tx } from './tx'
@@ -96,6 +97,10 @@ function onConnect(tx: Tx, input: Extract<SessionInput, { type: 'connect' }>): v
     s.members[pid] = newMember(name, connNo, now, s.status === 'waiting' ? 'player' : 'observer')
     tx.emit({ type: 'presence' })
   }
+  // a bot left unattended (no human connected) resumes once someone watches again
+  if (tx.s.game?.botAt == null) {
+    scheduleBot(tx)
+  }
 
   const s = tx.s
   const { lastSeq } = input
@@ -145,8 +150,11 @@ function onTick(tx: Tx): void {
     game.core = core
     // RQ-T2: the timeout is a pass, which always starts a new turn and a new deadline
     game.deadline = now + turnDurationMs(s, core, config)
+    scheduleBot(tx)
     tx.emit({ type: 'passed', by, reason: 'timeout', flowed: outcome.flowed })
   }
+
+  runBot(tx)
 
   const members = tx.s.members
   const expired = Object.keys(members)
@@ -171,6 +179,36 @@ function onTick(tx: Tx): void {
 }
 
 /**
+ * The bot holding the turn acts once `game.botAt` is due: one engine move through the same path
+ * as a human command. After a draw it acts again on the same turn after `botAfterDrawMs`; any
+ * other move ends the turn and `setCore` schedules the next seat.
+ */
+function runBot(tx: Tx): void {
+  const { now, rng, config } = tx.deps
+  const s = tx.s
+  if (s.status !== 'playing' || s.game === null || s.game.botAt == null || now < s.game.botAt) {
+    return
+  }
+  const { core } = s.game
+  const level = s.members[core.currentPlayer]?.bot
+  if (level === undefined) {
+    gameOf(tx.mut()).botAt = null
+    return
+  }
+  const by = core.currentPlayer
+  const action = decideBotAction(core, by, level, rng)
+  const result = move(tx, by, core.turn, action)
+  if (!result.ok) {
+    // never expected: fall back to a pass so the game cannot stall on a bot
+    move(tx, by, core.turn, { type: 'pass' })
+    return
+  }
+  if (action.type === 'draw') {
+    gameOf(tx.mut()).botAt = now + config.botAfterDrawMs
+  }
+}
+
+/**
  * RQ-S19: on wake, members marked connected without a live socket get a fresh grace; if that
  * happened during a game, the running deadline becomes at least now + restartDeadlineFloorMs.
  * A wake where every socket survived (hibernation) changes nothing.
@@ -179,7 +217,12 @@ function onReconcile(tx: Tx, input: Extract<SessionInput, { type: 'reconcile' }>
   const live = new Set(input.live.map((c) => `${c.pid}\u0000${c.connNo}`))
   const members = tx.s.members
   const dropped = Object.keys(members)
-    .filter((pid) => members[pid].connected && !live.has(`${pid}\u0000${members[pid].connNo}`))
+    .filter(
+      (pid) =>
+        members[pid].bot === undefined &&
+        members[pid].connected &&
+        !live.has(`${pid}\u0000${members[pid].connNo}`),
+    )
     .sort()
   if (dropped.length === 0) {
     return

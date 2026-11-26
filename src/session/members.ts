@@ -3,11 +3,11 @@
  */
 import type { Member, Pid, RoomConfig, RoomState } from './types'
 
-/** Number of connected members: the lobby/room count (RQ-S8). */
+/** Number of connected humans: the lobby/room count (RQ-S8) and the GC gate. Bots never count. */
 export function connectedCount(state: RoomState): number {
   let n = 0
   for (const member of Object.values(state.members)) {
-    if (member.connected) {
+    if (member.connected && member.bot === undefined) {
       n += 1
     }
   }
@@ -26,12 +26,20 @@ export function byJoinedAt(members: Record<Pid, Member>): Pid[] {
   })
 }
 
-/** Members eligible for a seat: ready and connected, ordered by `readyAt` (RQ-S12). */
+/**
+ * Members eligible for a seat: ready and connected, humans first, each group ordered by
+ * `readyAt` (RQ-S12), so bots never take a seat a ready human could have.
+ */
 export function readyCandidates(state: RoomState): Pid[] {
   const { members } = state
   return Object.keys(members)
     .filter((pid) => members[pid].ready && members[pid].connected)
     .sort((a, b) => {
+      const ba = members[a].bot === undefined ? 0 : 1
+      const bb = members[b].bot === undefined ? 0 : 1
+      if (ba !== bb) {
+        return ba - bb
+      }
       const ra = members[a].readyAt ?? Number.POSITIVE_INFINITY
       const rb = members[b].readyAt ?? Number.POSITIVE_INFINITY
       if (ra !== rb) {
@@ -40,6 +48,11 @@ export function readyCandidates(state: RoomState): Pid[] {
       const d = members[a].joinedAt - members[b].joinedAt
       return d !== 0 ? d : a < b ? -1 : a > b ? 1 : 0
     })
+}
+
+/** Bot seats in the room. */
+export function botPids(state: RoomState): Pid[] {
+  return Object.keys(state.members).filter((pid) => state.members[pid].bot !== undefined)
 }
 
 export function newMember(name: string, connNo: number, now: number, role: Member['role']): Member {

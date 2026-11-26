@@ -5,6 +5,7 @@
  * The UI talks to the backend only through `useRoomSession(roomId): RoomSession` (RQ-C1).
  */
 import type { FactCardId, PrimeDaifugoSetupData } from '@/interface/common'
+import type { BotLevel } from '@/shared/bot'
 import type { ClientGameStateBundle, SystemMessage } from '@/shared/client-state'
 import type { CardId } from '@/shared/ids'
 import type { RejectReason, RoomEvent, RoomStatus } from '@/shared/protocol'
@@ -30,6 +31,8 @@ export type SessionPresence = {
   status: 'ready' | 'not-ready'
   role: 'player' | 'observer'
   connected: boolean
+  /** set only for bot seats */
+  bot?: BotLevel
 }
 
 /** What the director receives: a game message, a snapshot (no animation) or a rule change. */
@@ -61,6 +64,9 @@ export type RoomSessionActions = {
   /** sends the current turn */
   pass(): Promise<AckResult>
   submit(set: { submit: CardId[]; factor: FactCardId[] }): Promise<AckResult>
+  /** seat a bot (between games) */
+  addBot(level: BotLevel): Promise<AckResult>
+  removeBot(pid: string): Promise<AckResult>
   leave(): Promise<void>
   reconnect(): void
 }

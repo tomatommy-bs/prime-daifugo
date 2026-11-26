@@ -156,6 +156,8 @@ describe('parseClientFrame', () => {
     [{ type: 'start', expectedVersion: 4 }],
     [{ type: 'draw', turn: 0 }],
     [{ type: 'pass', turn: 3 }],
+    [{ type: 'add-bot', level: 'strong' }],
+    [{ type: 'remove-bot', pid: 'bot-1' }],
     [{ type: 'submit', turn: 3, submit: ['QS', 'AH'], factor: [] }],
     [{ type: 'submit', turn: 3, submit: ['5S', '7H'], factor: ['3C', '*', '5D', '^', '2H'] }],
     [{ type: 'leave' }],
@@ -312,7 +314,18 @@ describe('schemas', () => {
 
   it('covers every command type', () => {
     expect(CmdSchema.options.map((o) => o.shape.type.value).sort()).toEqual(
-      ['draw', 'leave', 'pass', 'ready', 'set-rule', 'start', 'submit', 'unready'].sort(),
+      [
+        'add-bot',
+        'draw',
+        'leave',
+        'pass',
+        'ready',
+        'remove-bot',
+        'set-rule',
+        'start',
+        'submit',
+        'unready',
+      ].sort(),
     )
   })
 })

@@ -5,8 +5,9 @@ import { NumberGlyph } from '@/design/NumberGlyph'
 import { DUR, EASE, SPRING, useMotionMode, useMotionPreset } from '@/design/motion'
 import { useLayoutMode } from '@/design/use-layout-mode'
 import type { PrimeDaifugoSetupData } from '@/interface/common'
-import { Button, SegmentedControl } from '@mantine/core'
-import { IconArrowRight, IconCheck, IconX } from '@tabler/icons-react'
+import { BOT_LEVELS, BOT_LEVEL_LABEL, type BotLevel } from '@/shared/bot'
+import { ActionIcon, Button, SegmentedControl } from '@mantine/core'
+import { IconArrowRight, IconCheck, IconPlus, IconRobot, IconX } from '@tabler/icons-react'
 import { AnimatePresence, m } from 'framer-motion'
 import { type FC, type ReactNode, useEffect, useRef, useState } from 'react'
 import ClientRoomManager from '../room-manager'
@@ -21,6 +22,8 @@ interface Props {
   onGameStart?: (args: PrimeDaifugoSetupData) => void
   onSetReady?: () => void
   onUnsetReady?: () => void
+  onAddBot?: (level: BotLevel) => void
+  onRemoveBot?: (pid: string) => void
 }
 
 type PresenceEntry = SessionPresence
@@ -28,6 +31,8 @@ type RuleKey = keyof PrimeDaifugoSetupData
 
 /** Players needed to start (mirrors `ClientRoomManager.canStartGame`, used for copy only). */
 const MIN_READY = 2
+/** Bots leave at least one of the 4 seats for a human (mirrors the server). */
+const MAX_BOTS = 3
 const ICON = { stroke: 1.5, size: '1.25em' } as const
 const CIRCLED = ['⓪', '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨']
 const residue = (k: number) => CIRCLED[k] ?? `(${k})`
@@ -95,7 +100,8 @@ function useRuleFlashes(rule: PrimeDaifugoSetupData) {
 
 export const WaitingRoom: FC<Props> = (props) => {
   const { rule, onChangeRule } = props
-  const { presence, myPresence, onGameStart, onSetReady, onUnsetReady } = props
+  const { presence, myPresence, onGameStart, onSetReady, onUnsetReady, onAddBot, onRemoveBot } =
+    props
   const canStartGame = ClientRoomManager.canStartGame(presence)
   const layout = useLayoutMode()
   const motionMode = useMotionMode()
@@ -127,7 +133,12 @@ export const WaitingRoom: FC<Props> = (props) => {
         <h2 id="waiting-seats-title" className="sr-only">
           プレイヤー
         </h2>
-        <SeatRing presence={presence} selfId={myPresence?.id} compact={compact} />
+        <SeatRing
+          presence={presence}
+          selfId={myPresence?.id}
+          compact={compact}
+          onRemoveBot={onRemoveBot}
+        />
         <ReadyBar presence={presence} canStart={canStartGame} />
         <div className="grid w-full grid-cols-2 gap-fib-2">
           {isReady ? (
@@ -152,6 +163,12 @@ export const WaitingRoom: FC<Props> = (props) => {
             ゲーム開始
           </Button>
         </div>
+        {onAddBot ? (
+          <BotPicker
+            onAdd={onAddBot}
+            full={presence.filter((p) => p.bot !== undefined).length >= MAX_BOTS}
+          />
+        ) : null}
       </section>
 
       <m.section
@@ -273,14 +290,51 @@ export const WaitingRoom: FC<Props> = (props) => {
 /* Seat ring                                                           */
 /* ------------------------------------------------------------------ */
 
+/** "CPU を追加" with one button per level. */
+function BotPicker({ onAdd, full }: { onAdd: (level: BotLevel) => void; full: boolean }) {
+  return (
+    <fieldset
+      className="m-0 flex w-full min-w-0 flex-wrap items-center gap-fib-2 border-0 p-0"
+      data-bot-picker=""
+    >
+      <legend
+        className="float-left flex items-center gap-fib-1 p-0 font-semibold text-ink-muted"
+        style={{ fontSize: 'var(--fs--1)' }}
+      >
+        <IconRobot stroke={1.5} size="1.2em" aria-hidden="true" />
+        CPU を追加
+      </legend>
+      <div className="flex flex-1 gap-fib-1">
+        {BOT_LEVELS.map((level) => (
+          <Button
+            key={level}
+            size="compact-sm"
+            variant="default"
+            className="flex-1"
+            disabled={full}
+            onClick={() => onAdd(level)}
+            leftSection={<IconPlus stroke={1.5} size="1em" />}
+            aria-label={`CPU（${BOT_LEVEL_LABEL[level]}）を追加`}
+            data-add-bot={level}
+          >
+            {BOT_LEVEL_LABEL[level]}
+          </Button>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
 function SeatRing({
   presence,
   selfId,
   compact,
+  onRemoveBot,
 }: {
   presence: PresenceEntry[]
   selfId?: string
   compact: boolean
+  onRemoveBot?: (pid: string) => void
 }) {
   const slots = Math.max(presence.length, 4)
   const side = compact ? 'min(100%, 360px, max(176px, calc(100dvh - 210px)))' : 'min(100%, 360px)'
@@ -310,6 +364,9 @@ function SeatRing({
                 player={player}
                 isSelf={player.id === selfId}
                 style={style}
+                onRemove={
+                  player.bot !== undefined && onRemoveBot ? () => onRemoveBot(player.id) : undefined
+                }
               />
             ) : (
               // biome-ignore lint/suspicious/noArrayIndexKey: an empty seat is identified by its residue
@@ -329,11 +386,14 @@ function SeatNode({
   player,
   isSelf,
   style,
+  onRemove,
 }: {
   k: number
   player: PresenceEntry
   isSelf: boolean
   style: Position
+  /** bot seats: take the bot out */
+  onRemove?: () => void
 }) {
   const preset = useMotionPreset()
   const ready = player.status === 'ready'
@@ -350,6 +410,7 @@ function SeatNode({
       data-ready={ready ? 'true' : 'false'}
       data-connected={away ? 'false' : undefined}
       data-self={isSelf ? 'true' : undefined}
+      data-bot={player.bot}
     >
       <m.div
         layoutId={`seat-${player.id}`}
@@ -377,6 +438,9 @@ function SeatNode({
               ◌
             </span>
           ) : null}
+          {player.bot !== undefined ? (
+            <IconRobot stroke={1.5} size="1.1em" className="shrink-0 text-ink-muted" />
+          ) : null}
           <span className="max-w-[6em] truncate">{player.name}</span>
           {/* inline, so the top seat's label never reaches the ring's centre caption */}
           {isSelf ? (
@@ -391,6 +455,18 @@ function SeatNode({
             </span>
           ) : null}
         </span>
+        {onRemove ? (
+          <ActionIcon
+            size="sm"
+            variant="subtle"
+            color="ink"
+            onClick={onRemove}
+            aria-label={`${player.name} を外す`}
+            data-remove-bot={player.id}
+          >
+            <IconX stroke={1.5} size="1em" />
+          </ActionIcon>
+        ) : null}
       </m.div>
     </li>
   )
