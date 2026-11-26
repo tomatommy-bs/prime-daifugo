@@ -48,9 +48,17 @@ const RANK_VALUES = Array.from({ length: 13 }, (_, i) => i + 1)
 
 /**
  * Every `k`-card prime (57 excluded: it would have flowed the field) that the cards in `pool`
- * can lay out, with one card layout each.
+ * can lay out, with one card layout each, ascending.
  */
-export function primesFromPool(pool: readonly CardId[], k: number): BeatSolution[] {
+export const primesFromPool = (pool: readonly CardId[], k: number): BeatSolution[] =>
+  numbersFromPool(pool, k, (n) => n !== GROTHENDIECK && isPrimeSmall(n))
+
+/** Every `k`-card number the cards in `pool` can lay out that passes `keep`, ascending. */
+export function numbersFromPool(
+  pool: readonly CardId[],
+  k: number,
+  keep: (n: number) => boolean,
+): BeatSolution[] {
   const byRank = new Map<number, CardId[]>()
   for (const card of pool) {
     const v = cardValue(card)
@@ -60,7 +68,7 @@ export function primesFromPool(pool: readonly CardId[], k: number): BeatSolution
   const walk = (ranks: number[]) => {
     if (ranks.length === k) {
       const value = Number(ranks.join(''))
-      if (value !== GROTHENDIECK && !found.has(value) && isPrimeSmall(value)) {
+      if (!found.has(value) && keep(value)) {
         const used = new Map<number, number>()
         const cards = ranks.map((r) => {
           const n = used.get(r) ?? 0

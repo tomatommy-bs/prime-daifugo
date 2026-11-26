@@ -153,17 +153,27 @@ describe('mode 3: composite play', () => {
     expect(withAce).toContain('26 = 2 * 13')
   })
 
-  it.each(LEVELS)('%s: every pattern passes the engine judge with disjoint hand cards', (level) => {
+  it.each(LEVELS)('%s: every pattern beats the field and passes the engine judge', (level) => {
     const rng = mulberry32(4)
-    for (let i = 0; i < 10; i += 1) {
+    let none = 0
+    for (let i = 0; i < 20; i += 1) {
       const q = factorQuestion(rng, level)
       expect(q.hand).toHaveLength(FACTOR_LEVELS[level].hand)
-      // 解なし questions really have no play
+      expect(FACTOR_LEVELS[level].sizes).toContain(q.k)
+      expect(q.field).toHaveLength(q.k)
+      expect(q.field.some((c) => q.hand.includes(c))).toBe(false)
+      expect(q.fieldValue).not.toBe(57)
+      // the list is exactly the k-card plays above the field (empty = 解なし)
       expect(q.patterns.map((p) => p.key)).toEqual(
-        findPatterns(q.hand, FACTOR_LEVELS[level].maxCards).map((p) => p.key),
+        findPatterns(q.hand, q.k, q.k)
+          .filter((p) => p.value > q.fieldValue)
+          .map((p) => p.key),
       )
+      if (q.patterns.length === 0) {
+        none += 1
+      }
       for (const p of q.patterns) {
-        expect(judgeFactor(p.composite, p.expression)).toEqual({
+        expect(judgeFactor(p.composite, p.expression, q)).toEqual({
           ok: true,
           value: p.value,
           key: p.key,
@@ -171,9 +181,23 @@ describe('mode 3: composite play', () => {
         const used = [...p.composite, ...p.expression.filter((t) => t !== '*' && t !== '^')]
         expect(new Set(used).size).toBe(used.length)
         expect(used.every((c) => q.hand.includes(c as (typeof q.hand)[number]))).toBe(true)
-        expect(p.composite.length).toBeLessThanOrEqual(FACTOR_LEVELS[level].maxCards)
+        expect(p.composite).toHaveLength(q.k)
       }
     }
+    expect(none).toBeLessThan(10)
+  })
+
+  it('checks the field: same card count, bigger number', () => {
+    const field = { k: 1, fieldValue: 10 }
+    expect(judgeFactor(['QS'], ['2S', '^', '2H', '*', '3S'], field)).toMatchObject({ ok: true })
+    expect(judgeFactor(['9S'], ['3S', '^', '2H'], field)).toEqual({
+      ok: false,
+      reason: 'too-small',
+    })
+    expect(judgeFactor(['AS', '2S'], ['2S', '^', '2H', '*', '3S'], field)).toEqual({
+      ok: false,
+      reason: 'count',
+    })
   })
 
   it('reports why an answer fails', () => {
