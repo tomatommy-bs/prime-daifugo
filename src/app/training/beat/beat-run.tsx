@@ -173,6 +173,7 @@ function BeatQuestionView({ question: q, answered, onAnswer }: QuestionProps<Bea
           </ActionIcon>
           <Button
             size="md"
+            className="portrait-phone:order-last portrait-phone:basis-full"
             disabled={!full}
             onClick={submit}
             aria-keyshortcuts="Enter"

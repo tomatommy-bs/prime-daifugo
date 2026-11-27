@@ -180,6 +180,8 @@ export function Seat({
     connected,
   })
 
+  // a bot's level in full-width parentheses: dropped in the phone seat chip
+  const short = name.replace(/（.*）$/, '')
   const nameEl = (
     <span className="inline-flex min-w-0 items-center gap-fib-1">
       <span
@@ -199,11 +201,19 @@ export function Seat({
           fontSize: node ? 'var(--fs-0)' : 'var(--fs--1)',
         }}
       >
-        {name}
+        {short === name || node ? (
+          name
+        ) : (
+          <>
+            <span className="portrait-phone:hidden">{name}</span>
+            {/* phones: `CPU1（ふつう）` → `CPU1`, so every seat fits the line */}
+            <span className="hidden portrait-phone:inline">{short}</span>
+          </>
+        )}
       </span>
       {isSelf ? (
         <span
-          className="shrink-0 rounded-[var(--r-1)] px-[3px] leading-tight"
+          className={`shrink-0 rounded-[var(--r-1)] px-[3px] leading-tight ${node ? '' : 'portrait-phone:hidden'}`}
           style={{
             fontSize: 'var(--fs--1)',
             color: 'var(--mod)',

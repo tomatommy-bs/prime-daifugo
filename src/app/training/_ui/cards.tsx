@@ -3,10 +3,13 @@
 import { type CardId, GameCard, MathCard, cardLabel } from '@/game-card/src'
 import type { CSSProperties, ReactNode } from 'react'
 
-/** Hand card height: two rows of up to six fit a 390px-wide phone. */
-export const HAND_CARD = 'clamp(60px, 15dvh, 104px)'
-/** Cards in the answer tray. */
-export const TRAY_CARD = 'clamp(48px, 11dvh, 80px)'
+/**
+ * Hand card height. The `22vw` cap keeps five cards a row on a 375px phone (it only binds on
+ * narrow screens), so a 7–11 card hand takes two or three rows instead of three or four.
+ */
+export const HAND_CARD = 'clamp(60px, min(15dvh, 22vw), 104px)'
+/** Cards in the answer tray (kept short on phones, where the trays stack). */
+export const TRAY_CARD = 'clamp(44px, min(11dvh, 16vw), 80px)'
 
 /** Static cards (no layout flight), for the field, examples and explanations. */
 export function CardRow({
@@ -64,7 +67,7 @@ export function HandPicker({
       tabIndex={-1}
       aria-label={label}
       aria-multiselectable={true}
-      className="flex flex-wrap justify-center gap-fib-2"
+      className="flex flex-wrap justify-center gap-fib-2 portrait-phone:gap-fib-1"
       data-hand=""
     >
       {cards.map((card) => (

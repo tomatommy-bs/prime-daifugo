@@ -50,3 +50,6 @@ worker/.dev.vars
 dist-worker/
 test-results/
 playwright-report/
+
+# ui-diff output (before/after captures)
+.ui-diff/
